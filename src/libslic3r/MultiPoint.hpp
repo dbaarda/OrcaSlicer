@@ -54,11 +54,11 @@ public:
         int idx = -1;
         if (! this->points.empty()) {
             idx = 0;
-            double dist_min = (point - this->points.front()).cast<double>().norm();
+            double min_dist2 = point.distance_to_squared(this->points.front());
             for (int i = 1; i < int(this->points.size()); ++ i) {
-                double d = (this->points[i] - point).cast<double>().norm();
-                if (d < dist_min) {
-                    dist_min = d;
+                double dist2 = point.distance_to_squared(this->points[i]);
+                if (dist2 < min_dist2) {
+                    min_dist2 = dist2;
                     idx = i;
                 }
             }
@@ -66,12 +66,10 @@ public:
         return idx;
     }
     const Point* closest_point(const Point &point) const { return this->points.empty() ? nullptr : &this->points[this->closest_point_index(point)]; }
-    // The distance of polygon to point is defined as:
-    //  the minimum distance of all points to that point
-    double distance_to(const Point& point) const {
-        const Point* cl = closest_point(point);
-        return (*cl - point).cast<double>().norm();
-    }
+    // The distance of MultiPoint to point is defined as:
+    // the minimum distance of all points to that point
+    double distance_to_squared(const Point& point) const { return point.distance_to_squared(*closest_point(point)); }
+    double distance_to(const Point& point) const { return std::sqrt(distance_to_squared(point)); }
     BoundingBox bounding_box() const;
     // Return true if there are exact duplicates.
     bool has_duplicate_points() const;
@@ -110,8 +108,6 @@ public:
     inline auto cend()   const { return points.end();   }
     
 private:
-    //Orca: Distancing function used by IOI wall ordering algorithm for arachne
-    static double squaredDistanceToLineSegment(const Point& p, const Point& v, const Point& w);
 };
 
 class MultiPoint3
@@ -142,7 +138,7 @@ inline double length(const Points &pts) {
     if (! pts.empty()) {
         auto it = pts.begin();
         for (auto it_prev = it ++; it != pts.end(); ++ it, ++ it_prev)
-            total += (*it - *it_prev).cast<double>().norm();
+            total += it->distance_to(*it_prev);
     }
     return total;
 }

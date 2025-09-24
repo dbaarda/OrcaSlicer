@@ -12,7 +12,7 @@
 #include <oneapi/tbb/scalable_allocator.h>
 
 
-#include <Eigen/Geometry> 
+#include <Eigen/Geometry>
 
 #include "LocalesUtils.hpp"
 
@@ -106,7 +106,7 @@ inline typename Derived::Scalar cross2(const Eigen::MatrixBase<Derived> &v1, con
 // 2D vector perpendicular to the argument.
 template<typename Derived>
 inline Eigen::Matrix<typename Derived::Scalar, 2, 1, Eigen::DontAlign> perp(const Eigen::MatrixBase<Derived> &v)
-{ 
+{
     static_assert(Derived::IsVectorAtCompileTime && int(Derived::SizeAtCompileTime) == 2, "perp(): parameter is not a 2D vector");
     return { - v.y(), v.x() };
 }
@@ -185,8 +185,8 @@ public:
     Point(int32_t x, int64_t y) : Vec2crd(coord_t(x), coord_t(y)) {}
     Point(double x, double y) : Vec2crd(coord_t(std::round(x)), coord_t(std::round(y))) {}
     Point(const Point &rhs) { *this = rhs; }
-	explicit Point(const Vec2d& rhs) : Vec2crd(coord_t(std::round(rhs.x())), coord_t(std::round(rhs.y()))) {}
-	// This constructor allows you to construct Point from Eigen expressions
+        explicit Point(const Vec2d& rhs) : Vec2crd(coord_t(std::round(rhs.x())), coord_t(std::round(rhs.y()))) {}
+        // This constructor allows you to construct Point from Eigen expressions
     // This constructor has to be implicit (non-explicit) to allow implicit conversion from Eigen expressions.
     template<typename OtherDerived>
     Point(const Eigen::MatrixBase<OtherDerived> &other) : Vec2crd(other) {}
@@ -204,9 +204,9 @@ public:
 
     Point& operator+=(const Point& rhs) { this->x() += rhs.x(); this->y() += rhs.y(); return *this; }
     Point& operator-=(const Point& rhs) { this->x() -= rhs.x(); this->y() -= rhs.y(); return *this; }
-	Point& operator*=(const double &rhs) { this->x() = coord_t(this->x() * rhs); this->y() = coord_t(this->y() * rhs); return *this; }
+        Point& operator*=(const double &rhs) { this->x() = coord_t(this->x() * rhs); this->y() = coord_t(this->y() * rhs); return *this; }
     Point operator*(const double &rhs) { return Point(this->x() * rhs, this->y() * rhs); }
-    bool   both_comp(const Point &rhs, const std::string& op) { 
+    bool   both_comp(const Point &rhs, const std::string& op) {
         if (op == ">")
             return this->x() > rhs.x() && this->y() > rhs.y();
         else if (op == "<")
@@ -245,11 +245,12 @@ public:
     Point  projection_onto(const MultiPoint &poly) const;
     Point  projection_onto(const Line &line) const;
 
-    double distance_to(const Point &point) const { return (point - *this).cast<double>().norm(); }
+    double distance_to_squared(const Point &point) const { return (point - *this).cast<double>().squaredNorm(); }
+    double distance_to(const Point &point) const { return std::sqrt(distance_to_squared(point)); }
 };
 
-inline bool operator<(const Point &l, const Point &r) 
-{ 
+inline bool operator<(const Point &l, const Point &r)
+{
     return l.x() < r.x() || (l.x() == r.x() && l.y() < r.y());
 }
 
@@ -266,32 +267,32 @@ inline std::ostream &operator<<(std::ostream &os, const Point &pt)
 
 inline bool is_approx(const Point &p1, const Point &p2, coord_t epsilon = coord_t(SCALED_EPSILON))
 {
-	Point d = (p2 - p1).cwiseAbs();
-	return d.x() < epsilon && d.y() < epsilon;
+        Point d = (p2 - p1).cwiseAbs();
+        return d.x() < epsilon && d.y() < epsilon;
 }
 
 inline bool is_approx(const Vec2f &p1, const Vec2f &p2, float epsilon = float(EPSILON))
 {
-	Vec2f d = (p2 - p1).cwiseAbs();
-	return d.x() < epsilon && d.y() < epsilon;
+        Vec2f d = (p2 - p1).cwiseAbs();
+        return d.x() < epsilon && d.y() < epsilon;
 }
 
 inline bool is_approx(const Vec2d &p1, const Vec2d &p2, double epsilon = EPSILON)
 {
-	Vec2d d = (p2 - p1).cwiseAbs();
-	return d.x() < epsilon && d.y() < epsilon;
+        Vec2d d = (p2 - p1).cwiseAbs();
+        return d.x() < epsilon && d.y() < epsilon;
 }
 
 inline bool is_approx(const Vec3f &p1, const Vec3f &p2, float epsilon = float(EPSILON))
 {
-	Vec3f d = (p2 - p1).cwiseAbs();
-	return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
+        Vec3f d = (p2 - p1).cwiseAbs();
+        return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
 }
 
 inline bool is_approx(const Vec3d &p1, const Vec3d &p2, double epsilon = EPSILON)
 {
-	Vec3d d = (p2 - p1).cwiseAbs();
-	return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
+        Vec3d d = (p2 - p1).cwiseAbs();
+        return d.x() < epsilon && d.y() < epsilon && d.z() < epsilon;
 }
 
 inline Point lerp(const Point &a, const Point &b, double t)
@@ -377,48 +378,48 @@ struct PointHash {
 template<typename ValueType, typename PointAccessor> class ClosestPointInRadiusLookup
 {
 public:
-    ClosestPointInRadiusLookup(coord_t search_radius, PointAccessor point_accessor = PointAccessor()) : 
-		m_search_radius(search_radius), m_point_accessor(point_accessor), m_grid_log2(0)
+    ClosestPointInRadiusLookup(coord_t search_radius, PointAccessor point_accessor = PointAccessor()) :
+                m_search_radius(search_radius), m_point_accessor(point_accessor), m_grid_log2(0)
     {
         // Resolution of a grid, twice the search radius + some epsilon.
-		coord_t gridres = 2 * m_search_radius + 4;
+                coord_t gridres = 2 * m_search_radius + 4;
         m_grid_resolution = gridres;
         assert(m_grid_resolution > 0);
         assert(m_grid_resolution < (coord_t(1) << 30));
-		// Compute m_grid_log2 = log2(m_grid_resolution)
-		if (m_grid_resolution > 32767) {
-			m_grid_resolution >>= 16;
-			m_grid_log2 += 16;
-		}
-		if (m_grid_resolution > 127) {
-			m_grid_resolution >>= 8;
-			m_grid_log2 += 8;
-		}
-		if (m_grid_resolution > 7) {
-			m_grid_resolution >>= 4;
-			m_grid_log2 += 4;
-		}
-		if (m_grid_resolution > 1) {
-			m_grid_resolution >>= 2;
-			m_grid_log2 += 2;
-		}
-		if (m_grid_resolution > 0)
-			++ m_grid_log2;
-		m_grid_resolution = 1 << m_grid_log2;
-		assert(m_grid_resolution >= gridres);
-		assert(gridres > m_grid_resolution / 2);
+                // Compute m_grid_log2 = log2(m_grid_resolution)
+                if (m_grid_resolution > 32767) {
+                        m_grid_resolution >>= 16;
+                        m_grid_log2 += 16;
+                }
+                if (m_grid_resolution > 127) {
+                        m_grid_resolution >>= 8;
+                        m_grid_log2 += 8;
+                }
+                if (m_grid_resolution > 7) {
+                        m_grid_resolution >>= 4;
+                        m_grid_log2 += 4;
+                }
+                if (m_grid_resolution > 1) {
+                        m_grid_resolution >>= 2;
+                        m_grid_log2 += 2;
+                }
+                if (m_grid_resolution > 0)
+                        ++ m_grid_log2;
+                m_grid_resolution = 1 << m_grid_log2;
+                assert(m_grid_resolution >= gridres);
+                assert(gridres > m_grid_resolution / 2);
     }
 
     void insert(const ValueType &value) {
-        const Vec2crd *pt = m_point_accessor(value);
+        const Point *pt = m_point_accessor(value);
         if (pt != nullptr)
-            m_map.emplace(std::make_pair(Vec2crd(pt->x()>>m_grid_log2, pt->y()>>m_grid_log2), value));
+            m_map.emplace(std::make_pair(Point(pt->x()>>m_grid_log2, pt->y()>>m_grid_log2), value));
     }
 
     void insert(ValueType &&value) {
-        const Vec2crd *pt = m_point_accessor(value);
+        const Point *pt = m_point_accessor(value);
         if (pt != nullptr)
-            m_map.emplace(std::make_pair(Vec2crd(pt->x()>>m_grid_log2, pt->y()>>m_grid_log2), std::move(value)));
+            m_map.emplace(std::make_pair(Point(pt->x()>>m_grid_log2, pt->y()>>m_grid_log2), std::move(value)));
     }
 
     // Erase a data point equal to value. (ValueType has to declare the operator==).
@@ -440,24 +441,24 @@ public:
     }
 
     // Return a pair of <ValueType*, distance_squared>
-    std::pair<const ValueType*, double> find(const Vec2crd &pt) {
+    std::pair<const ValueType*, double> find(const Point &pt) {
         // Iterate over 4 closest grid cells around pt,
         // find the closest start point inside these cells to pt.
         const ValueType *value_min = nullptr;
         double           dist_min = std::numeric_limits<double>::max();
         // Round pt to a closest grid_cell corner.
-        Vec2crd            grid_corner((pt.x()+(m_grid_resolution>>1))>>m_grid_log2, (pt.y()+(m_grid_resolution>>1))>>m_grid_log2);
+        Point            grid_corner((pt.x()+(m_grid_resolution>>1))>>m_grid_log2, (pt.y()+(m_grid_resolution>>1))>>m_grid_log2);
         // For four neighbors of grid_corner:
         for (coord_t neighbor_y = -1; neighbor_y < 1; ++ neighbor_y) {
             for (coord_t neighbor_x = -1; neighbor_x < 1; ++ neighbor_x) {
                 // Range of fragment starts around grid_corner, close to pt.
-                auto range = m_map.equal_range(Vec2crd(grid_corner.x() + neighbor_x, grid_corner.y() + neighbor_y));
+                auto range = m_map.equal_range(Point(grid_corner.x() + neighbor_x, grid_corner.y() + neighbor_y));
                 // Find the map entry closest to pt.
                 for (auto it = range.first; it != range.second; ++it) {
                     const ValueType &value = it->second;
-                    const Vec2crd *pt2 = m_point_accessor(value);
+                    const Point *pt2 = m_point_accessor(value);
                     if (pt2 != nullptr) {
-                        const double d2 = (pt - *pt2).cast<double>().squaredNorm();
+                        const double d2 = pt.distance_to_squared(*pt2);
                         if (d2 < dist_min) {
                             dist_min = d2;
                             value_min = &value;
@@ -466,29 +467,29 @@ public:
                 }
             }
         }
-        return (value_min != nullptr && dist_min < coordf_t(m_search_radius) * coordf_t(m_search_radius)) ? 
-            std::make_pair(value_min, dist_min) : 
+        return (value_min != nullptr && dist_min < coordf_t(m_search_radius) * coordf_t(m_search_radius)) ?
+            std::make_pair(value_min, dist_min) :
             std::make_pair(nullptr, std::numeric_limits<double>::max());
     }
 
     // Returns all pairs of values and squared distances.
-    std::vector<std::pair<const ValueType*, double>> find_all(const Vec2crd &pt) {
+    std::vector<std::pair<const ValueType*, double>> find_all(const Point &pt) {
         // Iterate over 4 closest grid cells around pt,
         // Round pt to a closest grid_cell corner.
-        Vec2crd      grid_corner((pt.x()+(m_grid_resolution>>1))>>m_grid_log2, (pt.y()+(m_grid_resolution>>1))>>m_grid_log2);
+        Point      grid_corner((pt.x()+(m_grid_resolution>>1))>>m_grid_log2, (pt.y()+(m_grid_resolution>>1))>>m_grid_log2);
         // For four neighbors of grid_corner:
         std::vector<std::pair<const ValueType*, double>> out;
         const double r2 = double(m_search_radius) * m_search_radius;
         for (coord_t neighbor_y = -1; neighbor_y < 1; ++ neighbor_y) {
             for (coord_t neighbor_x = -1; neighbor_x < 1; ++ neighbor_x) {
                 // Range of fragment starts around grid_corner, close to pt.
-                auto range = m_map.equal_range(Vec2crd(grid_corner.x() + neighbor_x, grid_corner.y() + neighbor_y));
+                auto range = m_map.equal_range(Point(grid_corner.x() + neighbor_x, grid_corner.y() + neighbor_y));
                 // Find the map entry closest to pt.
                 for (auto it = range.first; it != range.second; ++it) {
                     const ValueType &value = it->second;
-                    const Vec2crd *pt2 = m_point_accessor(value);
+                    const Point *pt2 = m_point_accessor(value);
                     if (pt2 != nullptr) {
-                        const double d2 = (pt - *pt2).cast<double>().squaredNorm();
+                        const double d2 = pt.distance_to_squared(*pt2);
                         if (d2 <= r2)
                             out.emplace_back(&value, d2);
                     }
@@ -499,7 +500,7 @@ public:
     }
 
 private:
-    using map_type = typename std::unordered_multimap<Vec2crd, ValueType, PointHash>;
+    using map_type = typename std::unordered_multimap<Point, ValueType, PointHash>;
     PointAccessor m_point_accessor;
     map_type m_map;
     coord_t  m_search_radius;
@@ -587,9 +588,9 @@ inline coord_t align_to_grid(const coord_t coord, const coord_t spacing) {
     assert(aligned <= coord);
     return aligned;
 }
-inline Point   align_to_grid(Point   coord, Point   spacing) 
+inline Point   align_to_grid(Point   coord, Point   spacing)
     { return Point(align_to_grid(coord.x(), spacing.x()), align_to_grid(coord.y(), spacing.y())); }
-inline coord_t align_to_grid(coord_t coord, coord_t spacing, coord_t base) 
+inline coord_t align_to_grid(coord_t coord, coord_t spacing, coord_t base)
     { return base + align_to_grid(coord - base, spacing); }
 inline Point   align_to_grid(Point   coord, Point   spacing, Point   base)
     { return Point(align_to_grid(coord.x(), spacing.x(), base.x()), align_to_grid(coord.y(), spacing.y(), base.y())); }
@@ -623,16 +624,16 @@ static bool apply(T &val, const MinMax<T> &limit)
 namespace boost { namespace polygon {
     template <>
     struct geometry_concept<Slic3r::Point> { using type = point_concept; };
-   
+
     template <>
     struct point_traits<Slic3r::Point> {
         using coordinate_type = coord_t;
-    
+
         static inline coordinate_type get(const Slic3r::Point& point, orientation_2d orient) {
             return static_cast<coordinate_type>(point((orient == HORIZONTAL) ? 0 : 1));
         }
     };
-    
+
     template <>
     struct point_mutable_traits<Slic3r::Point> {
         using coordinate_type = coord_t;
@@ -648,19 +649,19 @@ namespace boost { namespace polygon {
 
 // Serialization through the Cereal library
 namespace cereal {
-//	template<class Archive> void serialize(Archive& archive, Slic3r::Vec2crd &v) { archive(v.x(), v.y()); }
-//	template<class Archive> void serialize(Archive& archive, Slic3r::Vec3crd &v) { archive(v.x(), v.y(), v.z()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec2i32   &v) { archive(v.x(), v.y()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec3i32   &v) { archive(v.x(), v.y(), v.z()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec2i64 &v) { archive(v.x(), v.y()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec3i64 &v) { archive(v.x(), v.y(), v.z()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec2f   &v) { archive(v.x(), v.y()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec3f   &v) { archive(v.x(), v.y(), v.z()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec2d   &v) { archive(v.x(), v.y()); }
-	template<class Archive> void serialize(Archive& archive, Slic3r::Vec3d   &v) { archive(v.x(), v.y(), v.z()); }
+//      template<class Archive> void serialize(Archive& archive, Slic3r::Vec2crd &v) { archive(v.x(), v.y()); }
+//      template<class Archive> void serialize(Archive& archive, Slic3r::Vec3crd &v) { archive(v.x(), v.y(), v.z()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec2i32   &v) { archive(v.x(), v.y()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec3i32   &v) { archive(v.x(), v.y(), v.z()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec2i64 &v) { archive(v.x(), v.y()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec3i64 &v) { archive(v.x(), v.y(), v.z()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec2f   &v) { archive(v.x(), v.y()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec3f   &v) { archive(v.x(), v.y(), v.z()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec2d   &v) { archive(v.x(), v.y()); }
+        template<class Archive> void serialize(Archive& archive, Slic3r::Vec3d   &v) { archive(v.x(), v.y(), v.z()); }
 
-	template<class Archive> void load(Archive& archive, Slic3r::Matrix2f &m) { archive.loadBinary((char*)m.data(), sizeof(float) * 4); }
-	template<class Archive> void save(Archive& archive, Slic3r::Matrix2f &m) { archive.saveBinary((char*)m.data(), sizeof(float) * 4); }
+        template<class Archive> void load(Archive& archive, Slic3r::Matrix2f &m) { archive.loadBinary((char*)m.data(), sizeof(float) * 4); }
+        template<class Archive> void save(Archive& archive, Slic3r::Matrix2f &m) { archive.saveBinary((char*)m.data(), sizeof(float) * 4); }
 
     template<class Archive> void load(Archive &archive, Slic3r::Transform3d &m) { archive.loadBinary((char *) m.data(), sizeof(double) * 16); }
     template<class Archive> void save(Archive &archive, const Slic3r::Transform3d &m) { archive.saveBinary((char *) m.data(), sizeof(double) * 16); }

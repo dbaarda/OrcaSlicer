@@ -13,8 +13,8 @@ void MultiPoint::scale(double factor_x, double factor_y)
 {
     for (Point &pt : points)
     {
-		pt(0) = coord_t(pt(0) * factor_x);
-		pt(1) = coord_t(pt(1) * factor_y);
+                pt(0) = coord_t(pt(0) * factor_x);
+                pt(1) = coord_t(pt(1) * factor_y);
     }
 }
 
@@ -71,7 +71,7 @@ int MultiPoint::find_point(const Point &point, double scaled_epsilon) const
     auto eps2      = scaled_epsilon * scaled_epsilon;
     int  idx_min   = -1;
     for (const Point &pt : this->points) {
-        double d2 = (pt - point).cast<double>().squaredNorm();
+        double d2 = point.distance_to_squared(pt);
         if (d2 < dist2_min) {
             idx_min   = int(&pt - &this->points.front());
             dist2_min = d2;
@@ -164,7 +164,7 @@ bool MultiPoint::intersections(const Line &line, Points *intersections) const
 Points MultiPoint::_douglas_peucker(const Points &pts, const double tolerance)
 {
     Points result_pts;
-	double tolerance_sq = tolerance * tolerance;
+        double tolerance_sq = tolerance * tolerance;
     if (! pts.empty()) {
         const Point  *anchor      = &pts.front();
         size_t        anchor_idx  = 0;
@@ -211,9 +211,9 @@ Points MultiPoint::_douglas_peucker(const Points &pts, const double tolerance)
 #if 0
         {
             static int iRun = 0;
-			BoundingBox bbox(pts);
-			BoundingBox bbox2(result_pts);
-			bbox.merge(bbox2);
+                        BoundingBox bbox(pts);
+                        BoundingBox bbox2(result_pts);
+                        bbox.merge(bbox2);
             SVG svg(debug_out_path("douglas_peucker_%d.svg", iRun ++).c_str(), bbox);
             if (pts.front() == pts.back())
                 svg.draw(Polygon(pts), "black");
@@ -247,7 +247,7 @@ struct vis_node{
     // Effective area of this "node"
     double area;
     // Overloaded operator used to sort the binheap
-    // Greater area = "more important" node. So, this node is less than the 
+    // Greater area = "more important" node. So, this node is less than the
     // other node if it's area is less than the other node's area
     bool operator<(const vis_node& other) { return (this->area < other.area); }
 };
@@ -257,22 +257,22 @@ Points MultiPoint::visivalingam(const Points& pts, const double tolerance)
     assert(pts.size() >= 2);
      // Result object
     Points results;
-     // Lambda to calculate effective area spanned by a point and its immediate 
+     // Lambda to calculate effective area spanned by a point and its immediate
     // successor + predecessor.
     auto effective_area = [pts](const size_t& curr_pt_idx, const size_t& prev_pt_idx, const size_t& next_pt_idx)->coordf_t {
         const Point& curr = pts[curr_pt_idx];
         const Point& prev = pts[prev_pt_idx];
         const Point& next = pts[next_pt_idx];
         // Use point objects as vector-distances
-		const Vec2d curr_to_next = (next - curr).cast<double>();
-		const Vec2d prev_to_next = (prev - curr).cast<double>();
+                const Vec2d curr_to_next = (next - curr).cast<double>();
+                const Vec2d prev_to_next = (prev - curr).cast<double>();
         // Take cross product of these two vector distances
-		return 0.50 * abs(cross2(curr_to_next, prev_to_next));
+                return 0.50 * abs(cross2(curr_to_next, prev_to_next));
     };
      // We store the effective areas for each node
     std::vector<coordf_t> areas;
     areas.reserve(pts.size());
-     // Construct the initial set of nodes. We will make a heap out of the "heap" vector using 
+     // Construct the initial set of nodes. We will make a heap out of the "heap" vector using
     // std::make_heap. node_list is used later.
     std::vector<vis_node*> node_list;
     node_list.resize(pts.size());
@@ -285,7 +285,7 @@ Points MultiPoint::visivalingam(const Points& pts, const double tolerance)
         node_list[i] = new vis_node(i, i - 1, i + 1, area);
         heap.push_back(node_list[i]);
     }
-     // Call std::make_heap, which uses the < operator by default to make "heap" into 
+     // Call std::make_heap, which uses the < operator by default to make "heap" into
     // a binheap, sorted by the < operator we defind in the vis_node struct
     std::make_heap(heap.begin(), heap.end());
      // Start comparing areas. Set min_area to an outrageous value initially.
@@ -301,7 +301,7 @@ Points MultiPoint::visivalingam(const Points& pts, const double tolerance)
         assert(curr == node_list[curr->pt_idx]);
          // If the current pt'ss area is less than that of the previous pt's area
         // use the last pt's area instead. This ensures we don't elimate the current
-        // point without eliminating the previous 
+        // point without eliminating the previous
         min_area = std::max(min_area, curr->area);
          // Update prev
         vis_node* prev = node_list[curr->prev_idx];
@@ -372,28 +372,6 @@ Points MultiPoint::concave_hull_2d(const Points& pts, const double tolerence)
 
 //Orca: Distancing function used by IOI wall ordering algorithm for arachne
 /**
- * @brief Calculates the squared distance between a point and a line segment defined by two points.
- *
- * @param p The point.
- * @param v The starting point of the line segment.
- * @param w The ending point of the line segment.
- * @return double The squared distance between the point and the line segment.
- */
- double MultiPoint::squaredDistanceToLineSegment(const Point& p, const Point& v, const Point& w) {
-    // Calculate the squared length of the line segment
-    double l2 = (v - w).squaredNorm();
-    // If the segment is a single point, return the squared distance to that point
-    if (l2 == 0.0) return (p - v).squaredNorm();
-    // Project point p onto the line defined by v and w, and clamp the projection to the segment
-    double t = std::max(0.0, std::min(1.0, ((p - v).dot(w - v)) / l2));
-    // Compute the projection point
-    Point projection{v.x() + t * (w.x() - v.x()), v.y() + t * (w.y() - v.y())};
-    // Return the squared distance between the point and the projection
-    return (p - projection).squaredNorm();
-}
-
-//Orca: Distancing function used by IOI wall ordering algorithm for arachne
-/**
  * @brief Calculates the minimum distance between two lines defined by sets of points.
  *
  * @param A The first set of points defining a polyline.
@@ -401,25 +379,25 @@ Points MultiPoint::concave_hull_2d(const Points& pts, const double tolerence)
  * @return double The minimum distance between the two polylines.
  */
  double MultiPoint::minimumDistanceBetweenLinesDefinedByPoints(const Points& A, const Points& B) {
-    double min_distance = std::numeric_limits<double>::infinity();
+    double min_dist2 = std::numeric_limits<double>::infinity();
 
     // Calculate the minimum distance between segments in A and points in B
     for (size_t i = 0; i < A.size() - 1; ++i) {
         for (const auto& b : B) {
-            double distance = squaredDistanceToLineSegment(b, A[i], A[i + 1]);
-            min_distance = std::min(min_distance, std::sqrt(distance));
+          double dist2 = Line::distance_to_squared(b, A[i], A[i + 1]);
+            min_dist2 = std::min(min_dist2, dist2);
         }
     }
 
     // Calculate the minimum distance between segments in B and points in A
     for (size_t i = 0; i < B.size() - 1; ++i) {
         for (const auto& a : A) {
-            double distance = squaredDistanceToLineSegment(a, B[i], B[i + 1]);
-            min_distance = std::min(min_distance, std::sqrt(distance));
+            double dist2 = Line::distance_to_squared(a, B[i], B[i + 1]);
+            min_dist2 = std::min(min_dist2, dist2);
         }
     }
 
-    return min_distance;
+    return std::sqrt(min_dist2);
 }
 
 
@@ -472,12 +450,12 @@ bool MultiPoint3::remove_duplicate_points()
 }
 
 BoundingBox get_extents(const MultiPoint &mp)
-{ 
+{
     return BoundingBox(mp.points);
 }
 
 BoundingBox get_extents_rotated(const Points &points, double angle)
-{ 
+{
     BoundingBox bbox;
     if (! points.empty()) {
         double s = sin(angle);
