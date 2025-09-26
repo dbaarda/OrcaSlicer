@@ -140,7 +140,7 @@ struct MinDistanceVisitor
             auto  segment = grid.segment(*it_contour_and_segment);
             Point closest_point;
             if (closest_lines_set.find(*it_contour_and_segment) == closest_lines_set.end() &&
-                line_alg::distance_to_squared(Line(segment.first, segment.second), center, &closest_point) <= this->max_distance_squared) {
+                Line(segment.first, segment.second).distance_to_squared(center, &closest_point) <= this->max_distance_squared) {
                 closest_lines.push_back({it_contour_and_segment->first, it_contour_and_segment->second, closest_point});
                 closest_lines_set.insert(*it_contour_and_segment);
             }
@@ -440,7 +440,7 @@ static std::vector<TravelPoint> simplify_travel(const AvoidCrossingPerimeters::B
     simplified_path.emplace_back(travel.front());
     // Try to skip some points in the path.
     //FIXME maybe use a binary search to trim the line?
-    //FIXME how about searching tangent point at long segments? 
+    //FIXME how about searching tangent point at long segments?
     for (size_t point_idx = 1; point_idx < travel.size(); ++point_idx) {
         const Point &current_point = travel[point_idx - 1].point;
         TravelPoint  next          = travel[point_idx];
@@ -948,20 +948,20 @@ static std::vector<float> contour_distance(const EdgeGrid::Grid     &grid,
                 return true;
             }
 
-            const EdgeGrid::Grid 			   &grid;
-            const size_t 		  				idx_contour;
+            const EdgeGrid::Grid                           &grid;
+            const size_t                                                idx_contour;
             const EdgeGrid::Contour            &contour;
 
             const std::vector<float>           &boundary_parameters;
             const double                        dist_same_contour_accept;
-            const double 						dist_same_contour_reject;
+            const double                                                dist_same_contour_reject;
 
-            size_t 								idx_point;
-            Point			      				point;
+            size_t                                                              idx_point;
+            Point                                                       point;
             // Direction inside the contour from idx_point, not normalized.
-            Vec2d								dir_inside;
-            bool 								found;
-            double 								distance;
+            Vec2d                                                               dir_inside;
+            bool                                                                found;
+            double                                                              distance;
 
         private:
             static Vec2d dir_inside_at_point(const Points &contour, size_t i)
@@ -1271,14 +1271,14 @@ Polyline AvoidCrossingPerimeters::travel_to(const GCode &gcodegen, const Point &
             m_external.clear();
             init_boundary(&m_external, get_boundary_external(*gcodegen.layer()), {start, end});
         }
-        
+
         // Trim the travel line by the bounding box.
-        if (!m_external.boundaries.empty()) 
+        if (!m_external.boundaries.empty())
         {
             travel_intersection_count = avoid_perimeters(m_external, start, end, *gcodegen.layer(), result_pl);
             result_pl.points.front()  = start;
             result_pl.points.back()   = end;
-            
+
         }
     }
 
@@ -1325,7 +1325,7 @@ void AvoidCrossingPerimeters::init_layer(const Layer &layer)
     for (auto coeff : {0.6f, 0.5f, 0.45f}) {
         m_lslices_offset = offset_ex(layer.lslices, -get_external_perimeter_width(layer) * coeff);
         if (!m_lslices_offset.empty()) break;
-    }    
+    }
     m_lslices_offset_bboxes.reserve(m_lslices_offset.size());
     for (const auto &ex_polygon : m_lslices_offset) m_lslices_offset_bboxes.emplace_back(get_extents(ex_polygon));
 

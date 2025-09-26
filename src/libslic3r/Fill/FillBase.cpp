@@ -89,16 +89,16 @@ static bool use_bridge_flow_initializer = Fill::use_bridge_flow(ipGrid);
 
 bool Fill::use_bridge_flow(const InfillPattern type)
 {
-	static std::vector<unsigned char> cached;
-	if (cached.empty()) {
-		cached.assign(size_t(ipCount), 0);
-		for (size_t i = 0; i < cached.size(); ++ i) {
-			auto *fill = Fill::new_from_type((InfillPattern)i);
-			cached[i] = fill->use_bridge_flow();
-			delete fill;
-		}
-	}
-	return cached[type] != 0;
+        static std::vector<unsigned char> cached;
+        if (cached.empty()) {
+                cached.assign(size_t(ipCount), 0);
+                for (size_t i = 0; i < cached.size(); ++ i) {
+                        auto *fill = Fill::new_from_type((InfillPattern)i);
+                        cached[i] = fill->use_bridge_flow();
+                        delete fill;
+                }
+        }
+        return cached[type] != 0;
 }
 
 Polylines Fill::fill_surface(const Surface *surface, const FillParams &params)
@@ -276,8 +276,8 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     // set infill angle
     float out_angle = this->angle;
 
-	if (out_angle == FLT_MAX) {
-		//FIXME Vojtech: Add a warning?
+        if (out_angle == FLT_MAX) {
+                //FIXME Vojtech: Add a warning?
         printf("Using undefined infill angle\n");
         out_angle = 0.f;
     }
@@ -285,7 +285,7 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     // Bounding box is the bounding box of a perl object Slic3r::Print::Object (c++ object Slic3r::PrintObject)
     // The bounding box is only undefined in unit tests.
     Point out_shift = empty(this->bounding_box) ?
-    	surface->expolygon.contour.bounding_box().center() :
+        surface->expolygon.contour.bounding_box().center() :
         this->bounding_box.center();
 
 #if 0
@@ -297,8 +297,8 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
 #endif
 
     if (surface->bridge_angle >= 0) {
-	    // use bridge angle
-		//FIXME Vojtech: Add a debugf?
+            // use bridge angle
+                //FIXME Vojtech: Add a debugf?
         // Slic3r::debugf "Filling bridge with angle %d\n", rad2deg($surface->bridge_angle);
 #ifdef SLIC3R_DEBUG
         printf("Filling bridge with angle %f\n", surface->bridge_angle);
@@ -307,10 +307,10 @@ std::pair<float, Point> Fill::_infill_direction(const Surface *surface) const
     } else if (this->layer_id != size_t(-1)) {
         // alternate fill direction
         //Orca: if template angle is not empty, don't apply layer angle
-        if(!is_using_template_angle) 
+        if(!is_using_template_angle)
             out_angle += this->_layer_angle(this->layer_id / surface->thickness_layers);
     } else {
-//    	printf("Layer_ID undefined!\n");
+//      printf("Layer_ID undefined!\n");
     }
 
     out_angle += float(M_PI/2.);
@@ -529,22 +529,22 @@ static inline double take_ccw_limited(Polyline &pl, const Points &contour, const
 static void take(Polyline &pl1, const Polyline &pl2, const Points &contour, size_t idx_start, size_t idx_end, bool clockwise)
 {
 #ifndef NDEBUG
-	assert(idx_start != idx_end);
+        assert(idx_start != idx_end);
     assert(pl1.size() >= 2);
     assert(pl2.size() >= 2);
 #endif /* NDEBUG */
 
-	{
-		// Reserve memory at pl1 for the connecting contour and pl2.
-		int new_points = int(idx_end) - int(idx_start) - 1;
-		if (new_points < 0)
-			new_points += int(contour.size());
-		pl1.points.reserve(pl1.points.size() + size_t(new_points) + pl2.points.size());
-	}
+        {
+                // Reserve memory at pl1 for the connecting contour and pl2.
+                int new_points = int(idx_end) - int(idx_start) - 1;
+                if (new_points < 0)
+                        new_points += int(contour.size());
+                pl1.points.reserve(pl1.points.size() + size_t(new_points) + pl2.points.size());
+        }
 
-	if (clockwise)
+        if (clockwise)
         take_cw_full(pl1, contour, idx_start, idx_end);
-	else
+        else
         take_ccw_full(pl1, contour, idx_start, idx_end);
 
     pl1.points.insert(pl1.points.end(), pl2.points.begin() + 1, pl2.points.end());
@@ -673,65 +673,65 @@ static void take_limited(
 
 // Return an index of start of a segment and a point of the clipping point at distance from the end of polyline.
 struct SegmentPoint {
-	// Segment index, defining a line <idx_segment, idx_segment + 1).
-	size_t idx_segment = std::numeric_limits<size_t>::max();
-	// Parameter of point in <0, 1) along the line <idx_segment, idx_segment + 1)
-	double t;
-	Vec2d  point;
+        // Segment index, defining a line <idx_segment, idx_segment + 1).
+        size_t idx_segment = std::numeric_limits<size_t>::max();
+        // Parameter of point in <0, 1) along the line <idx_segment, idx_segment + 1)
+        double t;
+        Vec2d  point;
 
-	bool valid() const { return idx_segment != std::numeric_limits<size_t>::max(); }
+        bool valid() const { return idx_segment != std::numeric_limits<size_t>::max(); }
 };
 
 static inline SegmentPoint clip_start_segment_and_point(const Points &polyline, double distance)
 {
-	assert(polyline.size() >= 2);
-	assert(distance > 0.);
-	// Initialized to "invalid".
-	SegmentPoint out;
-	if (polyline.size() >= 2) {
-	    Vec2d pt_prev = polyline.front().cast<double>();
+        assert(polyline.size() >= 2);
+        assert(distance > 0.);
+        // Initialized to "invalid".
+        SegmentPoint out;
+        if (polyline.size() >= 2) {
+            Vec2d pt_prev = polyline.front().cast<double>();
         for (size_t i = 1; i < polyline.size(); ++ i) {
-			Vec2d pt = polyline[i].cast<double>();
-			Vec2d v = pt - pt_prev;
-	        double l = v.norm();
-	        if (l > distance) {
-	        	out.idx_segment = i - 1;
-	        	out.t 			= distance / l;
-	        	out.point 		= pt_prev + out.t * v;
-	            break;
-	        }
-	        distance -= l;
-	        pt_prev = pt;
-	    }
-	}
-	return out;
+                        Vec2d pt = polyline[i].cast<double>();
+                        Vec2d v = pt - pt_prev;
+                double l = v.norm();
+                if (l > distance) {
+                        out.idx_segment = i - 1;
+                        out.t                   = distance / l;
+                        out.point               = pt_prev + out.t * v;
+                    break;
+                }
+                distance -= l;
+                pt_prev = pt;
+            }
+        }
+        return out;
 }
 
 static inline SegmentPoint clip_end_segment_and_point(const Points &polyline, double distance)
 {
-	assert(polyline.size() >= 2);
-	assert(distance > 0.);
-	// Initialized to "invalid".
-	SegmentPoint out;
-	if (polyline.size() >= 2) {
-	    Vec2d pt_next = polyline.back().cast<double>();
-		for (int i = int(polyline.size()) - 2; i >= 0; -- i) {
-			Vec2d pt = polyline[i].cast<double>();
-			Vec2d v = pt - pt_next;
-	        double l = v.norm();
-	        if (l > distance) {
-	        	out.idx_segment = i;
-	        	out.t 			= distance / l;
-	        	out.point 		= pt_next + out.t * v;
-				// Store the parameter referenced to the starting point of a segment.
-				out.t			= 1. - out.t;
-	            break;
-	        }
-	        distance -= l;
-	        pt_next = pt;
-	    }
-	}
-	return out;
+        assert(polyline.size() >= 2);
+        assert(distance > 0.);
+        // Initialized to "invalid".
+        SegmentPoint out;
+        if (polyline.size() >= 2) {
+            Vec2d pt_next = polyline.back().cast<double>();
+                for (int i = int(polyline.size()) - 2; i >= 0; -- i) {
+                        Vec2d pt = polyline[i].cast<double>();
+                        Vec2d v = pt - pt_next;
+                double l = v.norm();
+                if (l > distance) {
+                        out.idx_segment = i;
+                        out.t                   = distance / l;
+                        out.point               = pt_next + out.t * v;
+                                // Store the parameter referenced to the starting point of a segment.
+                                out.t                   = 1. - out.t;
+                    break;
+                }
+                distance -= l;
+                pt_next = pt;
+            }
+        }
+        return out;
 }
 
 // Calculate intersection of a line with a thick segment.
@@ -993,19 +993,19 @@ bool validate_boundary_intersections(const std::vector<std::vector<ContourInters
 // Mark the segments of split boundary as consumed if they are very close to some of the infill line.
 void mark_boundary_segments_touching_infill(
     // Boundary contour, along which the perimeter extrusions will be drawn.
-	const std::vector<Points>                              &boundary,
+        const std::vector<Points>                              &boundary,
     // Parametrization of boundary with Euclidian length.
-	const std::vector<std::vector<double>>                 &boundary_parameters,
+        const std::vector<std::vector<double>>                 &boundary_parameters,
     // Intersections (T-joints) of the infill lines with the boundary.
     std::vector<std::vector<ContourIntersectionPoint*>>    &boundary_intersections,
     // Bounding box around the boundary.
-	const BoundingBox 		                               &boundary_bbox,
+        const BoundingBox                                              &boundary_bbox,
     // Infill lines, either completely inside the boundary, or touching the boundary.
-	const Polylines 		                               &infill,
+        const Polylines                                                &infill,
     // How much of the infill ends should be ignored when marking the boundary segments?
-	const double			                                clip_distance,
+        const double                                                    clip_distance,
     // Roughly width of the infill line.
-	const double 				                            distance_colliding)
+        const double                                                        distance_colliding)
 {
     assert(boundary.size() == boundary_parameters.size());
 #ifndef NDEBUG
@@ -1022,41 +1022,41 @@ void mark_boundary_segments_touching_infill(
     Polylines perimeter_overlaps;
 #endif // INFILL_DEBUG_OUTPUT
 
-	EdgeGrid::Grid grid;
+        EdgeGrid::Grid grid;
     // Make sure that the the grid is big enough for queries against the thick segment.
-	grid.set_bbox(boundary_bbox.inflated(distance_colliding * 1.43));
-	// Inflate the bounding box by a thick line width.
-	grid.create(boundary, coord_t(std::max(clip_distance, distance_colliding) + scale_(10.)));
+        grid.set_bbox(boundary_bbox.inflated(distance_colliding * 1.43));
+        // Inflate the bounding box by a thick line width.
+        grid.create(boundary, coord_t(std::max(clip_distance, distance_colliding) + scale_(10.)));
 
     // Visitor for the EdgeGrid to trim boundary_intersections with existing infill lines.
-	struct Visitor {
-		Visitor(const EdgeGrid::Grid &grid,
+        struct Visitor {
+                Visitor(const EdgeGrid::Grid &grid,
                 const std::vector<Points> &boundary, const std::vector<std::vector<double>> &boundary_parameters, std::vector<std::vector<ContourIntersectionPoint*>> &boundary_intersections,
                 const double radius) :
-			grid(grid), boundary(boundary), boundary_parameters(boundary_parameters), boundary_intersections(boundary_intersections), radius(radius), trim_l_threshold(0.5 * radius) {}
+                        grid(grid), boundary(boundary), boundary_parameters(boundary_parameters), boundary_intersections(boundary_intersections), radius(radius), trim_l_threshold(0.5 * radius) {}
 
         // Init with a segment of an infill line.
-		void init(const Vec2d &infill_pt1, const Vec2d &infill_pt2) {
-			this->infill_pt1 = &infill_pt1;
-			this->infill_pt2 = &infill_pt2;
+                void init(const Vec2d &infill_pt1, const Vec2d &infill_pt2) {
+                        this->infill_pt1 = &infill_pt1;
+                        this->infill_pt2 = &infill_pt2;
             this->infill_bbox.reset();
             this->infill_bbox.merge(infill_pt1);
             this->infill_bbox.merge(infill_pt2);
             this->infill_bbox.offset(this->radius + SCALED_EPSILON);
         }
 
-		bool operator()(coord_t iy, coord_t ix) {
-			// Called with a row and colum of the grid cell, which is intersected by a line.
-			auto cell_data_range = this->grid.cell_data_range(iy, ix);
-			for (auto it_contour_and_segment = cell_data_range.first; it_contour_and_segment != cell_data_range.second; ++ it_contour_and_segment) {
-				// End points of the line segment and their vector.
-				auto segment = this->grid.segment(*it_contour_and_segment);
+                bool operator()(coord_t iy, coord_t ix) {
+                        // Called with a row and colum of the grid cell, which is intersected by a line.
+                        auto cell_data_range = this->grid.cell_data_range(iy, ix);
+                        for (auto it_contour_and_segment = cell_data_range.first; it_contour_and_segment != cell_data_range.second; ++ it_contour_and_segment) {
+                                // End points of the line segment and their vector.
+                                auto segment = this->grid.segment(*it_contour_and_segment);
                 std::vector<ContourIntersectionPoint*> &intersections = boundary_intersections[it_contour_and_segment->first];
                 if (intersections.empty())
                     // There is no infil line touching this contour, thus effort will be saved to calculate overlap with other infill lines.
                     continue;
-				const Vec2d seg_pt1 = segment.first.cast<double>();
-				const Vec2d seg_pt2 = segment.second.cast<double>();
+                                const Vec2d seg_pt1 = segment.first.cast<double>();
+                                const Vec2d seg_pt2 = segment.second.cast<double>();
                 std::pair<double, double> interval;
                 BoundingBoxf bbox_seg;
                 bbox_seg.merge(seg_pt1);
@@ -1070,7 +1070,7 @@ void mark_boundary_segments_touching_infill(
                     // 1) Find the Euclidian parameters of seg_pt1 and seg_pt2 on its boundary contour.
                     const std::vector<double> &contour_parameters = boundary_parameters[it_contour_and_segment->first];
                     const double contour_length = contour_parameters.back();
-					const double param_seg_pt1  = contour_parameters[it_contour_and_segment->second];
+                                        const double param_seg_pt1  = contour_parameters[it_contour_and_segment->second];
                     const double param_seg_pt2  = contour_parameters[it_contour_and_segment->second + 1];
 #ifdef INFILL_DEBUG_OUTPUT
                     this->perimeter_overlaps.push_back({ Point((seg_pt1 + (seg_pt2 - seg_pt1).normalized() * interval.first).cast<coord_t>()),
@@ -1118,103 +1118,103 @@ void mark_boundary_segments_touching_infill(
                     //FIXME mark point as consumed?
                     //FIXME verify the sequence between prev and next?
 #ifdef INFILL_DEBUG_OUTPUT
-					{
+                                        {
 #if 0
                         static size_t iRun = 0;
-						ExPolygon expoly(Polygon(*grid.contours().front()));
-						for (size_t i = 1; i < grid.contours().size(); ++i)
-							expoly.holes.emplace_back(Polygon(*grid.contours()[i]));
-						SVG svg(debug_out_path("%s-%d.svg", "FillBase-mark_boundary_segments_touching_infill", iRun ++).c_str(), get_extents(expoly));
-						svg.draw(expoly, "green");
-						svg.draw(Line(segment.first, segment.second), "red");
-						svg.draw(Line(this->infill_pt1->cast<coord_t>(), this->infill_pt2->cast<coord_t>()), "magenta");
+                                                ExPolygon expoly(Polygon(*grid.contours().front()));
+                                                for (size_t i = 1; i < grid.contours().size(); ++i)
+                                                        expoly.holes.emplace_back(Polygon(*grid.contours()[i]));
+                                                SVG svg(debug_out_path("%s-%d.svg", "FillBase-mark_boundary_segments_touching_infill", iRun ++).c_str(), get_extents(expoly));
+                                                svg.draw(expoly, "green");
+                                                svg.draw(Line(segment.first, segment.second), "red");
+                                                svg.draw(Line(this->infill_pt1->cast<coord_t>(), this->infill_pt2->cast<coord_t>()), "magenta");
 #endif
                     }
 #endif // INFILL_DEBUG_OUTPUT
-				}
-			}
-			// Continue traversing the grid along the edge.
-			return true;
-		}
+                                }
+                        }
+                        // Continue traversing the grid along the edge.
+                        return true;
+                }
 
-		const EdgeGrid::Grid 			   			        &grid;
-		const std::vector<Points> 					        &boundary;
+                const EdgeGrid::Grid                                                    &grid;
+                const std::vector<Points>                                               &boundary;
         const std::vector<std::vector<double>>              &boundary_parameters;
         std::vector<std::vector<ContourIntersectionPoint*>> &boundary_intersections;
-		// Maximum distance between the boundary and the infill line allowed to consider the boundary not touching the infill line.
-		const double								         radius;
+                // Maximum distance between the boundary and the infill line allowed to consider the boundary not touching the infill line.
+                const double                                                                     radius;
         // Region around the contour / infill line intersection point, where the intersections are ignored.
         const double                                         trim_l_threshold;
 
-		const Vec2d 								        *infill_pt1;
-		const Vec2d 								        *infill_pt2;
+                const Vec2d                                                                     *infill_pt1;
+                const Vec2d                                                                     *infill_pt2;
         BoundingBoxf                                         infill_bbox;
 
 #ifdef INFILL_DEBUG_OUTPUT
         Polylines                                            perimeter_overlaps;
 #endif // INFILL_DEBUG_OUTPUT
-	} visitor(grid, boundary, boundary_parameters, boundary_intersections, distance_colliding);
+        } visitor(grid, boundary, boundary_parameters, boundary_intersections, distance_colliding);
 
-	for (const Polyline &polyline : infill) {
+        for (const Polyline &polyline : infill) {
 #ifdef INFILL_DEBUG_OUTPUT
         ++ iStep;
 #endif // INFILL_DEBUG_OUTPUT
-		// Clip the infill polyline by the Eucledian distance along the polyline.
-		SegmentPoint start_point = clip_start_segment_and_point(polyline.points, clip_distance);
-		SegmentPoint end_point   = clip_end_segment_and_point(polyline.points, clip_distance);
-		if (start_point.valid() && end_point.valid() &&
-			(start_point.idx_segment < end_point.idx_segment || (start_point.idx_segment == end_point.idx_segment && start_point.t < end_point.t))) {
-			// The clipped polyline is non-empty.
+                // Clip the infill polyline by the Eucledian distance along the polyline.
+                SegmentPoint start_point = clip_start_segment_and_point(polyline.points, clip_distance);
+                SegmentPoint end_point   = clip_end_segment_and_point(polyline.points, clip_distance);
+                if (start_point.valid() && end_point.valid() &&
+                        (start_point.idx_segment < end_point.idx_segment || (start_point.idx_segment == end_point.idx_segment && start_point.t < end_point.t))) {
+                        // The clipped polyline is non-empty.
 #ifdef INFILL_DEBUG_OUTPUT
             visitor.perimeter_overlaps.clear();
 #endif // INFILL_DEBUG_OUTPUT
-			for (size_t point_idx = start_point.idx_segment; point_idx <= end_point.idx_segment; ++ point_idx) {
+                        for (size_t point_idx = start_point.idx_segment; point_idx <= end_point.idx_segment; ++ point_idx) {
 //FIXME extend the EdgeGrid to suport tracing a thick line.
 #if 0
-				Point pt1, pt2;
-				Vec2d pt1d, pt2d;
-				if (point_idx == start_point.idx_segment) {
-					pt1d = start_point.point;
-					pt1  = pt1d.cast<coord_t>();
-				} else {
-					pt1  = polyline.points[point_idx];
-					pt1d = pt1.cast<double>();
-				}
-				if (point_idx == start_point.idx_segment) {
-					pt2d = end_point.point;
-					pt2  = pt1d.cast<coord_t>();
-				} else {
-					pt2  = polyline.points[point_idx];
-					pt2d = pt2.cast<double>();
-				}
-				visitor.init(pt1d, pt2d);
-				grid.visit_cells_intersecting_thick_line(pt1, pt2, distance_colliding, visitor);
+                                Point pt1, pt2;
+                                Vec2d pt1d, pt2d;
+                                if (point_idx == start_point.idx_segment) {
+                                        pt1d = start_point.point;
+                                        pt1  = pt1d.cast<coord_t>();
+                                } else {
+                                        pt1  = polyline.points[point_idx];
+                                        pt1d = pt1.cast<double>();
+                                }
+                                if (point_idx == start_point.idx_segment) {
+                                        pt2d = end_point.point;
+                                        pt2  = pt1d.cast<coord_t>();
+                                } else {
+                                        pt2  = polyline.points[point_idx];
+                                        pt2d = pt2.cast<double>();
+                                }
+                                visitor.init(pt1d, pt2d);
+                                grid.visit_cells_intersecting_thick_line(pt1, pt2, distance_colliding, visitor);
 #else
-				Vec2d pt1 = (point_idx == start_point.idx_segment) ? start_point.point : polyline.points[point_idx    ].cast<double>();
-				Vec2d pt2 = (point_idx == end_point  .idx_segment) ? end_point  .point : polyline.points[point_idx + 1].cast<double>();
+                                Vec2d pt1 = (point_idx == start_point.idx_segment) ? start_point.point : polyline.points[point_idx    ].cast<double>();
+                                Vec2d pt2 = (point_idx == end_point  .idx_segment) ? end_point  .point : polyline.points[point_idx + 1].cast<double>();
 #if 0
-					{
-						static size_t iRun = 0;
-						ExPolygon expoly(Polygon(*grid.contours().front()));
-						for (size_t i = 1; i < grid.contours().size(); ++i)
-							expoly.holes.emplace_back(Polygon(*grid.contours()[i]));
-						SVG svg(debug_out_path("%s-%d.svg", "FillBase-mark_boundary_segments_touching_infill0", iRun ++).c_str(), get_extents(expoly));
-						svg.draw(expoly, "green");
-						svg.draw(polyline, "blue");
-						svg.draw(Line(pt1.cast<coord_t>(), pt2.cast<coord_t>()), "magenta", scale_(0.1));
-					}
+                                        {
+                                                static size_t iRun = 0;
+                                                ExPolygon expoly(Polygon(*grid.contours().front()));
+                                                for (size_t i = 1; i < grid.contours().size(); ++i)
+                                                        expoly.holes.emplace_back(Polygon(*grid.contours()[i]));
+                                                SVG svg(debug_out_path("%s-%d.svg", "FillBase-mark_boundary_segments_touching_infill0", iRun ++).c_str(), get_extents(expoly));
+                                                svg.draw(expoly, "green");
+                                                svg.draw(polyline, "blue");
+                                                svg.draw(Line(pt1.cast<coord_t>(), pt2.cast<coord_t>()), "magenta", scale_(0.1));
+                                        }
 #endif
-				visitor.init(pt1, pt2);
-				// Simulate tracing of a thick line. This only works reliably if distance_colliding <= grid cell size.
-				Vec2d v = (pt2 - pt1).normalized() * distance_colliding;
-				Vec2d vperp = perp(v);
-				Vec2d a = pt1 - v - vperp;
-				Vec2d b = pt2 + v - vperp;
+                                visitor.init(pt1, pt2);
+                                // Simulate tracing of a thick line. This only works reliably if distance_colliding <= grid cell size.
+                                Vec2d v = (pt2 - pt1).normalized() * distance_colliding;
+                                Vec2d vperp = perp(v);
+                                Vec2d a = pt1 - v - vperp;
+                                Vec2d b = pt2 + v - vperp;
                 assert(grid.bbox().contains(a.cast<coord_t>()));
                 assert(grid.bbox().contains(b.cast<coord_t>()));
-				grid.visit_cells_intersecting_line(a.cast<coord_t>(), b.cast<coord_t>(), visitor);
-				a = pt1 - v + vperp;
-				b = pt2 + v + vperp;
+                                grid.visit_cells_intersecting_line(a.cast<coord_t>(), b.cast<coord_t>(), visitor);
+                                a = pt1 - v + vperp;
+                                b = pt2 + v + vperp;
                 assert(grid.bbox().contains(a.cast<coord_t>()));
                 assert(grid.bbox().contains(b.cast<coord_t>()));
                 grid.visit_cells_intersecting_line(a.cast<coord_t>(), b.cast<coord_t>(), visitor);
@@ -1222,7 +1222,7 @@ void mark_boundary_segments_touching_infill(
 #ifdef INFILL_DEBUG_OUTPUT
 //                export_infill_to_svg(boundary, boundary_parameters, boundary_intersections, infill, distance_colliding * 2, debug_out_path("%s-%03d-%03d-%03d.svg", "FillBase-mark_boundary_segments_touching_infill-step", iRun, iStep, int(point_idx)), { polyline });
 #endif // INFILL_DEBUG_OUTPUT
-			}
+                        }
 #ifdef INFILL_DEBUG_OUTPUT
             Polylines perimeter_overlaps;
             export_infill_to_svg(boundary, boundary_parameters, boundary_intersections, infill, distance_colliding * 2, debug_out_path("%s-%03d-%03d.svg", "FillBase-mark_boundary_segments_touching_infill-step", iRun, iStep), visitor.perimeter_overlaps, { polyline });
@@ -1230,7 +1230,7 @@ void mark_boundary_segments_touching_infill(
             perimeter_overlaps.clear();
 #endif // INFILL_DEBUG_OUTPUT
         }
-	}
+        }
 
 #ifdef INFILL_DEBUG_OUTPUT
     export_infill_to_svg(boundary, boundary_parameters, boundary_intersections, infill, distance_colliding * 2, debug_out_path("%s-%03d.svg", "FillBase-mark_boundary_segments_touching_infill-end", iRun), perimeter_overlaps);
@@ -1240,7 +1240,7 @@ void mark_boundary_segments_touching_infill(
 
 void Fill::connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary_src, Polylines &polylines_out, const double spacing, const FillParams &params)
 {
-	assert(! boundary_src.contour.points.empty());
+        assert(! boundary_src.contour.points.empty());
     auto polygons_src = reserve_vector<const Polygon*>(boundary_src.holes.size() + 1);
     polygons_src.emplace_back(&boundary_src.contour);
     for (const Polygon &polygon : boundary_src.holes)
@@ -1577,7 +1577,7 @@ BoundingBox Fill::extended_object_bounding_box() const
 
 void Fill::connect_infill(Polylines &&infill_ordered, const std::vector<const Polygon*> &boundary_src, const BoundingBox &bbox, Polylines &polylines_out, const double spacing, const FillParams &params)
 {
-	assert(! infill_ordered.empty());
+        assert(! infill_ordered.empty());
     assert(params.anchor_length     >= 0.);
     assert(params.anchor_length_max >= 0.01f);
     assert(params.anchor_length_max >= params.anchor_length);
@@ -1638,8 +1638,8 @@ void Fill::connect_infill(Polylines &&infill_ordered, const std::vector<const Po
     std::sort(connections_sorted.begin(), connections_sorted.end(), [](const ConnectionCost& l, const ConnectionCost& r) { return l.cost < r.cost; });
 
     for (ConnectionCost &connection_cost : connections_sorted) {
-		ContourIntersectionPoint *cp1    = &graph.map_infill_end_point_to_boundary[connection_cost.idx_first * 2 + 1];
-		ContourIntersectionPoint *cp2    = &graph.map_infill_end_point_to_boundary[(connection_cost.idx_first + 1) * 2];
+                ContourIntersectionPoint *cp1    = &graph.map_infill_end_point_to_boundary[connection_cost.idx_first * 2 + 1];
+                ContourIntersectionPoint *cp2    = &graph.map_infill_end_point_to_boundary[(connection_cost.idx_first + 1) * 2];
         assert(cp1 != cp2);
         assert(cp1->contour_idx == cp2->contour_idx && cp1->contour_idx != boundary_idx_unconnected);
         if (cp1->consumed || cp2->consumed)
@@ -1682,7 +1682,7 @@ void Fill::connect_infill(Polylines &&infill_ordered, const std::vector<const Po
             take_limited(infill_ordered[idx_first],  graph.boundary[cp1->contour_idx], graph.boundary_params[cp1->contour_idx], cp1, cp2, connection_cost.reversed, anchor_length, line_half_width);
             take_limited(infill_ordered[idx_second], graph.boundary[cp1->contour_idx], graph.boundary_params[cp1->contour_idx], cp2, cp1, ! connection_cost.reversed, anchor_length, line_half_width);
         }
-	}
+        }
 #endif
 
     struct Arc {
@@ -1804,9 +1804,9 @@ void Fill::connect_infill(Polylines &&infill_ordered, const std::vector<const Po
         }
 
     polylines_out.reserve(polylines_out.size() + std::count_if(infill_ordered.begin(), infill_ordered.end(), [](const Polyline &pl) { return ! pl.empty(); }));
-	for (Polyline &pl : infill_ordered)
-		if (! pl.empty())
-			polylines_out.emplace_back(std::move(pl));
+        for (Polyline &pl : infill_ordered)
+                if (! pl.empty())
+                        polylines_out.emplace_back(std::move(pl));
 }
 
 void Fill::chain_or_connect_infill(Polylines &&infill_ordered, const ExPolygon &boundary, Polylines &polylines_out, const double spacing, const FillParams &params)
@@ -2185,9 +2185,9 @@ static double evaluate_support_arch_cost(const Polyline &pl)
 
     double dmax = 0;
     // Maximum distance in Y axis out of the (ymin, ymax) band and from the (front, back) line.
-    Linef line { front.cast<double>(), back.cast<double>() };
+    Line line {front, back};
     for (const Point &pt : pl.points)
-        dmax = std::max<double>(std::max(dmax, line_alg::distance_to(line, Vec2d(pt.cast<double>()))), std::max(pt.y() - ymax, ymin - pt.y()));
+        dmax = std::max<double>(std::max(dmax, line.distance_to(pt)), std::max(pt.y() - ymax, ymin - pt.y()));
     return dmax;
 }
 

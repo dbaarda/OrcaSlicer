@@ -29,28 +29,29 @@ using Vector = Point;
 template<int N, int M, class T>
 using Mat = Eigen::Matrix<T, N, M, Eigen::DontAlign, N, M>;
 
-template<int N, class T> using Vec = Mat<N, 1, T>;
+template<int N, class T>
+using Vec = Mat<N, 1, T>;
 
 // Eigen types, to replace the Slic3r's own types in the future.
 // Vector types with a fixed point coordinate base type.
-using Vec2crd = Eigen::Matrix<coord_t,  2, 1, Eigen::DontAlign>;
-using Vec3crd = Eigen::Matrix<coord_t,  3, 1, Eigen::DontAlign>;
-// using Vec2i   = Eigen::Matrix<int,      2, 1, Eigen::DontAlign>;
-// using Vec3i   = Eigen::Matrix<int,      3, 1, Eigen::DontAlign>;
-// using Vec4i   = Eigen::Matrix<int,      4, 1, Eigen::DontAlign>;
-using Vec2i32 = Eigen::Matrix<int32_t,  2, 1, Eigen::DontAlign>;
-using Vec2i64 = Eigen::Matrix<int64_t,  2, 1, Eigen::DontAlign>;
-using Vec3i32 = Eigen::Matrix<int32_t,  3, 1, Eigen::DontAlign>;
-using Vec3i64 = Eigen::Matrix<int64_t,  3, 1, Eigen::DontAlign>;
-using Vec4i32 = Eigen::Matrix<int32_t,  4, 1, Eigen::DontAlign>;
+using Vec2crd = Vec<2, coord_t>;
+using Vec3crd = Vec<3, coord_t>;
+// using Vec2i   = Vec<2, int>;
+// using Vec3i   = Vec<3, int>;
+// using Vec4i   = Vec<4, int>;
+using Vec2i32 = Vec<2, int32_t>;
+using Vec2i64 = Vec<2, int64_t>;
+using Vec3i32 = Vec<3, int32_t>;
+using Vec3i64 = Vec<3, int64_t>;
+using Vec4i32 = Vec<4, int32_t>;
 
 // Vector types with a double coordinate base type.
-using Vec2f   = Eigen::Matrix<float,    2, 1, Eigen::DontAlign>;
-using Vec3f   = Eigen::Matrix<float,    3, 1, Eigen::DontAlign>;
-using Vec4f   = Eigen::Matrix<float,    4, 1, Eigen::DontAlign>;
-using Vec2d   = Eigen::Matrix<double,   2, 1, Eigen::DontAlign>;
-using Vec3d   = Eigen::Matrix<double,   3, 1, Eigen::DontAlign>;
-using Vec4d   = Eigen::Matrix<double,   4, 1, Eigen::DontAlign>;
+using Vec2f   = Vec<2, float>;
+using Vec3f   = Vec<3, float>;
+using Vec4f   = Vec<4, float>;
+using Vec2d   = Vec<2, double>;
+using Vec3d   = Vec<3, double>;
+using Vec4d   = Vec<4, double>;
 
 template<typename BaseType>
 using PointsAllocator = tbb::scalable_allocator<BaseType>;
@@ -64,37 +65,26 @@ using Pointf3s       = std::vector<Vec3d>;
 
 using VecOfPoints    = std::vector<Points, PointsAllocator<Points>>;
 
-using Matrix2f       = Eigen::Matrix<float,  2, 2, Eigen::DontAlign>;
-using Matrix2d       = Eigen::Matrix<double, 2, 2, Eigen::DontAlign>;
-using Matrix3f       = Eigen::Matrix<float,  3, 3, Eigen::DontAlign>;
-using Matrix3d       = Eigen::Matrix<double, 3, 3, Eigen::DontAlign>;
-using Matrix4f       = Eigen::Matrix<float,  4, 4, Eigen::DontAlign>;
-using Matrix4d       = Eigen::Matrix<double, 4, 4, Eigen::DontAlign>;
+using Matrix2f       = Mat<2, 2, float>;
+using Matrix2d       = Mat<2, 2, double>;
+using Matrix3f       = Mat<3, 3, float>;
+using Matrix3d       = Mat<3, 3, double>;
+using Matrix4f       = Mat<4, 4, float>;
+using Matrix4d       = Mat<4, 4, double>;
 
 template<int N, class T>
-using Transform = Eigen::Transform<float, N, Eigen::Affine, Eigen::DontAlign>;
+using Transform = Eigen::Transform<T, N, Eigen::Affine, Eigen::DontAlign>;
 
-using Transform2f    = Eigen::Transform<float,  2, Eigen::Affine, Eigen::DontAlign>;
-using Transform2d    = Eigen::Transform<double, 2, Eigen::Affine, Eigen::DontAlign>;
-using Transform3f    = Eigen::Transform<float,  3, Eigen::Affine, Eigen::DontAlign>;
-using Transform3d    = Eigen::Transform<double, 3, Eigen::Affine, Eigen::DontAlign>;
-
-// using ColorRGBA      = std::array<float, 4>;
-// I don't know why Eigen::Transform::Identity() return a const object...
-template<int N, class T> Transform<N, T> identity() { return Transform<N, T>::Identity(); }
-inline const auto &identity3f = identity<3, float>;
-inline const auto &identity3d = identity<3, double>;
+using Transform2f    = Transform<2, float>;
+using Transform2d    = Transform<2, double>;
+using Transform3f    = Transform<3, float>;
+using Transform3d    = Transform<3, double>;
 
 inline bool operator<(const Vec2d &lhs, const Vec2d &rhs) { return lhs.x() < rhs.x() || (lhs.x() == rhs.x() && lhs.y() < rhs.y()); }
 
+// Disable cross2() for int32_t coordinate points to prevent overflow? Is that why this is here?
 template<int Options>
 int32_t cross2(const Eigen::MatrixBase<Eigen::Matrix<int32_t, 2, 1, Options>> &v1, const Eigen::MatrixBase<Eigen::Matrix<int32_t, 2, 1, Options>> &v2) = delete;
-
-template<typename T, int Options>
-inline T cross2(const Eigen::MatrixBase<Eigen::Matrix<T, 2, 1, Options>> &v1, const Eigen::MatrixBase<Eigen::Matrix<T, 2, 1, Options>> &v2)
-{
-    return v1.x() * v2.y() - v1.y() * v2.x();
-}
 
 template<typename Derived, typename Derived2>
 inline typename Derived::Scalar cross2(const Eigen::MatrixBase<Derived> &v1, const Eigen::MatrixBase<Derived2> &v2)
@@ -105,7 +95,7 @@ inline typename Derived::Scalar cross2(const Eigen::MatrixBase<Derived> &v1, con
 
 // 2D vector perpendicular to the argument.
 template<typename Derived>
-inline Eigen::Matrix<typename Derived::Scalar, 2, 1, Eigen::DontAlign> perp(const Eigen::MatrixBase<Derived> &v)
+inline Vec<2, typename Derived::Scalar> perp(const Eigen::MatrixBase<Derived> &v)
 {
     static_assert(Derived::IsVectorAtCompileTime && int(Derived::SizeAtCompileTime) == 2, "perp(): parameter is not a 2D vector");
     return { - v.y(), v.x() };
@@ -121,14 +111,30 @@ inline double angle(const Eigen::MatrixBase<Derived> &v1, const Eigen::MatrixBas
     return atan2(cross2(v1d, v2d), v1d.dot(v2d));
 }
 
+// distance squared from v1 to v2 as a double.
+template<typename Derived, typename Derived2>
+inline double dist2(const Eigen::MatrixBase<Derived> &v1, const Eigen::MatrixBase<Derived2> &v2) {
+    static_assert(Derived::IsVectorAtCompileTime, "dist2(): first parameter is not a vector.");
+    static_assert(Derived2::IsVectorAtCompileTime, "dist2(): second parameter is not a vector.");
+    static_assert(Derived::SizeAtCompileTime == Derived2::SizeAtCompileTime, "dist2(): first and second operand are not the same size.");
+    static_assert(std::is_same<typename Derived::Scalar, typename Derived2::Scalar>::value, "dist2(): Scalar types of 1st and 2nd operand are different.");
+    return (v2 - v1).template cast<double>().squaredNorm();
+}
+
+// distance from v1 to v2 as a double.
+template<typename Derived, typename Derived2>
+inline double dist(const Eigen::MatrixBase<Derived> &v1, const Eigen::MatrixBase<Derived2> &v2) {
+    return std::sqrt(dist2<Derived, Derived2>(v1, v2));
+}
+
 template<typename Derived>
-Eigen::Matrix<typename Derived::Scalar, 2, 1, Eigen::DontAlign> to_2d(const Eigen::MatrixBase<Derived> &ptN) {
+Vec<2, typename Derived::Scalar> to_2d(const Eigen::MatrixBase<Derived> &ptN) {
     static_assert(Derived::IsVectorAtCompileTime && int(Derived::SizeAtCompileTime) >= 3, "to_2d(): first parameter is not a 3D or higher dimensional vector");
     return ptN.template head<2>();
 }
 
 template<typename Derived>
-inline Eigen::Matrix<typename Derived::Scalar, 3, 1, Eigen::DontAlign> to_3d(const Eigen::MatrixBase<Derived> &pt, const typename Derived::Scalar z) {
+inline Vec<3, typename Derived::Scalar> to_3d(const Eigen::MatrixBase<Derived> &pt, const typename Derived::Scalar z) {
     static_assert(Derived::IsVectorAtCompileTime && int(Derived::SizeAtCompileTime) == 2, "to_3d(): first parameter is not a 2D vector");
     return { pt.x(), pt.y(), z };
 }
@@ -170,8 +176,6 @@ inline const Vec3d get_base(unsigned index, const Transform3d::LinearPart &trans
 inline const Vec3d get_x_base(const Transform3d::LinearPart &transform) { return get_base(0, transform); }
 inline const Vec3d get_y_base(const Transform3d::LinearPart &transform) { return get_base(1, transform); }
 inline const Vec3d get_z_base(const Transform3d::LinearPart &transform) { return get_base(2, transform); }
-
-template<int N, class T> using Vec = Eigen::Matrix<T,  N, 1, Eigen::DontAlign, N, 1>;
 
 class Point : public Vec2crd
 {
@@ -245,8 +249,8 @@ public:
     Point  projection_onto(const MultiPoint &poly) const;
     Point  projection_onto(const Line &line) const;
 
-    double distance_to_squared(const Point &point) const { return (point - *this).cast<double>().squaredNorm(); }
-    double distance_to(const Point &point) const { return std::sqrt(distance_to_squared(point)); }
+    double distance_to_squared(const Point &point) const { return dist2(*this, point); }
+    double distance_to(const Point &point) const { return dist(*this, point); }
 };
 
 inline bool operator<(const Point &l, const Point &r)

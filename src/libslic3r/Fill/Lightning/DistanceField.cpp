@@ -59,7 +59,7 @@ DistanceField::DistanceField(const coord_t& radius, const Polygons& current_outl
                     if (contour.size() > 2) {
                         Point prev = contour.points.back();
                         for (const Point &p2 : contour.points) {
-                            d2   = std::min(d2, Line::distance_to_squared(sp, prev, p2));
+                            d2   = std::min(d2, Line(prev, p2).distance_to_squared(sp));
                             prev = p2;
                         }
                     }

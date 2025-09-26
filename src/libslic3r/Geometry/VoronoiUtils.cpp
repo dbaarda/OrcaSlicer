@@ -129,8 +129,7 @@ VoronoiUtils::discretize_parabola(const Point &source_point, const Segment &sour
     const Point   ap = source_point - a;
     const coord_t px = ap.cast<int64_t>().dot(ab.cast<int64_t>()) / ab_size;
 
-    Point pxx;
-    Line(a, b).distance_to_infinite_squared(source_point, &pxx);
+    Point pxx = Line(a, b).projected_point(source_point);
     const Point   ppxx = pxx - source_point;
     const coord_t d    = ppxx.cast<int64_t>().norm();
 

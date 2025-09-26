@@ -182,7 +182,7 @@ Points MultiPoint::_douglas_peucker(const Points &pts, const double tolerance)
                 size_t furthest_idx = anchor_idx;
                 // find point furthest from line seg created by (anchor, floater) and note it
                 for (size_t i = anchor_idx + 1; i < floater_idx; ++ i) {
-                    double dist_sq = Line::distance_to_squared(pts[i], *anchor, *floater);
+                    double dist_sq = Line(*anchor, *floater).distance_to_squared(pts[i]);
                     if (dist_sq > max_dist_sq) {
                         max_dist_sq  = dist_sq;
                         furthest_idx = i;
@@ -384,7 +384,7 @@ Points MultiPoint::concave_hull_2d(const Points& pts, const double tolerence)
     // Calculate the minimum distance between segments in A and points in B
     for (size_t i = 0; i < A.size() - 1; ++i) {
         for (const auto& b : B) {
-          double dist2 = Line::distance_to_squared(b, A[i], A[i + 1]);
+            double dist2 = Line(A[i], A[i + 1]).distance_to_squared(b);
             min_dist2 = std::min(min_dist2, dist2);
         }
     }
@@ -392,7 +392,7 @@ Points MultiPoint::concave_hull_2d(const Points& pts, const double tolerence)
     // Calculate the minimum distance between segments in B and points in A
     for (size_t i = 0; i < B.size() - 1; ++i) {
         for (const auto& a : A) {
-            double dist2 = Line::distance_to_squared(a, B[i], B[i + 1]);
+            double dist2 = Line(B[i], B[i + 1]).distance_to_squared(a);
             min_dist2 = std::min(min_dist2, dist2);
         }
     }

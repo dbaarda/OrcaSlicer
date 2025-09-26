@@ -129,7 +129,7 @@ void ExtrusionLine::simplify(const int64_t smallest_line_segment_squared, const 
         const auto    height_2 = int64_t(double(area_removed_so_far) * double(area_removed_so_far) / double(base_length_2));
         const int64_t extrusion_area_error = calculateExtrusionAreaDeviationError(previous, current, next);
         if ((height_2 <= scaled<coord_t>(0.001) //Almost exactly colinear (barring rounding errors).
-             && Line::distance_to_infinite(current.p, previous.p, next.p) <= scaled<double>(0.001)) // Make sure that height_2 is not small because of cancellation of positive and negative areas
+             && Line(previous.p, next.p).projected_distance_squared(current.p) <= scaled<double>(0.001*0.001)) // Make sure that height_2 is not small because of cancellation of positive and negative areas
             // We shouldn't remove middle junctions of colinear segments if the area changed for the C-P segment is exceeding the maximum allowed
              && extrusion_area_error <= maximum_extrusion_area_deviation)
         {
@@ -157,15 +157,11 @@ void ExtrusionLine::simplify(const int64_t smallest_line_segment_squared, const 
                 bool has_intersection = Line(previous_previous.p, previous.p).intersection_infinite(Line(current.p, next.p), &intersection_point);
                 const auto dist_greater = [](const Point& p1, const Point& p2, const int64_t threshold) {
                     const auto vec = (p1 - p2).cwiseAbs().cast<uint64_t>().eval();
-                    if(vec.x() > threshold || vec.y() > threshold) {
-                        // If this condition is true, the distance is definitely greater than the threshold.
-                        // We don't need to calculate the squared norm at all, which avoid potential arithmetic overflow.
-                        return true;
-                    }
-                    return vec.squaredNorm() > threshold;
+                    // This uses short-circuit boolean evaluation to avoid calculating squaredNorm() if we don't need to.
+                    return vec.x() > threshold || vec.y() > threshold || vec.squaredNorm() > threshold;
                 };
                 if (!has_intersection
-                    || Line::distance_to_infinite_squared(intersection_point, previous.p, current.p) > double(allowed_error_distance_squared)
+                    || Line(previous.p, current.p).projected_distance_squared(intersection_point) > double(allowed_error_distance_squared)
                     || dist_greater(intersection_point, previous.p, smallest_line_segment_squared)  // The intersection point is way too far from the 'previous'
                     || dist_greater(intersection_point, current.p, smallest_line_segment_squared))  // and 'current' points, so it shouldn't replace 'current'
                 {

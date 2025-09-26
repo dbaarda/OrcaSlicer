@@ -40,16 +40,6 @@ bool Line::intersection_infinite(const Line &other, Point* point) const
     return true;
 }
 
-double Line::perp_distance_to(const Point &point) const
-{
-    const Line  &line = *this;
-    const Vec2d  v  = (line.b - line.a).cast<double>();
-    const Vec2d  va = (point - line.a).cast<double>();
-    if (line.a == line.b)
-        return va.norm();
-    return std::abs(cross2(v, va)) / v.norm();
-}
-
 double Line::orientation() const
 {
     double angle = this->atan2_();
@@ -96,13 +86,13 @@ bool Line::intersection(const Line &l2, Point *intersection) const
 
 bool Line::clip_with_bbox(const BoundingBox &bbox)
 {
-	Vec2d x0clip, x1clip;
-	bool result = Geometry::liang_barsky_line_clipping<double>(this->a.cast<double>(), this->b.cast<double>(), BoundingBoxf(bbox.min.cast<double>(), bbox.max.cast<double>()), x0clip, x1clip);
-	if (result) {
-		this->a = x0clip.cast<coord_t>();
-		this->b = x1clip.cast<coord_t>();
-	}
-	return result;
+        Vec2d x0clip, x1clip;
+        bool result = Geometry::liang_barsky_line_clipping<double>(this->a.cast<double>(), this->b.cast<double>(), BoundingBoxf(bbox.min.cast<double>(), bbox.max.cast<double>()), x0clip, x1clip);
+        if (result) {
+                this->a = x0clip.cast<coord_t>();
+                this->b = x1clip.cast<coord_t>();
+        }
+        return result;
 }
 
 void Line::extend(double offset)

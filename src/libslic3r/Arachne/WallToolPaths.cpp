@@ -144,7 +144,7 @@ void simplify(Polygon &thiss, const int64_t smallest_line_segment_squared, const
         //h^2 = L^2 / b^2     [factor the divisor]
         const int64_t height_2 = double(area_removed_so_far) * double(area_removed_so_far) / double(base_length_2);
         if ((height_2 <= Slic3r::sqr(scaled<coord_t>(0.005)) //Almost exactly colinear (barring rounding errors).
-             && Line::distance_to_infinite(current, previous, next) <= scaled<double>(0.005))) // make sure that height_2 is not small because of cancellation of positive and negative areas
+             && Line(previous, next).projected_distance_squared(current) <= scaled<double>(0.005*0.005))) // make sure that height_2 is not small because of cancellation of positive and negative areas
             continue;
 
         if (length2 < smallest_line_segment_squared
@@ -159,7 +159,7 @@ void simplify(Polygon &thiss, const int64_t smallest_line_segment_squared, const
                 Point intersection_point;
                 bool has_intersection = Line(previous_previous, previous).intersection_infinite(Line(current, next), &intersection_point);
                 if (!has_intersection
-                    || Line::distance_to_infinite_squared(intersection_point, previous, current) > double(allowed_error_distance_squared)
+                    || Line(previous, current).projected_distance_squared(intersection_point) > double(allowed_error_distance_squared)
                     || (intersection_point - previous).cast<int64_t>().squaredNorm() > smallest_line_segment_squared  // The intersection point is way too far from the 'previous'
                     || (intersection_point - next).cast<int64_t>().squaredNorm() > smallest_line_segment_squared)     // and 'next' points, so it shouldn't replace 'current'
                 {
@@ -278,8 +278,7 @@ void fixSelfIntersections(const coord_t epsilon, Polygons &thiss)
                     continue;
 
                 const Line segment(thiss[line.poly_idx][line.point_idx], thiss[line.poly_idx][line_next_idx]);
-                Point      segment_closest_point;
-                segment.distance_to_squared(pt, &segment_closest_point);
+                Point segment_closest_point = segment.closest_point(pt);
 
                 if (half_epsilon_sqrd >= (pt - segment_closest_point).cast<int64_t>().squaredNorm()) {
                     const Point  &other = thiss[poly_idx][(point_idx + 1) % pathlen];
@@ -506,10 +505,10 @@ const std::vector<VariableWidthLines> &WallToolPaths::generate()
     const float perimeter_extrusion_width          = Flow::rounded_rectangle_extrusion_width_from_spacing(unscale<float>(bead_width_x), float(this->layer_height));
 
     const coord_t wall_transition_length = scaled<coord_t>(this->m_params.wall_transition_length);
-	
-	const double wall_split_middle_threshold = std::clamp(2. * unscaled<double>(this->min_bead_width) / external_perimeter_extrusion_width - 1., 0.01, 0.99); // For an uneven nr. of lines: When to split the middle wall into two.
+
+        const double wall_split_middle_threshold = std::clamp(2. * unscaled<double>(this->min_bead_width) / external_perimeter_extrusion_width - 1., 0.01, 0.99); // For an uneven nr. of lines: When to split the middle wall into two.
     const double wall_add_middle_threshold   = std::clamp(unscaled<double>(this->min_bead_width) / perimeter_extrusion_width, 0.01, 0.99); // For an even nr. of lines: When to add a new middle in between the innermost two walls.
-    
+
     const int wall_distribution_count = this->m_params.wall_distribution_count;
     const size_t max_bead_count = (inset_count < std::numeric_limits<coord_t>::max() / 2) ? 2 * inset_count : std::numeric_limits<coord_t>::max();
     const auto beading_strat = BeadingStrategyFactory::makeStrategy

@@ -129,14 +129,15 @@ GroundingLocation Layer::getBestGroundingLocation
     // Closest point on current_outlines to unsupported_location:
     Point node_location;
     {
-        double d2 = std::numeric_limits<double>::max();
+        double d2_min = std::numeric_limits<double>::max();
         for (const Polygon &contour : current_outlines)
             if (contour.size() > 2) {
                 Point prev = contour.points.back();
                 for (const Point &p2 : contour.points) {
-                    Point closest_point;
-                    if (double d = line_alg::distance_to_squared(Line{prev, p2}, unsupported_location, &closest_point); d < d2) {
-                        d2 = d;
+                    Point closest_point = Line(prev, p2).closest_point(unsupported_location);
+                    double d2 = unsupported_location.distance_to_squared(closest_point);
+                    if (d2 < d2_min) {
+                        d2_min = d2;
                         node_location = closest_point;
                     }
                     prev = p2;
@@ -362,7 +363,7 @@ static unsigned int moveInside(const Polygons& polygons, Point& from, int distan
                     {
                         bestDist2 = dist2;
                         bestPoly = poly_idx;
-                        if (distance == 0) { 
+                        if (distance == 0) {
                             ret = x;
                         } else {
                             // inward direction irrespective of sign of [distance]
