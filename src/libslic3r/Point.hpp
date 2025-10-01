@@ -80,6 +80,11 @@ using Transform2d    = Transform<2, double>;
 using Transform3f    = Transform<3, float>;
 using Transform3d    = Transform<3, double>;
 
+// I don't know why Eigen::Transform::Identity() return a const object...
+template<int N, class T> Transform<N, T> identity() { return Transform<N, T>::Identity(); }
+inline const auto &identity3f = identity<3, float>;
+inline const auto &identity3d = identity<3, double>;
+
 inline bool operator<(const Vec2d &lhs, const Vec2d &rhs) { return lhs.x() < rhs.x() || (lhs.x() == rhs.x() && lhs.y() < rhs.y()); }
 
 // Disable cross2() for int32_t coordinate points to prevent overflow? Is that why this is here?
