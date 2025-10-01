@@ -75,17 +75,77 @@ for the same geometry.
 
 Often you want to find the minimum distance for multile different instances,
 and there can be fast heuristics for comparing distances that don't always
-require computing the distance accurately.
+require computing the distance accurately. Sometimes, but less often, you want
+to find the maxiumum distance.
 
 Sometimes you only need to find the minimum distance. Sometimes you need
 to find the closest instance and don't need the distance. Sometimes you need
 both. Sometimes you need to find the closest point, which might not be a point
 defining the instance but a point on a line or plane that the instance defines.
 
+
+// get the result of min(v.squaredNorm(), len2) but short-circuit evaluating
+//the length-squared if len2 is clearly shorter.
+coord2_t min_length2(Vec2crd v, coord2_t len2)
+{
+   coord2_t x2,y2,l2;
+   if ((v.x > len2) || (v.x < -len2) || (v.y > len2) || (v.y < - len) || ((x2 = sqr(v.x)) > len2) || ((y2 =
+   sqr(v.y)) > len2) || ((l2 = x2 + y2) >= len2))
+     return len2;
+   return l2;
+}
+
+// Note min_length2() is cheaper, but if you really need the actual length...
+coord2_t min_length(Vec2crd v, coord_t len)
+{
+   coord2_t l2;
+   if ((v.x > len) || (v.y > len) || ((l2 = sqr(x) + sqr(y)) >= len*len))
+     return len;
+   return sqrt(l2);
+}
+
+// returns true if length2(v) < len2, and updates len2 to the new minimum length. Use
+// like;
+
+// for (v : vects) if (is_length2_lt(v, minlen)) min_v = v;
+bool is_length2_lt(Vec2crd v, coord2_t& len2)
+{
+  coord2_t l2 = len2;
+  return ((len2 = min_length2(v, len2)) < l2)
+}
+
+// returns the shorter of v and vmin
+Vect min_vect_len2(Vect v, Vect vmin, coord2_t& len2)
+{
+  return is_length2_lt(v, len2) ? v : vmin;
+}
+
+
+bool is_vect_lt(Vect2crd v, Vect2crd& vmin, coord2_t& len2=-1)
+{
+  if (v
+
+
+###### Existing Implementations and where used.
+
+Eigen::
+
+* norm, squaredNorm: returns Scalar type so will overflow for coord, so they need
+cast<double> or cast<int64_t> before using them. Used in lots of places.
+
+* projected distance: infinite-line projected point and projected point
+distance. infinite line is define with a point on the line and a direction
+vector. Doesn't look particularly optimized, but maybe uses vector ops? Not
+used?
+
+Point: lots
+
+
+
 ##### Coordinates
 
 There are several different coordinate types, with the default `coord_t` being
-an alias for `int32_t` (unless a compiler option toggles it to `int64_t`) used
+an alias for `int32_t` (unless a build option toggles it to `int64_t`) used
 as a "fixed point" integer where i*10e-6 is the distance in mm. There are
 scale() and unscale() methods for scaling to/from coord_t, usually to/from
 double. It's also possible to cast to/from other types without re-scaling.
@@ -110,6 +170,33 @@ Note the following Eigen docs cover using a plugin to add methods and the
 example adds length(), distanceTo() squaredDistanceTo() etc;
 
 https://libeigen.gitlab.io/eigen/docs-nightly/TopicCustomizing_Plugins.html
+
+Err... correction: it seems coord_t is actually int64_t since some time last
+year. It's not really a build option, it's a "#if 0" selecting between int32_t
+and int64_t. There appears to still be lots of code that assumes it's int32_t
+that is doing casts to int64_t or double to avoid overflows calculating
+distances. It would be nice if this really was a clean build option with the
+code correctly compiling with either, because using int32_t would be faster
+and use less memory. However, it seems large-scale printers and large numbers
+of build plates support was actually the motivating factor for the switch, so
+it looks like int64_t is going to be the default. IMHO it should either be
+made to compile/work for both as a build option, or all the int32_t
+assumptions and support should be ripped out.
+
+To correctly support coord_t as both int32_t or int64_t would need some kind
+of abstraction-wrapper for handling distances safely. We could use these for
+squared distances;
+
+coord2_t = uint64_t  // type for squared distances AKA areas.
+
+coord2fast_t = uint32_t // fast type for squared distances where sqr() does
+>>16 before squaring, and sqrt() does <<16 after std::sqrt(). Only accurate to
++-0.066mm, but maybe accurate enough for many applications?
+
+Note C typedefs are just type aliases and are not strongly typed, so you can't
+e.g. overload sqrt for different typdefs of the same base type. So to do
+strong-typing you need to hide it inside a struct. Or maybe you can do some
+kind of template magic.
 
 ##### Features
 
