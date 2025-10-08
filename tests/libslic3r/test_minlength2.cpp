@@ -1,3 +1,19 @@
+/* Compare alternative min_length() and min_length2() implementions.
+ *
+ * This doesn't cover anything in libslic3r, and instead tests and benchmarks
+ * different alternatives for implementing min_length() and min_length2()
+ * using different coord_t and coord2_t (squared coordinates) types. This was
+ * done to figure out the best alternatives for coordinate types and how to
+ * find minimum lengths.
+ *
+ * The tests cover using unit32_t and uint32_t for coord_t as type `T`, and a
+ * rescaled int32_t, int64_t, and double for coord2_t as `T2`.
+ *
+ * The different min_length() and min_length2() implementations use a variety
+ * of short-circuit heuristics to quickly identify the shorter length or
+ * length-squared before fully calculating the vector length, and various
+ * ways of calculating the length.
+ */
 #include <catch2/catch.hpp>
 
 #include "libslic3r/Point.hpp"
