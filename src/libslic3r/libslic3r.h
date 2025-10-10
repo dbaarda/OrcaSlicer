@@ -35,12 +35,67 @@
 #include "Technologies.hpp"
 #include "Semver.hpp"
 
+/****
+ * The coordinate units type coord_t is an integer scaled by a scaling
+ * factor. In the past int32_t was used but it now uses to int64_t by
+ * default. The SCALING_FACTOR used is normally SCALING_FACTOR_INTERNAL or
+ * 1e-6 mm (nanometer resolution), but for large printers it can be changed
+ * at run-time by setting it to SCALING_FACTOR_INTERNAL_LARGE_PRINTER or
+ * 1e-5 (100 micrometer resolution).
+ *
+ * Using int32_t supports a range of +-2.147m (2^31*1e-6mm) for
+ * SCALING_FACTOR=1e-6, or +-21.47m (2^31*1e-5mm) for SCALING_FACTOR=1e-5.
+ * Note however that calculating lengths or distances requires squaring
+ * coordinates, and calculating areas also requires multiplying lengths
+ * together, so calcuating distances or areas with these units will overflow
+ * for anything longer than 0.04634mm (sqrt(2^31) * 1e-6mm) for
+ * SCALING_FACTOR=1e-6 or 0.463mm for SCALING_FACTOR=1e-5.
+ *
+ * Using int64_t for coord_t supports a range of +-9.223 million km for
+ * SCALING_FACTOR=1e-6, but will still overflow when calculating distances or
+ * areas for lengths up to +-3.037m (sqrt(2^63)*1e-6mm). This means a larger
+ * scaling factor might still be needed when calculating lengths dispite the
+ * huge length range supported.
+ *
+ * Because of the increased overflow risk, there is a separate coord2_t type
+ * for squared distances or areas. When calculating lengths or areas coord_t
+ * values are first converted to this type. These units are area in mm^2
+ * normally scaled to SCALING_FACTOR^2, but in theory a different scaling
+ * factor could be used to give a greater range at the sacrifice of some
+ * resolution. Using int64_t for coord2_t supports lengths +-3.037m for
+ * SCALING_FACTOR=1e-6, or +-30.37m for SCALING_FACTOR=1e-5.
+ *
+ * There are standard functions provided for various operations on coord_t
+ * and coord2_t coordinates that correctly and optimally handle the
+ * transformations required to avoid overflow. Although using int64_t for
+ * coord_t means a separate coord2_t type is not really needed, code should
+ * not assume that and should always use the provided functions which will
+ * optimize to no-ops when no type-transformations are required.
+ *
+ * There is also `coordf_t` which uses a double. This can also be used for
+ * calculating distances or areas, but is a little more computationally
+ * expensive, so it's better to use coord2_t unless you really need the
+ * length or area as a double. This coordinate type is also the best to use
+ * for calculating volumes, which are length-cubed and will overflow even
+ * int64_t.
+ *
+ */
 #if 0
 // Saves around 32% RAM after slicing step, 6.7% after G-code export (tested on PrusaSlicer 2.2.0 final).
 using coord_t = int32_t;
+using coord2_t = int64_t;
+#define coord_sqr(v) (static_cast<int64_t>(v)*static_cast<int64_t>(v))
+#define coord_sqrt(v) (static_cast<int32_t>(std::sqrt(v)))
+#define coord_mul(x,y) (static_cast<int64_t>(x)*static_cast<int64_t>(y))
+#define coord_div(x,y) (static_cast<int32_t>((x)/(y)))
 #else
 //FIXME At least FillRectilinear2 and std::boost Voronoi require coord_t to be 32bit.
 using coord_t = int64_t;
+using coord2_t = int64_t;
+#define coord_sqr(v) ((v)*(v))
+#define coord_sqrt(v) (static_cast<int64_t>(std::sqrt(v)))
+#define coord_mul(x,y) ((x)*(y))
+#define coord_div(x,y) ((x)/(y))
 #endif
 
 using coordf_t = double;
@@ -80,7 +135,7 @@ static constexpr double SPARSE_INFILL_RESOLUTION = 0.04;
 
 static constexpr double SUPPORT_RESOLUTION = 0.0375;
 #define                 SCALED_SUPPORT_RESOLUTION (SUPPORT_RESOLUTION / SCALING_FACTOR)
-// Maximum perimeter length for the loop to apply the small perimeter speed. 
+// Maximum perimeter length for the loop to apply the small perimeter speed.
 #define                 SMALL_PERIMETER_LENGTH(LENGTH)  (((LENGTH) / SCALING_FACTOR) * 2 * PI)
 static constexpr double INSET_OVERLAP_TOLERANCE = 0.4;
 // 3mm ring around the top / bottom / bridging areas.
@@ -124,20 +179,20 @@ using deque =
 template<typename T, typename Q>
 inline T unscale(Q v) { return T(v) * T(SCALING_FACTOR); }
 
-enum Axis { 
-	X=0,
-	Y,
-	Z,
-	E,
-	F,
+enum Axis {
+        X=0,
+        Y,
+        Z,
+        E,
+        F,
     //BBS: add I, J, P axis
     I,
     J,
     P,
-	NUM_AXES,
-	// For the GCodeReader to mark a parsed axis, which is not in "XYZEF", it was parsed correctly.
-	UNKNOWN_AXIS = NUM_AXES,
-	NUM_AXES_WITH_UNKNOWN,
+        NUM_AXES,
+        // For the GCodeReader to mark a parsed axis, which is not in "XYZEF", it was parsed correctly.
+        UNKNOWN_AXIS = NUM_AXES,
+        NUM_AXES_WITH_UNKNOWN,
 };
 
 template <typename T, typename Alloc, typename Alloc2>
@@ -197,7 +252,7 @@ inline void append_reversed(std::vector<T>& dest, std::vector<T>&& src)
 
 // Casting an std::vector<> from one type to another type without warnings about a loss of accuracy.
 template<typename T_TO, typename T_FROM>
-std::vector<T_TO> cast(const std::vector<T_FROM> &src) 
+std::vector<T_TO> cast(const std::vector<T_FROM> &src)
 {
     std::vector<T_TO> dst;
     dst.reserve(src.size());
@@ -209,16 +264,16 @@ std::vector<T_TO> cast(const std::vector<T_FROM> &src)
 template <typename T>
 inline void remove_nulls(std::vector<T*> &vec)
 {
-	vec.erase(
-    	std::remove_if(vec.begin(), vec.end(), [](const T *ptr) { return ptr == nullptr; }),
-    	vec.end());
+        vec.erase(
+        std::remove_if(vec.begin(), vec.end(), [](const T *ptr) { return ptr == nullptr; }),
+        vec.end());
 }
 
 template <typename T>
 inline void sort_remove_duplicates(std::vector<T> &vec)
 {
-	std::sort(vec.begin(), vec.end());
-	vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+        std::sort(vec.begin(), vec.end());
+        vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
 }
 
 // Older compilers do not provide a std::make_unique template. Provide a simple one.
@@ -235,7 +290,7 @@ ForwardIt lower_bound_by_predicate(ForwardIt first, ForwardIt last, LowerThanKey
     ForwardIt it;
     typename std::iterator_traits<ForwardIt>::difference_type count, step;
     count = std::distance(first, last);
- 
+
     while (count > 0) {
         it = first;
         step = count / 2;
@@ -254,10 +309,10 @@ ForwardIt lower_bound_by_predicate(ForwardIt first, ForwardIt last, LowerThanKey
 template<class ForwardIt, class T, class Compare=std::less<>>
 ForwardIt binary_find(ForwardIt first, ForwardIt last, const T& value, Compare comp={})
 {
-    // Note: BOTH type T and the type after ForwardIt is dereferenced 
-    // must be implicitly convertible to BOTH Type1 and Type2, used in Compare. 
+    // Note: BOTH type T and the type after ForwardIt is dereferenced
+    // must be implicitly convertible to BOTH Type1 and Type2, used in Compare.
     // This is stricter than lower_bound requirement (see above)
- 
+
     first = std::lower_bound(first, last, value, comp);
     return first != last && !comp(value, *first) ? first : last;
 }
@@ -266,10 +321,10 @@ ForwardIt binary_find(ForwardIt first, ForwardIt last, const T& value, Compare c
 template<class ForwardIt, class LowerThanKeyPredicate, class EqualToKeyPredicate>
 ForwardIt binary_find_by_predicate(ForwardIt first, ForwardIt last, LowerThanKeyPredicate lower_thank_key, EqualToKeyPredicate equal_to_key)
 {
-    // Note: BOTH type T and the type after ForwardIt is dereferenced 
-    // must be implicitly convertible to BOTH Type1 and Type2, used in Compare. 
+    // Note: BOTH type T and the type after ForwardIt is dereferenced
+    // must be implicitly convertible to BOTH Type1 and Type2, used in Compare.
     // This is stricter than lower_bound requirement (see above)
- 
+
     first = lower_bound_by_predicate(first, last, lower_thank_key);
     return first != last && equal_to_key(*first) ? first : last;
 }
@@ -290,7 +345,7 @@ constexpr inline T sqr(T x)
     return x * x;
 }
 
-template<typename Number> constexpr 
+template<typename Number> constexpr
 inline bool is_zero(Number value)
 {
     return std::fabs(double(value)) < 1e-6;
@@ -336,7 +391,7 @@ template<class I> struct is_scaled_coord
 // return type will be bool.
 // For more info how to use, see docs for std::enable_if
 //
-template<class T, class O = T> 
+template<class T, class O = T>
 using FloatingOnly = std::enable_if_t<std::is_floating_point<T>::value, O>;
 
 template<class T, class O = T>
