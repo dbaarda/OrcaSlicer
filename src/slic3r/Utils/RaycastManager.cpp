@@ -205,15 +205,11 @@ std::optional<RaycastManager::ClosePoint> RaycastManager::closest(const Vec3d &p
         Transform3d tr_inv = transformation.inverse();
         Vec3d mesh_point = tr_inv * point;
                 
-        int   face_idx = 0;
+        size_t face_idx = 0;
         Vec3d closest_point;
-        Vec3d pointd = point.cast<double>();
-        mesh->squared_distance(pointd, face_idx, closest_point);
-
-        double squared_distance = (mesh_point - closest_point).squaredNorm();
+        double squared_distance = mesh->squared_distance(point, face_idx, closest_point);
         if (closest.has_value() && closest->squared_distance < squared_distance)
             continue;
-
         closest = ClosePoint{key, closest_point, squared_distance};
     }
     return closest;

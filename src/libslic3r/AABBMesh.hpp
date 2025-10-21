@@ -121,20 +121,20 @@ public:
     std::vector<hit_result> query_ray_hits(const Vec3d &s, const Vec3d &dir) const;
 
     // Get squared distance and closest face index and point.
-    double squared_distance(const Vec3d& p, int& i, Vec3d& c) const;
+    double squared_distance(const Vec3d& p, size_t& i, Vec3d& c) const;
     // Get closest squared distance.
     inline double squared_distance(const Vec3d &p) const
     {
-        int   i;
+        size_t   i;
         Vec3d c;
         return squared_distance(p, i, c);
     }
     // Get the closest signed distance (negative is inside mesh).
     inline double signed_distance(const Vec3d &p) const
     {
-        int   i;
+        size_t   i;
         Vec3d c;
-        double d = std:sqrt(squared_distance(p, i, c));
+        double d = std::sqrt(squared_distance(p, i, c));
         // Return 0.0 for points (nearly) on the face.
         if (d < SCALED_EPSILON) return 0.0;
         // Get the "ray" from point p to closest point c.
@@ -150,7 +150,7 @@ public:
         return s > 0.0 ? -d : d;
     }
 
-    Vec3d normal_by_face_id(int face_id) const;
+    Vec3d normal_by_face_id(size_t face_id) const;
 
     const indexed_triangle_set * get_triangle_mesh() const { return m_tm; }
 

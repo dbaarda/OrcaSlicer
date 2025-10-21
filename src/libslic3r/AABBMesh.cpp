@@ -51,18 +51,11 @@ public:
 
     double squared_distance(const indexed_triangle_set & its,
                             const Vec3d &                point,
-                            int &                        i,
-                            Eigen::Matrix<double, 1, 3> &closest)
+                            size_t &                     i,
+                            Vec3d&                       closest)
     {
-        size_t idx_unsigned = 0;
-        Vec3d  closest_vec3d(closest);
-        double dist =
-            AABBTreeIndirect::squared_distance_to_indexed_triangle_set(
-                its.vertices, its.indices, m_tree, point, idx_unsigned,
-                closest_vec3d);
-        i       = int(idx_unsigned);
-        closest = closest_vec3d;
-        return dist;
+        return AABBTreeIndirect::squared_distance_to_indexed_triangle_set(
+                its.vertices, its.indices, m_tree, point, i, closest);
     }
 };
 
@@ -142,7 +135,7 @@ const Vec3i32& AABBMesh::indices(size_t idx) const
 }
 
 
-Vec3d AABBMesh::normal_by_face_id(int face_id) const {
+Vec3d AABBMesh::normal_by_face_id(size_t face_id) const {
 
     return its_unnormalized_normal(*m_tm, face_id).cast<double>().normalized();
 }
@@ -310,13 +303,8 @@ AABBMesh::hit_result IndexedMesh::filter_hits(
 #endif
 
 
-double AABBMesh::squared_distance(const Vec3d &p, int& i, Vec3d& c) const {
-    double sqdst = 0;
-    Eigen::Matrix<double, 1, 3> pp = p;
-    Eigen::Matrix<double, 1, 3> cc;
-    sqdst = m_aabb->squared_distance(*m_tm, pp, i, cc);
-    c = cc;
-    return sqdst;
+double AABBMesh::squared_distance(const Vec3d &p, size_t& i, Vec3d& c) const {
+    return m_aabb->squared_distance(*m_tm, p, i, c);
 }
 
 } // namespace Slic3r
