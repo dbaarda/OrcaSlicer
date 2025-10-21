@@ -30,7 +30,7 @@ struct NumTraits<Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>>
     typedef Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>          MatrixType;
     typedef typename NumTraits<_Scalar>::Real                                    RealScalar;
     typedef Matrix<RealScalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>       Real;
-    typedef typename NumTraits<T>::NonInteger                                    NonIntegerScalar;
+    typedef typename NumTraits<_Scalar>::NonInteger                              NonIntegerScalar;
     typedef Matrix<NonIntegerScalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols> NonInteger;
     typedef MatrixType&                                                          Nested;
     typedef typename NumTraits<_Scalar>::Literal                                 Literal;
@@ -85,25 +85,28 @@ namespace BicubicInternal {
 // Linear kernel, to be able to test cubic methods with hat kernels.
 template<typename _Scalar> struct LinearKernel
 {
-    typedef _Scalar                          Scalar;
-    static const Eigen::Matrix<Scalar, 4, 4> a{{0., 1., 0., 0.}, {0., -1., 1., 0.}, {0., 0., 0., 0.}, {0., 0., 0., 0.}};
+    typedef _Scalar                     Scalar;
+    typedef Eigen::Matrix<Scalar, 4, 4> Matrix4S;
+
+    static inline const Matrix4S a = (Matrix4S() << 0, 1, 0, 0, 0, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0).finished();
 };
 
 // Interpolation kernel aka Catmul-Rom aka Keyes kernel.
 template<typename _Scalar> struct CubicCatmulRomKernel
 {
-    typedef _Scalar                          Scalar;
-    static const Eigen::Matrix<Scalar, 4, 4> a{{0.0, 1.0, 0.0, 0.0}, {-0.5, 0.0, 0.5, 0.0}, {1.0, -2.5, 2.0, -0.5}, {-0.5, 1.5, -1.5, 0.5}};
+    typedef _Scalar                     Scalar;
+    typedef Eigen::Matrix<Scalar, 4, 4> Matrix4S;
+
+    static inline const Matrix4S a = (Matrix4S() << 0, 2, 0, 0, -1, 0, 1, 0, 2, -5, 4, -1, -1, 3, -3, 1).finished() / 2;
 };
 
 // B-spline kernel
 template<typename _Scalar> struct CubicBSplineKernel
 {
-    typedef _Scalar                   Scalar;
-    static const Matrix<Scalar, 4, 4> a{{1 / 6, 4 / 6, 1 / 6, 0},
-                                        {-3 / 6, 0, 3 / 6, 0},
-                                        {3 / 6, -6 / 6, 3 / 6, 0},
-                                        {-1 / 6, 3 / 6, -3 / 6, 1 / 6}};
+    typedef _Scalar                     Scalar;
+    typedef Eigen::Matrix<Scalar, 4, 4> Matrix4S;
+
+    static inline const Matrix4S a = (Matrix4S() << 1, 4, 1, 0, -3, 0, 3, 0, 3, -6, 3, 0, -1, 3, -3, 1).finished() / 6;
 };
 
 } // namespace BicubicInternal
@@ -118,12 +121,12 @@ template<typename _Scalar> struct CubicBSplineKernel
 // multiplied by Scalar and added together.
 template<typename _Kernel, typename _ValueType> struct CubicKernelWrapper
 {
-    typedef _Kernel                 Kernel;
-    typedef _ValueType              ValueType;
-    typedef typename Kernel::Scalar Scalar;
-    typedef RowVector4S             RowVector<Scalar, 4>;
-    typedef Vector4V                Vector<ValueType, 4>;
-    typedef Matrix4V                Matrix<ValueType, 4, 4>;
+    typedef _Kernel                        Kernel;
+    typedef _ValueType                     ValueType;
+    typedef typename Kernel::Scalar        Scalar;
+    typedef Eigen::RowVector<Scalar, 4>    RowVector4S;
+    typedef Eigen::Vector<ValueType, 4>    Vector4V;
+    typedef Eigen::Matrix<ValueType, 4, 4> Matrix4V;
 
     static constexpr size_t kernel_span = 4;
 
@@ -176,15 +179,16 @@ static typename KernelWrapper::ValueType cubic_interpolate(const Eigen::ArrayBas
     typedef typename KernelWrapper::Scalar Scalar;
     const int                              w  = int(F.size());
     const int                              ix = std::floor(pt);
-    const Scalar                           s  = pt - Scalar(ix);
+    const Scalar                           rx = pt - Scalar(ix);
 
     if (ix > 1 && ix + 2 < w) {
         // Inside the fully interpolated region.
-        return KernelWrapper::interpolate(F.segment<4>(ix - 1), s);
+        return KernelWrapper::interpolate(F.segment<4>(ix - 1), rx);
     }
-    // Transition region. Extend with a constant function.
-    auto f = [&F, w](T x) { return F[std::clamp(x, 0, w - 1)]; };
-    return KernelWrapper::interpolate(f(ix - 1), f(ix), f(ix + 1), f(ix + 2), s);
+    // Interpolate using a vector which extends the edges of F.
+    auto fn = KernelWrapper::Vector4V::NullaryExpr(
+        [&F, ix, w](Eigen::Index y, Eigen::Index x) { return F(std::clamp(int(ix - 1 + x), 0, w - 1)); });
+    return KernelWrapper::interpolate(fn, rx);
 }
 
 // Interpolate for a 2D field grid in a Matrix. Note x is the column and y is
@@ -193,24 +197,23 @@ template<typename Kernel, typename Derived>
 static float bicubic_interpolate(const Eigen::MatrixBase<Derived>&                                     F,
                                  const Eigen::Matrix<typename Kernel::Scalar, 2, 1, Eigen::DontAlign>& pt)
 {
-    typedef typename Kernel::Scalar                Scalar;
-    typedef Eigen::Matrix<Kernel::ValueType, 4, 4> Matrix4V;
-    const int                                      w  = F.cols();
-    const int                                      h  = F.rows();
-    const int                                      ix = (int) floor(pt.x());
-    const int                                      iy = (int) floor(pt.y());
-    const Scalar                                   rx = pt.x() - Scalar(ix);
-    const Scalar                                   ry = pt.y() - Scalar(iy);
-    const Kernel::RowVector4S                      cy = Kernel::cint(ry);
+    typedef typename Kernel::Scalar                         Scalar;
+    typedef Eigen::Matrix<typename Kernel::ValueType, 4, 4> Matrix4V;
+    const int                                               w  = F.cols();
+    const int                                               h  = F.rows();
+    const int                                               ix = (int) floor(pt.x());
+    const int                                               iy = (int) floor(pt.y());
+    const Scalar                                            rx = pt.x() - Scalar(ix);
+    const Scalar                                            ry = pt.y() - Scalar(iy);
+    const typename Kernel::RowVector4S                      cy = Kernel::cint(ry);
 
     if (ix > 1 && ix + 2 < w && iy > 1 && iy + 2 < h) {
         // Inside the fully interpolated region.
         return Kernel::interpolate((cy * F.block<4, 4>(ix - 1, iy - 1)).transpose(), rx);
     }
     // Interpolate using a matrix which extends the edges of F.
-    auto fn = Matrix4V::NullaryExpr([&F, ix, iy, w, h](Eigen::Index y, Eigen::Index x) {
-        return F(std::clamp(iy - 1 + y, 0, h - 1), std::clamp(ix - 1 + x, 0, w - 1));
-    });
+    auto fn = Matrix4V::NullaryExpr(
+        [&F, ix, iy, w, h](int y, int x) { return F(std::clamp(iy - 1 + y, 0, h - 1), std::clamp(ix - 1 + x, 0, w - 1)); });
     return Kernel::interpolate((cy * fn).transpose(), rx);
 }
 
