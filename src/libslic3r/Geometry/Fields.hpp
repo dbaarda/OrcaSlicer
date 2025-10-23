@@ -164,8 +164,8 @@ template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
     const Eigen::Index ix = std::floor(p.x());
     const double       ry = p.y() - iy;
     const double       rx = p.x() - ix;
-    assert(0 <= iy && iy < f(0).rows() - 1);
-    assert(0 <= ix && ix < f(0).cols() - 1);
+    assert(0 <= iy && iy < f.rows() - 1);
+    assert(0 <= ix && ix < f.cols() - 1);
     auto cy = Kernel::cint(ry);
     auto cx = Kernel::cint(rx).transpose().eval();
     return cy * Kernel::fblock(f, iy, ix) * cx;
