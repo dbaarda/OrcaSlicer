@@ -160,7 +160,7 @@ template<typename _Kernel, typename _ValueType> struct CubicKernelWrapper
     { return interpolate(Vector4V(f0, f1, f2, f3), x); }
 
     // Get a 4x1 vector from a vector for interpolating with.
-    template<typename Derived> const auto fblock(const Eigen::EigenBase<Derived>& F, const Eigen::Index ix)
+    template<typename Derived> static auto fblock(const Eigen::MatrixBase<Derived>& F, const Eigen::Index ix)
     {
         const Eigen::Index w = F.size();
         if (ix > 1 && ix + 2 < w)
@@ -171,7 +171,7 @@ template<typename _Kernel, typename _ValueType> struct CubicKernelWrapper
     }
 
     // Get a 4x4 block from a matrix for interpolating with.
-    template<typename Derived> const auto fblock(const Eigen::EigenBase<Derived>& F, const Eigen::Index iy, const Eigen::Index ix)
+    template<typename Derived> static auto fblock(const Eigen::MatrixBase<Derived>& F, const Eigen::Index iy, const Eigen::Index ix)
     {
         const Eigen::Index w = F.cols();
         const Eigen::Index h = F.rows();
