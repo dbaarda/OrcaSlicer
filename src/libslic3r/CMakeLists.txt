@@ -253,6 +253,7 @@ set(lisbslic3r_sources
     Geometry/ConvexHull.hpp
     Geometry.cpp
     Geometry/Curves.hpp
+    Geometry/Fields.hpp
     Geometry.hpp
     Geometry/MedialAxis.cpp
     Geometry/MedialAxis.hpp
