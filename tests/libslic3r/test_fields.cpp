@@ -99,35 +99,137 @@ SCENARIO("Test Field2 Smoothing", "[Fields]")
     };
 }
 
-void benchmark_field2() {};
+TEST_CASE("Benchmark Field2 cubic()", "[Fields]")
+{
+    Eigen::Index n = 100;
+    SECTION("Using T=float")
+    {
+        std::stringstream title;
+        title << "f2<float> size=" << n << "x" << n;
+        Field2<float> f2(n, n);
+        f2.setRandom(n, n);
+        BENCHMARK(title.str(), i) { return cubic(f2, Vec2f(std::fmodf(i * 123.123456f, 100.0f), std::fmodf(i * 321.124505f, 100.0f))); };
+    };
+    SECTION("Using T=double")
+    {
+        std::stringstream title;
+        title << "f2<double> size=" << n << "x" << n;
+        Field2<double> f2(n, n);
+        f2.setRandom(n, n);
+        BENCHMARK(title.str(), i) { return cubic(f2, Vec2d(std::fmod(i * 123.123456, 100.0), std::fmod(i * 321.124505, 100.0))); };
+    };
+};
+
+TEST_CASE("Benchmark Field3 cubic()", "[Fields]")
+{
+    Eigen::Index n = 100;
+    SECTION("Using T=float")
+    {
+        std::stringstream title;
+        title << "f3<float> size=" << n << "x" << n << "x" << n;
+        Field3<float> f3(n, n, n);
+        for (Index z = 0; z < f3.size(); z++) {
+            f3(z).setRandom(n, n);
+        }
+        BENCHMARK(title.str(), i)
+        {
+            return cubic(f3, Vec3f(std::fmodf(i * 123.123456, 100.0), std::fmodf(i * 321.124505f, 100.0f),
+                                   std::fmodf(i * 987.654333f, 100.0f)));
+        };
+    };
+    SECTION("Using T=double")
+    {
+        std::stringstream title;
+        title << "f3<double> size=" << n << "x" << n << "x" << n;
+        Field3<double> f3(n, n, n);
+        for (Index z = 0; z < f3.size(); z++) {
+            f3(z).setRandom(n, n);
+        }
+        BENCHMARK(title.str(), i)
+        { return cubic(f3, Vec3d(std::fmod(i * 123.123456, 100.0), std::fmod(i * 321.124505, 100.0), std::fmod(i * 987.654333, 100.0))); };
+    };
+};
 
 TEST_CASE("Benchmark Field2 smooth()", "[Fields]")
 {
-    Field2<float> f2;
-    for (Index n = 10; n <= 1000; n *= 10) {
-        std::stringstream title;
-        title << "size=" << n << "x" << n;
-        f2.setRandom(n, n);
-        BENCHMARK(title.str())
-        {
-            smooth(f2);
-            return f2;
-        };
-    }
+    SECTION("Using T=float")
+    {
+        for (Index n = 50; n <= 200; n *= 2) {
+            std::stringstream title;
+            title << "size=" << n << "x" << n;
+            Field2<float> f2(n, n);
+            f2.setRandom(n, n);
+            BENCHMARK(title.str())
+            {
+                smooth(f2);
+                return f2;
+            };
+        }
+    };
+    SECTION("Using T=double")
+    {
+        for (Index n = 50; n <= 200; n *= 2) {
+            std::stringstream title;
+            title << "size=" << n << "x" << n;
+            Field2<double> f2(n, n);
+            f2.setRandom(n, n);
+            BENCHMARK(title.str())
+            {
+                smooth(f2);
+                return f2;
+            };
+        }
+    };
+    /*
+    SECTION("Using T=int32_t")
+    {
+        for (Index n = 50; n <= 200; n *= 2) {
+            std::stringstream title;
+            title << "size=" << n << "x" << n;
+            Field2<int32_t> f2(n, n);
+            f2.setRandom(n, n);
+            BENCHMARK(title.str())
+            {
+                smooth(f2);
+                return f2;
+            };
+        }
+    };
+    */
 };
 
 TEST_CASE("Benchmark Field3 smooth()", "[Fields]")
 {
-    for (Index n = 10; n <= 1000; n *= 10) {
-        std::stringstream title;
-        title << "size=" << n << "x" << n << "x" << n;
-        Field3<float> f3(n, n, n);
-        for (Index z = 0; z < n; z++)
-            f3(z).setRandom(n, n);
-        BENCHMARK(title.str())
-        {
-            smooth(f3);
-            return f3;
-        };
-    }
+    SECTION("Using T=float")
+    {
+        for (Index n = 50; n <= 200; n *= 2) {
+            std::stringstream title;
+            title << "size=" << n << "x" << n << "x" << n;
+            Field3<float> f3(n, n, n);
+            for (Index z = 0; z < f3.size(); z++) {
+                f3(z).setRandom(n, n);
+            }
+            BENCHMARK(title.str())
+            {
+                smooth(f3);
+                return f3;
+            };
+        }
+    };
+    SECTION("Using T=double")
+    {
+        for (Index n = 50; n <= 200; n *= 2) {
+            std::stringstream title;
+            title << "size=" << n << "x" << n << "x" << n;
+            Field3<double> f3(n, n, n);
+            for (Index z = 0; z < f3.size(); z++) {
+                f3(z).setRandom(n, n);
+            }
+            BENCHMARK(title.str())
+            {
+                smooth(f3);
+                return f3;
+            };
+        }
+    };
 };

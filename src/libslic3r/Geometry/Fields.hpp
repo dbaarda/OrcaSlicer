@@ -105,6 +105,7 @@ template<typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eig
 // Old Eigen versions don't have this defined.
 // using RowVector2d = Eigen::Matrix<double, 1, 2>;
 
+// A simple linear interpolation "kernel" with a similar API to Bicubic.hpp.
 namespace LerpKernel {
 
 const Eigen::RowVector2d cint(const double x) { return Eigen::RowVector2d(1 - x, x); }
@@ -146,9 +147,9 @@ const T lerp(const Field3<T, Z, Y, X>& f, const P& p)
     const double       rz = p.z() - iz;
     const double       ry = p.y() - iy;
     const double       rx = p.x() - ix;
-    assert(0 <= iz && iz < f.size() - 1);
-    assert(0 <= iy && iy < f(0).rows() - 1);
-    assert(0 <= ix && ix < f(0).cols() - 1);
+    assert(0 <= iz && iz < f.size());
+    assert(0 <= iy && iy < f(0).rows());
+    assert(0 <= ix && ix < f(0).cols());
     Eigen::Vector2d cy = LerpKernel::cint(ry);
     Eigen::Vector2d cx = LerpKernel::cint(rx).transpose();
     double          z0 = cy * LerpKernel::fblock(f(iz), iy, ix) * cx;
@@ -159,13 +160,14 @@ const T lerp(const Field3<T, Z, Y, X>& f, const P& p)
 // cubic interpolate within a Field2 to get the value at p(x,y).
 template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> const T cubic(const Field2<T, Y, X>& f, const P& p)
 {
-    using Kernel          = CubicCatmulRomKernel<double, T>;
+    using Scalar          = typename P::Scalar;
+    using Kernel          = CubicCatmulRomKernel<Scalar, T>;
     const Eigen::Index iy = std::floor(p.y());
     const Eigen::Index ix = std::floor(p.x());
     const double       ry = p.y() - iy;
     const double       rx = p.x() - ix;
-    assert(0 <= iy && iy < f.rows() - 1);
-    assert(0 <= ix && ix < f.cols() - 1);
+    assert(0 <= iy && iy < f.rows());
+    assert(0 <= ix && ix < f.cols());
     auto cy = Kernel::cint(ry);
     auto cx = Kernel::cint(rx).transpose().eval();
     return cy * Kernel::fblock(f, iy, ix) * cx;
@@ -175,31 +177,31 @@ template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
 template<typename P, typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
 const T cubic(const Field3<T, Z, Y, X>& f, const P& p)
 {
-    using Kernel          = CubicCatmulRomKernel<double, T>;
+    using Scalar          = typename P::Scalar;
+    using Kernel          = CubicCatmulRomKernel<Scalar, T>;
     const Eigen::Index iz = std::floor(p.z());
     const Eigen::Index iy = std::floor(p.y());
     const Eigen::Index ix = std::floor(p.x());
-    const double       rz = p.z() - iz;
-    const double       ry = p.y() - iy;
-    const double       rx = p.x() - ix;
-    assert(0 <= iz && iz < f.size() - 1);
-    assert(0 <= iy && iy < f(0).rows() - 1);
-    assert(0 <= ix && ix < f(0).cols() - 1);
-    auto                      cy      = Kernel::cint(ry);
-    auto                      cx      = Kernel::cint(rx).transpose().eval();
-    auto                      zfblock = Kernel::fblock(f, iz);
+    const Scalar       rz = p.z() - iz;
+    const Scalar       ry = p.y() - iy;
+    const Scalar       rx = p.x() - ix;
+    assert(0 <= iz && iz < f.size());
+    assert(0 <= iy && iy < f(0).rows());
+    assert(0 <= ix && ix < f(0).cols());
+    const auto                cy = Kernel::cint(ry);
+    const auto                cx = Kernel::cint(rx).transpose().eval();
     typename Kernel::Vector4V zf;
     for (int z = 0; z < 4; z++)
-        zf(z) = cy * Kernel::fblock(zfblock(z), iy, ix) * cx;
+        zf(z) = cy * Kernel::fblock(f(std::clamp<Eigen::Index>(iz + z - 1, 0, f.size() - 1)), iy, ix) * cx;
     return Kernel::cint(rz) * zf;
 }
 
 // cubic interpolate a Field3 into a Field2 at a given z.
-template<typename P, typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
-const Field2<T, Y, X> cubic(const Field3<T, Z, Y, X>& f, const float z)
+template<typename S, typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+const Field2<T, Y, X> cubic_z(const Field3<T, Z, Y, X>& f, const S z)
 {
-    using Kernel = CubicCatmulRomKernel<double, Field2<T, Y, X>>;
-    return cubic_interpolate<Kernel, Field3<T, Z, Y, X>>(f, z);
+    using Kernel = CubicCatmulRomKernel<S, Field2<T, Y, X>>;
+    return Kernel::interpolate(f, z);
 }
 
 /*********************************************
@@ -262,6 +264,9 @@ template<typename T, int Z, int Y, int X> void sum3(Field3<T, Z, Y, X>& f)
     const Eigen::Index z = f.size();
     const Eigen::Index y = f(0).rows();
     const Eigen::Index x = f(0).cols();
+    assert(z > 0);
+    assert(y > 0);
+    assert(x > 0);
     // Used to hold 3 layers i-1, i, i+1 for summing, with layer i at index i%3.
     Field3<T, 3, Y, X> buf(3, y, x);
     // Save the first 2 layers into buf for later sums.
@@ -271,11 +276,7 @@ template<typename T, int Z, int Y, int X> void sum3(Field3<T, Z, Y, X>& f)
     // Go through layers copying the i+1 layer into buf and put the sum/3 into f.
     for (Eigen::Index i = 1; i < z - 1; i++) {
         buf((i + 1) % 3) = f(i + 1);
-        assert(z > 0);
-        assert(y > 0);
-        assert(x > 0);
-        assert(buf.size() > 0);
-        f(i) = buf.sum();
+        f(i)             = buf.sum();
     }
     // Set outer-edge layer z-1 with the edge value extended.
     f(z - 1) = 2.0 * f(z - 1) + buf((z - 2) % 3);
