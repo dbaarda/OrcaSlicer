@@ -53,6 +53,7 @@ template<typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eig
 class Field3 : public Eigen::Vector<Field2<T, Y, X>, Z>
 {
 public:
+    typedef Eigen::Vector<Field2<T, Y, X>, Z> Parent;
     Field3(void) : Eigen::Vector<Field2<T, Y, X>, Z>() {}
 
     Field3(const Eigen::Index z, const Eigen::Index y = 0, const Eigen::Index x = 0) : Eigen::Vector<Field2<T, Y, X>, Z>(z)
@@ -85,6 +86,23 @@ public:
             s += (*this)(i);
         return s;
     }
+
+    Field3& setConstant(const T& val)
+    {
+        for (Eigen::Index z = 0; z < this->size(); z++)
+            (*this)(z).setConstant(val);
+        return (*this);
+    }
+
+    Field3& setZero() { return setConstant(T(0)); }
+
+    inline const auto& operator()(const Eigen::Index z) const { return Parent::operator()(z); }
+    inline const auto& operator()(const Eigen::Index z, const Eigen::Index y) const { return Parent::operator()(z)(y); }
+    inline const auto& operator()(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) const
+    { return Parent::operator()(z)(y, x); }
+    inline auto& operator()(const Eigen::Index z) { return Parent::operator()(z); }
+    inline auto& operator()(const Eigen::Index z, const Eigen::Index y) { return Parent::operator()(z)(y); }
+    inline auto& operator()(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) { return Parent::operator()(z)(y, x); }
 };
 
 // A 2D Vector Field of Vec3 of type T.

@@ -58,24 +58,31 @@ TEST_CASE("Test Field2", "[Fields]")
 
 SCENARIO("Test Field2 Smoothing", "[Fields]")
 {
-    GIVEN("Setup f2(20,20) instance zeroed with f2(10,10)=1000.")
+    GIVEN("Setup f2(15,15) instance zeroed with f2(7,7)=1000.")
     {
-        Field2<float> f2(20, 20);
+        Field2<float> f2(15, 15);
 
         f2.setZero();
-        f2(10, 10) = 1000.0;
+        f2(7, 7) = 1000.0;
 
-        THEN("Check f2 instance.") { REQUIRE(f2(10, 10) == 1000.0); };
+        THEN("Check f2 setup center.")
+        {
+            REQUIRE(f2(7, 7) == 1000.0);
+            REQUIRE(f2(6, 6) == 0.0);
+            REQUIRE(f2(8, 8) == 0.0);
+        };
         WHEN("Apply smoothing for 1 iteration")
         {
             smooth(f2, 1);
             THEN("Check smoothing result")
             {
-                CHECK(f2.topRows(9) == Matrix<float, 9, 20>::Zero());
-                CHECK(f2.bottomRows(8) == Matrix<float, 8, 20>::Zero());
-                CHECK(f2.leftCols(9) == Matrix<float, 20, 9>::Zero());
-                CHECK(f2.rightCols(8) == Matrix<float, 20, 8>::Zero());
-                CHECK(f2.block(9, 9, 3, 3) == Matrix<float, 3, 3>::Constant(1000.0 / 9.0));
+                // Note we put brackets around the comparison because we
+                // don't need to see all the zero's in the test output.
+                CHECK((f2.topRows(6) == Matrix<float, 6, 15>::Zero()));
+                CHECK((f2.bottomRows(6) == Matrix<float, 6, 15>::Zero()));
+                CHECK((f2.leftCols(6) == Matrix<float, 15, 6>::Zero()));
+                CHECK((f2.rightCols(6) == Matrix<float, 15, 6>::Zero()));
+                CHECK(f2.block(6, 6, 3, 3).isApprox(Matrix<float, 3, 3>::Constant(1000.0 / 9.0)));
             };
         };
         WHEN("Apply smoothing for default=6 iterations")
@@ -83,17 +90,84 @@ SCENARIO("Test Field2 Smoothing", "[Fields]")
             smooth(f2);
             THEN("Check smoothing result")
             {
-                CHECK(f2.topRows(4) == Matrix<float, 4, 20>::Zero());
-                CHECK(f2.bottomRows(3) == Matrix<float, 3, 20>::Zero());
-                CHECK(f2.leftCols(4) == Matrix<float, 20, 4>::Zero());
-                CHECK(f2.rightCols(3) == Matrix<float, 20, 3>::Zero());
-                CHECK(f2.block(4, 4, 13, 13) != Matrix<float, 13, 13>::Zero());
-                CHECK(f2.block(4, 4, 13, 13).minCoeff() > 0.0);
-                CHECK(f2.maxCoeff() == f2(10, 10));
-                CHECK(f2.rowwise().maxCoeff() == f2.col(10));
-                CHECK(f2.colwise().maxCoeff() == f2.row(10));
-                CHECK(f2.block(4, 4, 13, 13).rowwise().minCoeff() == f2.block(4, 4, 13, 1));
-                CHECK(f2.block(4, 4, 13, 13).colwise().minCoeff() == f2.block(4, 4, 1, 13));
+                CHECK((f2.topRows(1) == Matrix<float, 1, 15>::Zero()));
+                CHECK((f2.bottomRows(1) == Matrix<float, 1, 15>::Zero()));
+                CHECK((f2.leftCols(1) == Matrix<float, 15, 1>::Zero()));
+                CHECK((f2.rightCols(1) == Matrix<float, 15, 1>::Zero()));
+                // This is mostly so we can see the full block in the test output.
+                CHECK(f2.block(1, 1, 13, 13) != Matrix<float, 13, 13>::Zero());
+                CHECK(f2.maxCoeff() == f2(7, 7));
+                CHECK(f2.block(1, 1, 13, 13).minCoeff() == f2(1, 1));
+                CHECK(f2.block(1, 1, 13, 13).minCoeff() > 0.0);
+                // Result should be symetric about (7,7) and smaller as you go out.
+                for (Index i = 0; i < 7; i++) {
+                    INFO("Checking for i=" << i);
+                    CHECK((f2.row(i) == f2.row(14 - i)));
+                    CHECK((f2.col(i) == f2.col(14 - i)));
+                    CHECK((f2.col(i) == f2.row(i).transpose()));
+                    CHECK((f2.row(i).segment(1, 13).array() < f2.row(i + 1).segment(1, 13).array()).all());
+                    CHECK((f2.col(i).segment(1, 13).array() < f2.col(i + 1).segment(1, 13).array()).all());
+                }
+            };
+        };
+    };
+}
+
+SCENARIO("Test Field3 Smoothing", "[Fields]")
+{
+    GIVEN("Setup f3(15,15,15) instance zeroed with f3(7,7,7)=1000.")
+    {
+        Field3<float> f3(15, 15, 15);
+
+        f3.setZero();
+        f3(7, 7, 7) = 1000.0;
+
+        THEN("Check f3 setup center.")
+        {
+            REQUIRE(f3(7, 7, 7) == 1000.0);
+            REQUIRE(f3(6, 6, 6) == 0.0);
+            REQUIRE(f3(8, 8, 8) == 0.0);
+        };
+        WHEN("Apply smoothing for 1 iteration")
+        {
+            smooth(f3, 1);
+            THEN("Check smoothing result")
+            {
+                CHECK(f3(7, 7, 5) == 0.0);
+                CHECK(f3(7, 7, 9) == 0.0);
+                CHECK(f3(7, 5, 7) == 0.0);
+                CHECK(f3(7, 9, 7) == 0.0);
+                CHECK((f3(5) == Matrix<float, 15, 15>::Zero()));
+                CHECK((f3(9) == Matrix<float, 15, 15>::Zero()));
+                for (Index z = 6; z < 9; z++) {
+                    CHECK(f3(z).block(6, 6, 3, 3).isApprox(Matrix<float, 3, 3>::Constant(1000.0 / 27.0)));
+                }
+            };
+        };
+        WHEN("Apply smoothing for default=6 iterations")
+        {
+            smooth(f3);
+            THEN("Check smoothing result")
+            {
+                CHECK((f3(0) == Matrix<float, 15, 15>::Zero()));
+                CHECK((f3(14) == Matrix<float, 15, 15>::Zero()));
+                for (Index z = 1; z < 14; z++) {
+                    INFO("Checking for z=" << z);
+                    CHECK((f3(z).topRows(1) == Matrix<float, 1, 15>::Zero()));
+                    CHECK((f3(z).bottomRows(1) == Matrix<float, 1, 15>::Zero()));
+                    CHECK((f3(z).leftCols(1) == Matrix<float, 15, 1>::Zero()));
+                    CHECK((f3(z).rightCols(1) == Matrix<float, 15, 1>::Zero()));
+                    // This is mostly so we can see the full block in the test output.
+                    CHECK(f3(z).block(1, 1, 13, 13) != Matrix<float, 13, 13>::Zero());
+                    CHECK(f3(z).maxCoeff() == f3(z)(7, 7));
+                    CHECK(f3(z).block(1, 1, 13, 13).minCoeff() == f3(z)(1, 1));
+                    CHECK(f3(z).block(1, 1, 13, 13).minCoeff() > 0.0);
+                }
+                for (Index z = 0; z < 7; z++) {
+                    INFO("Checking for z=" << z);
+                    CHECK(f3(z).isApprox(f3(14 - z)));
+                    CHECK((f3(z).block(1, 1, 13, 13).array() < f3(z + 1).block(1, 1, 13, 13).array()).all());
+                }
             };
         };
     };
