@@ -175,14 +175,20 @@ SCENARIO("Test Field3 Smoothing", "[Fields]")
 
 TEST_CASE("Benchmark Field2 cubic()", "[Fields]")
 {
-    Eigen::Index n = 100;
+    Eigen::Index n     = 100;
+    Eigen::Index steps = n - 3;
+    double       dstep = double(n) / double(steps);
     SECTION("Using T=float")
     {
         std::stringstream title;
         title << "f2<float> size=" << n << "x" << n;
         Field2<float> f2(n, n);
         f2.setRandom(n, n);
-        BENCHMARK(title.str(), i) { return cubic(f2, Vec2f(std::fmodf(i * 123.123456f, 100.0f), std::fmodf(i * 321.124505f, 100.0f))); };
+        BENCHMARK(title.str(), i)
+        {
+            float d = (i % steps) * dstep;
+            return cubic(f2, Vec2f(d, d));
+        };
     };
     SECTION("Using T=double")
     {
@@ -190,13 +196,19 @@ TEST_CASE("Benchmark Field2 cubic()", "[Fields]")
         title << "f2<double> size=" << n << "x" << n;
         Field2<double> f2(n, n);
         f2.setRandom(n, n);
-        BENCHMARK(title.str(), i) { return cubic(f2, Vec2d(std::fmod(i * 123.123456, 100.0), std::fmod(i * 321.124505, 100.0))); };
+        BENCHMARK(title.str(), i)
+        {
+            double d = (i % steps) * dstep;
+            return cubic(f2, Vec2d(d, d));
+        };
     };
 };
 
 TEST_CASE("Benchmark Field3 cubic()", "[Fields]")
 {
-    Eigen::Index n = 100;
+    Eigen::Index n     = 100;
+    Eigen::Index steps = n - 3;
+    double       dstep = double(n) / double(steps);
     SECTION("Using T=float")
     {
         std::stringstream title;
@@ -207,8 +219,8 @@ TEST_CASE("Benchmark Field3 cubic()", "[Fields]")
         }
         BENCHMARK(title.str(), i)
         {
-            return cubic(f3, Vec3f(std::fmodf(i * 123.123456, 100.0), std::fmodf(i * 321.124505f, 100.0f),
-                                   std::fmodf(i * 987.654333f, 100.0f)));
+            float d = (i % steps) * dstep;
+            return cubic(f3, Vec3f(d, d, d));
         };
     };
     SECTION("Using T=double")
@@ -220,8 +232,31 @@ TEST_CASE("Benchmark Field3 cubic()", "[Fields]")
             f3(z).setRandom(n, n);
         }
         BENCHMARK(title.str(), i)
-        { return cubic(f3, Vec3d(std::fmod(i * 123.123456, 100.0), std::fmod(i * 321.124505, 100.0), std::fmod(i * 987.654333, 100.0))); };
+        {
+            float d = (i % steps) * dstep;
+            return cubic(f3, Vec3d(d, d, d));
+        };
     };
+    /*
+    SECTION("Using T=Vec3f")
+    {
+        std::stringstream title;
+        title << "f3<Vec3f> size=" << n << "x" << n << "x" << n;
+        Field3<Vec3f> f3(n, n, n);
+        for (Index z = 0; z < f3.lays(); z++) {
+          for (Index y = 0; y < f3.rows(); y++) {
+            for (Index x = 0; x < f3.cols(); x++) {
+              f3(z,y,x) = Vec3f(x,y,z);
+            }
+          }
+        }
+        BENCHMARK(title.str(), i)
+        {
+          float d = (i % steps) * dstep;
+          return cubic(f3, Vec3f(d, d, d));
+        };
+    };
+     */
 };
 
 TEST_CASE("Benchmark Field2 smooth()", "[Fields]")
