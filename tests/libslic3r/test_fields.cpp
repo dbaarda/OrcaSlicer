@@ -259,6 +259,43 @@ TEST_CASE("Benchmark Field3 cubic()", "[Fields]")
      */
 };
 
+TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
+{
+    Eigen::Index n     = 100;
+    Eigen::Index steps = n - 3;
+    double       dstep = double(n) / double(steps);
+    SECTION("Using T=float")
+    {
+        std::stringstream title;
+        title << "f3<float> size=" << n << "x" << n << "x" << n;
+        Field3<float> f3(n, n, n);
+        for (Index z = 0; z < f3.size(); z++) {
+            f3(z).setRandom(n, n);
+        }
+        BENCHMARK(title.str(), i)
+        {
+            float d = (i % steps) * dstep;
+            // TODO: make this work.
+            //return cubic_z(f3, d);
+        };
+    };
+    SECTION("Using T=double")
+    {
+        std::stringstream title;
+        title << "f3<double> size=" << n << "x" << n << "x" << n;
+        Field3<double> f3(n, n, n);
+        for (Index z = 0; z < f3.size(); z++) {
+            f3(z).setRandom(n, n);
+        }
+        BENCHMARK(title.str(), i)
+        {
+            double d = (i % steps) * dstep;
+            // TODO: make this work.
+            //return cubic_z(f3, d);
+        };
+    };
+};
+
 TEST_CASE("Benchmark Field2 smooth()", "[Fields]")
 {
     SECTION("Using T=float")
