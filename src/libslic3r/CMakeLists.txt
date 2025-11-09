@@ -95,6 +95,7 @@ set(lisbslic3r_sources
     ClipperZUtils.hpp
     Color.cpp
     Color.hpp
+    CommonDefs.hpp
     Config.cpp
     Config.hpp
     CustomGCode.cpp
@@ -207,6 +208,8 @@ set(lisbslic3r_sources
     GCode/ConflictChecker.hpp
     GCode/CoolingBuffer.cpp
     GCode/CoolingBuffer.hpp
+    GCode/TimelapsePosPicker.cpp
+    GCode/TimelapsePosPicker.hpp
     GCode.cpp
     GCode/ExtrusionProcessor.hpp
     GCode/FanMover.cpp
@@ -304,6 +307,7 @@ set(lisbslic3r_sources
     NormalUtils.hpp
     NSVGUtils.cpp
     NSVGUtils.hpp
+    ObjColorUtils.cpp
     ObjColorUtils.hpp
     ObjectID.cpp
     ObjectID.hpp
@@ -454,6 +458,14 @@ set(lisbslic3r_sources
     VariableWidth.hpp
     Zipper.cpp
     Zipper.hpp
+    FilamentGroup.hpp
+    FilamentGroup.cpp
+    FilamentGroupUtils.hpp
+    FilamentGroupUtils.cpp
+    GCode/ToolOrderUtils.hpp
+    GCode/ToolOrderUtils.cpp
+    FlushVolPredictor.hpp
+    FlushVolPredictor.cpp
 )
 
 if (APPLE)
@@ -553,7 +565,6 @@ set(OCCT_LIBS
     TKernel
 )
 
-find_package(libnoise REQUIRED)
 target_link_libraries(libslic3r
     PUBLIC
         admesh
@@ -581,12 +592,12 @@ target_link_libraries(libslic3r
         TBB::tbb
         TBB::tbbmalloc
         ZLIB::ZLIB
+        OpenSSL::Crypto
     )
 
 if(NOT WIN32)
     # Link freetype for OCCT dependency (CAD operations need font rendering)
     target_link_libraries(libslic3r PRIVATE ${FREETYPE_LIBRARIES})
-    target_link_libraries(libslic3r PRIVATE OpenSSL::Crypto)
     if (NOT APPLE)
         target_link_libraries(libslic3r PRIVATE fontconfig)
     endif()
@@ -603,7 +614,7 @@ if (TARGET OpenVDB::openvdb)
 endif()
 
 if(WIN32)
-    target_link_libraries(libslic3r PRIVATE Psapi.lib)
+    target_link_libraries(libslic3r PRIVATE Psapi.lib bcrypt.lib)
 endif()
 
 if(SLIC3R_PROFILE)
