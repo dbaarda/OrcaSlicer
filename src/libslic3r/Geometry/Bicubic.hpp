@@ -8,18 +8,11 @@
 #include <Eigen/Dense>
 
 /***
- * We define some extensions to Eigen here to make it easier to define
- * Eigen::Vector and Eigen::RowVector types, and so we can put any type of
+ * We define some extensions to Eigen here so we can put any type of
  * Eigen::Matrix inside another Eigen::Matrix or Eigen::Array. This means we
  * can interpolate not just scalar fields, but also vector fields.
  */
 namespace Eigen {
-
-// Define Eigen::Vector and Eigen::RowVector templates to make it easier to define these.
-template<typename _Scalar, int _Rows, int _Options = AutoAlign | ColMajor, int _MaxRows = _Rows>
-using Vector = Matrix<_Scalar, _Rows, 1, _Options, _MaxRows, 1>;
-template<typename _Scalar, int _Cols, int _Options = AutoAlign | RowMajor, int _MaxCols = _Cols>
-using RowVector = Matrix<_Scalar, 1, _Cols, _Options, 1, _MaxCols>;
 
 // Define Eigen::NumTraits<Matrix<T,Y,X> so we can put Matrix and Vector
 // types inside other Matrix or Array types. This copies the existing
