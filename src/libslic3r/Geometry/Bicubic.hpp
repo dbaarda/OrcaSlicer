@@ -8,18 +8,11 @@
 #include <Eigen/Dense>
 
 /***
- * We define some extensions to Eigen here to make it easier to define
- * Eigen::Vector and Eigen::RowVector types, and so we can put any type of
+ * We define some extensions to Eigen here so we can put any type of
  * Eigen::Matrix inside another Eigen::Matrix or Eigen::Array. This means we
  * can interpolate not just scalar fields, but also vector fields.
  */
 namespace Eigen {
-
-// Define Eigen::Vector and Eigen::RowVector templates to make it easier to define these.
-template<typename _Scalar, int _Rows, int _Options = AutoAlign | ColMajor, int _MaxRows = _Rows>
-using Vector = Matrix<_Scalar, _Rows, 1, _Options, _MaxRows, 1>;
-template<typename _Scalar, int _Cols, int _Options = AutoAlign | RowMajor, int _MaxCols = _Cols>
-using RowVector = Matrix<_Scalar, 1, _Cols, _Options, 1, _MaxCols>;
 
 // Define Eigen::NumTraits<Matrix<T,Y,X> so we can put Matrix and Vector
 // types inside other Matrix or Array types. This copies the existing
@@ -81,8 +74,63 @@ namespace BicubicInternal {
  * which requires multiple interpolations for the same z (16x) and y (4x)
  * offsets before interpolating x;
  *
- * cint = u * a;
- * p = cint * f;
+ * cintx = u(x) * a;
+ * p = cintx * f;
+ *
+ * When we want to interpolate vectors,
+ *
+ * Row4(u) * a = Row4(cint) ; cint * vect4(f) = p
+ *
+ * If we want to bicubic interpolate a 4x4 grid we do
+ *
+ * (cint(ry) * matrix4(f) * cint(rx).translate())
+ *
+ * If the points we want to interpolate are actually (x,y,z) vectors, there
+ * are a few ways to do this;
+ *
+ * * Interpolate each vector dimension independently.
+ * * Emembed the vectors as Scalars into the Matrixes.
+ * * Use eigen Tensors with multiple dimensions.
+ * * Flatten/map the multiple dimensions into matrixes.
+ *
+ * Because we normally want to interpolate a whole vector, data locality
+ * suggests we want the vector dimensions closely packed, which suggests not
+ * storing and interpolating each vector dimension independently.
+ *
+ * Embedding vectors as Scalars into Matrixes is really hard to make work.
+ * It's also not clear if eigen can efficiently vector things if this is
+ * done.
+ *
+ * Eigen Tensors is not included in OrcaSlicer and is unsupported.
+ *
+ * This leaves flattening/mapping it all into Matrixes. This involves mapping
+ * a logical f(d,x,y) index to a float vector dimension "d" at point (x,y) in
+ * a 2d vector field into a matrix(r,c) index. Ideally we want the in-memory
+ * layout to reflect the locality order priority of d,x,y. This means the
+ * indexing-order and row-vs-col major are important. When flattening down to
+ * a 2d Matrix any two adjacent indexes can be merged into a single index.
+ * This gives a few options;
+ *
+ * * row-major and indexed as f(y,x,d). We can flatten this to
+ * m(y*xsize+x,d) or m(y,x*dsize+d). This means roughly col=x,row=y, but
+ * relies on row-major layout and the point vector is a row which are not the
+ * normal defaults.
+ *
+ * * col-major with a layout of f(d,x,y) which can be flattened into
+ * m(d,y*xsize+x) or m(r=x*dsize+d,y). This uses the default column-major
+ * mode, and the point vectors are columns, but it does mean x=row,y=col,
+ * which is not normally how it's visualized.
+ *
+ * * row-major and indexed as f(y,d,x) which can be flattened into
+ *   m(y*dmax+d,x) or m(y,d*xsize+x). This doesn't meet the preferred
+ *   locality, but has the big advantage of we can collaps the vector
+ *   dimensions into the row or column, which simplifys the matrix
+ *   operations.
+ *
+ * The way we want to map it depends on the operation we want to do. To
+ * interpolate a vector from an f(y,d,x) field we use;
+ *
+ * (f.remap(4*d,4) * cint(rx).translate()).remap(d,4) * cint(ry).translate()
  */
 
 // Linear kernel, to be able to test cubic methods with hat kernels.
@@ -205,7 +253,7 @@ template<typename _Kernel, typename _ValueType> struct CubicKernelWrapper
         const Eigen::Index ix = std::floor(x);
         const Scalar       rx = x - Scalar(ix);
         // return u(rx) * Kernel::a * fblock(f, ix);
-        return interpolate4(fblock(F, ix), rx);
+        return interpolate4(fblock(f, ix), rx);
     }
 
     // Interpolate a 2D scalar field in a matrix. Note x is the column and y is
