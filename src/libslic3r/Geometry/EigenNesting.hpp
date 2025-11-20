@@ -6,51 +6,22 @@
 #include <cmath>
 
 #include <Eigen/Dense>
+#include <Eigen/src/Core/IO.h>
 
 /***
- * We define some extensions to Eigen here to make it easier to define
- * Eigen::Vector and Eigen::RowVector types, and so we can put any type of
- * Eigen::Matrix inside another Eigen::Matrix or Eigen::Array. This means we
+ * We define some extensions to Eigen here so we can put any type of
+ * Eigen object inside another Eigen::Matrix or Eigen::Array. This means we
  * can interpolate not just scalar fields, but also vector fields.
  */
 namespace Eigen {
 
-// Define Eigen::Vector and Eigen::RowVector templates to make it easier to define these.
-template<typename Scalar_, int Rows_, int Options_ = AutoAlign | ColMajor, int MaxRows_ = Rows_>
-using Vector = Matrix<Scalar_, Rows_, 1, Options_, MaxRows_, 1>;
-template<typename Scalar_, int Cols_, int Options_ = AutoAlign | RowMajor, int MaxCols_ = Cols_>
-using RowVector = Matrix<Scalar_, 1, Cols_, Options_, 1, MaxCols_>;
+template<typename ExpressionType> class ScalarWrapper;
 
-// Define Eigen::ScalarMatrix subclass of Matrix for embedding in other Arrays or Matrixs.
-template<typename Matrix_> class ScalarMatrix : public Matrix_
-{
-public:
-    typedef Matrix_ Base;
-    // using Base::Scalar;
-
-    ScalarMatrix(void) : Base() {}
-    // We need to be able to initialize from a Scalar for Zero(), Ones(), etc.
-    explicit ScalarMatrix(const typename Base::Scalar& value) : Base() { Base::setConstant(value); }
-
-    template<typename OtherDerived> ScalarMatrix(const MatrixBase<OtherDerived>& other) : Base(other) {}
-
-    template<typename OtherDerived> ScalarMatrix& operator=(const MatrixBase<OtherDerived>& other)
-    {
-        this->Base::operator=(other);
-        return *this;
-    }
-
-    Matrix_& matrix() { return static_cast<Matrix_&>(*this); }
-};
-
-template<typename Matrix_> ScalarMatrix<Matrix_>& as_scalar(Matrix_& m) { return static_cast<ScalarMatrix<Matrix_>&>(m); }
-template<typename Matrix_> Matrix_&               as_matrix(ScalarMatrix<Matrix_>& m) { return static_cast<Matrix_&>(m); }
-
-// Define NumTraits<ScalarMatrix<> so we can put ScalarMatrix
+// Define NumTraits<ScalarWrapper<> so we can put ScalarWrapper
 // types inside other Matrix or Array types. This copies the existing
 // NumTraits<Array<...>> definition.
 template<typename _Scalar, int _Rows, int _Cols, int _Options, int _MaxRows, int _MaxCols>
-struct NumTraits<ScalarMatrix<Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>>>
+struct NumTraits<ScalarWrapper<Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>>>
 {
     typedef _Scalar                                                              MatrixScalar;
     typedef Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, _MaxCols>          MatrixType;
@@ -71,54 +42,220 @@ struct NumTraits<ScalarMatrix<Matrix<_Scalar, _Rows, _Cols, _Options, _MaxRows, 
         MulCost  = MatrixType::SizeAtCompileTime == Dynamic ? HugeCost : MatrixType::SizeAtCompileTime * NumTraits<_Scalar>::MulCost
     };
 
-    // This is the Eigen v5.0.0 version.
-    // EIGEN_DEVICE_FUNC constexpr static RealScalar epsilon() { return NumTraits<RealScalar>::epsilon(); }
-    // EIGEN_DEVICE_FUNC constexpr static RealScalar dummy_precision() { return NumTraits<RealScalar>::dummy_precision(); }
-    // constexpr static int digits10() { return NumTraits<Scalar>::digits10(); }
-    // constexpr static int max_digits10() { return NumTraits<Scalar>::max_digits10(); }
-
-    EIGEN_DEVICE_FUNC static inline RealScalar epsilon() { return NumTraits<RealScalar>::epsilon(); }
-    EIGEN_DEVICE_FUNC static inline RealScalar dummy_precision() { return NumTraits<RealScalar>::dummy_precision(); }
-    static inline int                          digits10() { return NumTraits<_Scalar>::digits10(); }
+    EIGEN_DEVICE_FUNC constexpr static RealScalar epsilon() { return NumTraits<RealScalar>::epsilon(); }
+    EIGEN_DEVICE_FUNC constexpr static RealScalar dummy_precision() { return NumTraits<RealScalar>::dummy_precision(); }
+    constexpr static int                          digits10() { return NumTraits<_Scalar>::digits10(); }
+    constexpr static int                          max_digits10() { return NumTraits<_Scalar>::max_digits10(); }
 };
 
-template<typename BinaryOp, typename Matrix_> struct ScalarBinaryOpTraits<ScalarMatrix<Matrix_>, ScalarMatrix<Matrix_>, BinaryOp>
+template<typename ExpressionType, typename BinaryOp>
+struct ScalarBinaryOpTraits<ScalarWrapper<ExpressionType>, typename ExpressionType::Scalar, BinaryOp>
 {
-    typedef ScalarMatrix<Matrix_> ReturnType;
+    typedef ScalarWrapper<ExpressionType> ReturnType;
+};
+template<typename ExpressionType, typename BinaryOp>
+struct ScalarBinaryOpTraits<typename ExpressionType::Scalar, ScalarWrapper<ExpressionType>, BinaryOp>
+{
+    typedef ScalarWrapper<ExpressionType> ReturnType;
 };
 
-template<typename Matrix_>
-struct ScalarBinaryOpTraits<ScalarMatrix<Matrix_>,
-                            typename Matrix_::Scalar,
-                            internal::scalar_product_op<ScalarMatrix<Matrix_>, typename Matrix_::Scalar>>
-    : internal::scalar_product_traits<ScalarMatrix<Matrix_>, typename Matrix_::Scalar>
+/** \class ScalarWrapper
+ * \ingroup Core_Module
+ *
+ * \brief Wrapper around Matrix of Array expressions so they can be used like a scalar.
+ *
+ * This class is the return type of scalar(), and most of the time this is the only way it is used.
+ *
+ * \sa scalar(), class MatrixWrapper, class ArrayWrapper.
+ */
+
+// Note we intentionally don't inherit from MatrixBase because we don't want
+// to confuse scalar vs matrix template matching.
+// class ScalarWrapper : public MatrixBase<ScalarWrapper<ExpressionType> > {
+template<typename ExpressionType> class ScalarWrapper
 {
-    typedef ScalarMatrix<Matrix_> ReturnType;
+public:
+    // typedef MatrixBase<ScalarWrapper<ExpressionType> > Base;
+    typedef typename ExpressionType::Scalar                                                      Scalar;
+    typedef std::conditional_t<internal::is_lvalue<ExpressionType>::value, Scalar, const Scalar> ScalarWithConstIfNotLvalue;
+
+    // Make all template instantiations friends so they can access m_expression of each other.
+    template<typename OtherExpressionType> friend class ScalarWrapper;
+
+    // EIGEN_DENSE_PUBLIC_INTERFACE(ScalarWrapper)
+    // EIGEN_INHERIT_ASSIGNMENT_OPERATORS(ScalarWrapper)
+
+    EIGEN_DEVICE_FUNC inline ScalarWrapper(void) : m_expression(){};
+    // EIGEN_DEVICE_FUNC inline ScalarWrapper(const ScalarWrapper&) = default;
+    template<typename OtherExpressionType>
+    EIGEN_DEVICE_FUNC inline ScalarWrapper(const ScalarWrapper<OtherExpressionType>& other) : m_expression(other.m_expression)
+    {}
+    template<typename OtherDerived>
+    explicit EIGEN_DEVICE_FUNC inline ScalarWrapper(const DenseBase<OtherDerived>& other) : m_expression(other.derived())
+    {}
+
+    // We need to be able to initialize from a Scalar for Zero(), Ones(), etc.
+    explicit ScalarWrapper(const Scalar& value) : m_expression{ExpressionType::Constant(value)} {}
+
+    template<typename OtherExpressionType>
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE ScalarWrapper& operator=(const ScalarWrapper<OtherExpressionType>& other)
+    {
+        m_expression = other.m_expression;
+        return *this;
+    }
+    template<typename OtherExpressionType> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE ScalarWrapper& operator=(const OtherExpressionType& other)
+    {
+        m_expression = other;
+        return *this;
+    }
+
+    EIGEN_DEVICE_FUNC constexpr Index rows() const noexcept { return m_expression.rows(); }
+    EIGEN_DEVICE_FUNC constexpr Index cols() const noexcept { return m_expression.cols(); }
+    // EIGEN_DEVICE_FUNC constexpr Index outerStride() const noexcept { return m_expression.outerStride(); }
+    // EIGEN_DEVICE_FUNC constexpr Index innerStride() const noexcept { return m_expression.innerStride(); }
+
+    EIGEN_DEVICE_FUNC constexpr ScalarWithConstIfNotLvalue* data() { return m_expression.data(); }
+    EIGEN_DEVICE_FUNC constexpr const Scalar*               data() const { return m_expression.data(); }
+
+    EIGEN_DEVICE_FUNC inline const Scalar& coeffRef(Index rowId, Index colId) const { return m_expression.coeffRef(rowId, colId); }
+    EIGEN_DEVICE_FUNC inline const Scalar& coeffRef(Index index) const { return m_expression.coeffRef(index); }
+    EIGEN_DEVICE_FUNC inline const Scalar& coeff(Index rowId, Index colId) const { return m_expression.coeff(rowId, colId); }
+    EIGEN_DEVICE_FUNC inline const Scalar& coeff(Index index) const { return m_expression.coeff(index); }
+
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const ExpressionType& nestedExpression() const { return m_expression; }
+    // EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const internal::remove_all_t<NestedExpressionType>& matrix() const { return m_expression; }
+    // EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const auto array() const { return m_expression.array(); }
+
+    // EIGEN_DEVICE_FUNC void resize(Index newSize) { m_expression.resize(newSize); }
+    // EIGEN_DEVICE_FUNC void resize(Index rows, Index cols) { m_expression.resize(rows, cols); }
+
+    auto operator-() const { return ScalarWrapper(-m_expression); }
+
+    template<typename OtherExpressionType> auto operator+(const ScalarWrapper<OtherExpressionType>& other) const
+    { return ScalarWrapper(m_expression + other.m_expression); }
+    auto        operator+(const Scalar& s) const { return ScalarWrapper(m_expression + s); }
+    friend auto operator+(const Scalar& s, const ScalarWrapper& w) { return ScalarWrapper(s + w.m_expression); }
+
+    template<typename OtherExpressionType> auto operator-(const ScalarWrapper<OtherExpressionType>& other) const
+    { return ScalarWrapper(m_expression - other.m_expression); }
+    auto        operator-(const Scalar& s) const { return ScalarWrapper(m_expression - s); }
+    friend auto operator-(const Scalar& s, const ScalarWrapper& w) { return ScalarWrapper(s - w.m_expression); }
+
+    template<typename OtherExpressionType> auto operator*(const ScalarWrapper<OtherExpressionType>& other) const
+    { return ScalarWrapper(m_expression * other.m_expression); }
+    auto        operator*(const Scalar& s) const { return ScalarWrapper(m_expression * s); }
+    friend auto operator*(const Scalar& s, const ScalarWrapper& w) { return ScalarWrapper(s * w.m_expression); }
+
+    template<typename OtherExpressionType> auto operator/(const ScalarWrapper<OtherExpressionType>& other) const
+    { return ScalarWrapper(m_expression / other.m_expression); }
+    auto        operator/(const Scalar& s) const { return ScalarWrapper(m_expression / s); }
+    friend auto operator/(const Scalar& s, const ScalarWrapper& w) { return ScalarWrapper(s / w.m_expression); }
+
+    template<typename OtherExpressionType> auto& operator+=(const ScalarWrapper<OtherExpressionType>& other)
+    {
+        m_expression += other.m_expression;
+        return *this;
+    }
+    auto& operator+=(const Scalar& s)
+    {
+        m_expression += s;
+        return *this;
+    }
+
+    template<typename OtherExpressionType> auto& operator-=(const ScalarWrapper<OtherExpressionType>& other)
+    {
+        m_expression -= other.m_expression;
+        return *this;
+    }
+    auto& operator-=(const Scalar& s)
+    {
+        m_expression -= s;
+        return *this;
+    }
+
+    template<typename OtherExpressionType> auto& operator*=(const ScalarWrapper<OtherExpressionType>& other)
+    {
+        m_expression *= other.m_expression;
+        return *this;
+    }
+    auto& operator*=(const Scalar& s)
+    {
+        m_expression *= s;
+        return *this;
+    }
+
+    template<typename OtherExpressionType> auto& operator/=(const ScalarWrapper<OtherExpressionType>& other)
+    {
+        m_expression /= other.m_expression;
+        return *this;
+    }
+    auto& operator/=(const Scalar& s)
+    {
+        m_expression /= s;
+        return *this;
+    }
+
+    template<typename OtherExpressionType> auto operator==(const ScalarWrapper<OtherExpressionType>& other) const
+    { return m_expression == other.m_expression; }
+    auto operator==(const Scalar& s) const { return m_expression == s; }
+
+    template<typename OtherExpressionType> auto operator!=(const ScalarWrapper<OtherExpressionType>& other) const
+    { return m_expression != other.m_expression; }
+    auto operator!=(const Scalar& s) const { return m_expression != s; }
+
+    template<typename OtherExpressionType> auto operator<=(const ScalarWrapper<OtherExpressionType>& other) const
+    { return m_expression <= other.m_expression; }
+    auto operator<=(const Scalar& s) const { return m_expression <= s; }
+
+    template<typename OtherExpressionType> auto operator<(const ScalarWrapper<OtherExpressionType>& other) const
+    { return m_expression < other.m_expression; }
+    auto operator<(const Scalar& s) const { return m_expression < s; }
+
+    template<typename OtherExpressionType> auto operator>=(const ScalarWrapper<OtherExpressionType>& other) const
+    { return m_expression >= other.m_expression; }
+    auto operator>=(const Scalar& s) const { return m_expression >= s; }
+
+    template<typename OtherExpressionType> auto operator>(const ScalarWrapper<OtherExpressionType>& other) const
+    { return m_expression > other.m_expression; }
+    auto operator>(const Scalar& s) const { return m_expression > s; }
+
+    const WithFormat<ExpressionType> format(const IOFormat& fmt) const { return m_expression.format(fmt); }
+
+protected:
+    ExpressionType m_expression;
 };
 
-template<typename Matrix_>
-struct ScalarBinaryOpTraits<typename Matrix_::Scalar,
-                            ScalarMatrix<Matrix_>,
-                            internal::scalar_product_op<typename Matrix_::Scalar, ScalarMatrix<Matrix_>>>
-    : internal::scalar_product_traits<typename Matrix_::Scalar, ScalarMatrix<Matrix_>>
-{
-    typedef ScalarMatrix<Matrix_> ReturnType;
-};
+// These wrap an expression as a scalar with ScalarWrapper.
+template<typename ExpressionType> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE ScalarWrapper<ExpressionType> scalar(ExpressionType& m)
+{ return ScalarWrapper<ExpressionType>(m); }
+template<typename ExpressionType>
+EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const ScalarWrapper<const ExpressionType> scalar(const ExpressionType& m)
+{ return ScalarWrapper<const ExpressionType>(m); }
 
-/*
-template<typename Matrix_, typename OtherMatrix_>
-struct ScalarBinaryOpTraits<
-       ScalarMatrix<Matrix_>,
-       ScalarMatrix<OtherMatrix_>,
-       internal::scalar_product_op<
-         ScalarMatrix<Matrix_>,
-         ScalarMatrix<OtherMatrix_>
-       >
-> : internal::scalar_product_traits<ScalarMatrix<Matrix_> , ScalarMatrix<OtherMatrix_> >
+template<typename ExpressionType> auto real(const ScalarWrapper<ExpressionType>& x) { return scalar(real(x.m_expression)); }
+template<typename ExpressionType> auto imag(const ScalarWrapper<ExpressionType>& x) { return scalar(imag(x.m_expression)); }
+template<typename ExpressionType> auto conj(const ScalarWrapper<ExpressionType>& x) { return scalar(conj(x.m_expression)); }
+template<typename ExpressionType> auto sqrt(const ScalarWrapper<ExpressionType>& x) { return scalar(sqrt(x.m_expression)); }
+template<typename ExpressionType> auto abs(const ScalarWrapper<ExpressionType>& x) { return scalar(abs(x.m_expression)); }
+template<typename ExpressionType> auto cos(const ScalarWrapper<ExpressionType>& x) { return scalar(cos(x.m_expression)); }
+template<typename ExpressionType> auto sin(const ScalarWrapper<ExpressionType>& x) { return scalar(sin(x.m_expression)); }
+template<typename ExpressionType> auto acos(const ScalarWrapper<ExpressionType>& x) { return scalar(acos(x.m_expression)); }
+template<typename ExpressionType> auto atan2(const ScalarWrapper<ExpressionType>& y, const ScalarWrapper<ExpressionType>& x)
+{ return scalar(atan2(y.m_expression, x.m_expression)); }
+
+template<typename ExpressionType> std::ostream& operator<<(std::ostream& stream, const ScalarWrapper<ExpressionType>& x)
 {
-  typedef ScalarMatrix<Product< Matrix_, OtherMatrix_ > > ReturnType;
-};
-*/
+    IOFormat fmt;
+    if (x.rows() == 1) {
+        fmt = IOFormat(StreamPrecision, DontAlignCols, ",", ",", "{", "}", "", "");
+    } else if (x.cols() == 1) {
+        fmt = IOFormat(StreamPrecision, DontAlignCols, ",", ",", "", "", "{", "}");
+    } else {
+        fmt = IOFormat(StreamPrecision, DontAlignCols, ",", ",", "{", "}", "{", "}");
+    }
+    stream << x.format(fmt);
+    return stream;
+}
 
 } // namespace Eigen
 
