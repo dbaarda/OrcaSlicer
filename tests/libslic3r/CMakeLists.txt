@@ -7,7 +7,6 @@ add_executable(${_TEST_NAME}_tests
     test_clipper_offset.cpp
     test_clipper_utils.cpp
     test_config.cpp
-    test_eigennesting.cpp
     test_elephant_foot_compensation.cpp
     test_fields.cpp
     test_geometry.cpp
@@ -15,6 +14,7 @@ add_executable(${_TEST_NAME}_tests
     test_polygon.cpp
     test_mutable_polygon.cpp
     test_mutable_priority_queue.cpp
+    test_scalarwrapper.cpp
     test_stl.cpp
     test_meshboolean.cpp
     test_marchingsquares.cpp

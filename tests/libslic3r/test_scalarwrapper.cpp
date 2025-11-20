@@ -5,7 +5,7 @@
 
 #include <fstream>
 
-#include <libslic3r/Geometry/EigenNesting.hpp>
+#include <libslic3r/Geometry/ScalarWrapper.hpp>
 
 using namespace Eigen;
 using namespace Catch::Matchers;
@@ -34,7 +34,7 @@ template<typename MatrixExpr>
 }
 */
 
-SCENARIO("Test Nesting a Vector3f inside a Matrix", "[EigenNesting]")
+SCENARIO("Test Nesting a Vector3f inside a Matrix", "[ScalarWrapper]")
 {
     GIVEN("Classes are defined and instances are initialized.")
     {

@@ -1,5 +1,14 @@
-#ifndef libslic3r_Geometry_EigenNesting_hpp_
-#define libslic3r_Geometry_EigenNesting_hpp_
+#ifndef libslic3r_Geometry_ScalarWrapper_hpp_
+#define libslic3r_Geometry_ScalarWrapper_hpp_
+
+/***
+ * An Eigen::ScalarWrapper for using eigen types like scalars.
+ *
+ * This means Matrix's and Array's can be treated like scalars and put inside
+ * other Matrix's or Array's. This means you can use an eigen
+ * expression designed for Bicubic interpolation of a Real scalar field to do
+ * Bicubic interpolation of a Vector Field.
+ */
 
 #include <algorithm>
 #include <vector>
@@ -259,4 +268,4 @@ template<typename ExpressionType> std::ostream& operator<<(std::ostream& stream,
 
 } // namespace Eigen
 
-#endif /* libslic3r_Geometry_EigenNesting_hpp_ */
+#endif /* libslic3r_Geometry_ScalarWrapper_hpp_ */
