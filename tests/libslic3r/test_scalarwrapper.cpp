@@ -17,6 +17,26 @@ using namespace Catch::Matchers;
  */
 
 
+// Note defining these ScalarBinaryOpTraits entries is required to make
+// operations like `Array<Array<int>> + int` or `Array<Array<int>> *
+// Array<int>` work, but if they are defined they break normal operations
+// like `Array<int> + Array<int>` because they become ambiguous; is one of
+// those arrays actually a Scalar, giving a `Array<Array<int>>` result?
+// So we can't define them.
+
+/*
+template <typename Scalar_, int Rows_, int Cols_, int Options_, int MaxRows_, int MaxCols_, typename BinaryOp_>
+struct ScalarBinaryOpTraits<Array<Scalar_, Rows_, Cols_, Options_, MaxRows_, MaxCols_>, Scalar_, BinaryOp_>
+{
+    typedef Array<Scalar_, Rows_, Cols_, Options_, MaxRows_, MaxCols_>  ReturnType;
+};
+template <typename Scalar_, int Rows_, int Cols_, int Options_, int MaxRows_, int MaxCols_, typename BinaryOp_>
+struct ScalarBinaryOpTraits<Scalar_, Array<Scalar_, Rows_, Cols_, Options_, MaxRows_, MaxCols_>, BinaryOp_>
+{
+    typedef Array<Scalar_, Rows_, Cols_, Options_, MaxRows_, MaxCols_>  ReturnType;
+};
+*/
+
 // Eigen natively supports using Arrays as scalars inside Matrix, Vector, and
 // Array, but it has some limitations. We include tests to test this and
 // highlight the limitations.
