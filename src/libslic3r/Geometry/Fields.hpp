@@ -7,6 +7,7 @@
 
 #include <Eigen/Dense>
 #include "Bicubic.hpp"
+#include "ScalarWrapper.hpp"
 
 namespace Slic3r::Geometry {
 
@@ -36,10 +37,23 @@ namespace Slic3r::Geometry {
  */
 
 // An p(x,y,z) Vector of type T;
-template<typename T> using Vec3 = Eigen::Matrix<T, 3, 1>;
+template<typename T>
+using Vec3 = Eigen::Matrix<T, 3, 1>;
+
+template<typename T>
+using SVec3 = Eigen::ScalarWrapper<Vec3<T>>;
 
 // A 2D Field of type T.
-template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> using Field2 = Eigen::Matrix<T, Y, X, Eigen::RowMajor>;
+template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+using Field2 = Eigen::Matrix<T, Y, X, Eigen::RowMajor>;
+
+// A ScalarWrapper around a Field2.
+template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+using SField2 = Eigen::ScalarWrapper<Field2<T, Y, X>>;
+
+// A 3D Field of type T.
+template<typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+using _Field3 = Eigen::Vector<SField2<T, Y, X>, Z>;
 
 // A 3D Field of type T.
 //
@@ -64,9 +78,12 @@ public:
         }
     }
 
-    template<typename OtherDerived> Field3(const Eigen::MatrixBase<OtherDerived>& other) : Eigen::Vector<Field2<T, Y, X>, Z>(other) {}
+    template<typename OtherDerived>
+    Field3(const Eigen::MatrixBase<OtherDerived>& other) : Eigen::Vector<Field2<T, Y, X>, Z>(other)
+    {}
 
-    template<typename OtherDerived> Field3& operator=(const Eigen::MatrixBase<OtherDerived>& other)
+    template<typename OtherDerived>
+    Field3& operator=(const Eigen::MatrixBase<OtherDerived>& other)
     {
         this->Eigen::Vector<Field2<T, Y, X>, Z>::operator=(other);
         return *this;
@@ -117,10 +134,12 @@ public:
 };
 
 // A 2D Vector Field of Vec3 of type T.
-template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> using Vec3Field2 = Field2<Vec3<T>, Y, X>;
+template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+using Vec3Field2 = Field2<SVec3<T>, Y, X>;
 
 // A 3D Vector Field of Vec3 of type T.
-template<typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> using Vec3Field3 = Field3<Vec3<T>, Z, Y, X>;
+template<typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+using Vec3Field3 = Field3<SVec3<T>, Z, Y, X>;
 
 /*********************************************
  * Interpolate Fields.
@@ -140,14 +159,16 @@ namespace LerpKernel {
 const Eigen::RowVector2d cint(const double x) { return Eigen::RowVector2d(1 - x, x); }
 
 // Get a 2x1 vector from a vector for lerp.
-template<typename Derived> const auto fblock(const Eigen::EigenBase<Derived>& F, const Eigen::Index x)
+template<typename Derived>
+const auto fblock(const Eigen::EigenBase<Derived>& F, const Eigen::Index x)
 {
     assert(0 <= x && x < F.size());
     return F.template segment<2>(x);
 }
 
 // Get a 2x2 block from a matrix for lerp.
-template<typename Derived> const auto fblock(const Eigen::EigenBase<Derived>& F, const Eigen::Index y, const Eigen::Index x)
+template<typename Derived>
+const auto fblock(const Eigen::EigenBase<Derived>& F, const Eigen::Index y, const Eigen::Index x)
 {
     assert(0 <= y && y < F.rows());
     assert(0 <= x && x < F.cols());
@@ -157,7 +178,8 @@ template<typename Derived> const auto fblock(const Eigen::EigenBase<Derived>& F,
 } // namespace LerpKernel
 
 // linearly interpolate within a Field2 to get the value at p(x,y).
-template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> const T lerp(const Field2<T, Y, X>& f, const P& p)
+template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+const T lerp(const Field2<T, Y, X>& f, const P& p)
 {
     const Eigen::Index iy = std::floor(p.y());
     const Eigen::Index ix = std::floor(p.x());
@@ -187,19 +209,12 @@ const T lerp(const Field3<T, Z, Y, X>& f, const P& p)
 }
 
 // cubic interpolate within a Field2 to get the value at p(x,y).
-template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> const T cubic(const Field2<T, Y, X>& f, const P& p)
+template<typename P, typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+const T cubic(const Field2<T, Y, X>& f, const P& p)
 {
-    using Scalar          = typename P::Scalar;
-    using Kernel          = CubicCatmulRomKernel<Scalar, T>;
-    const Eigen::Index iy = std::floor(p.y());
-    const Eigen::Index ix = std::floor(p.x());
-    const double       ry = p.y() - iy;
-    const double       rx = p.x() - ix;
-    assert(0 <= iy && iy < f.rows());
-    assert(0 <= ix && ix < f.cols());
-    auto cy = Kernel::cint(ry);
-    auto cx = Kernel::cint(rx).transpose().eval();
-    return cy * Kernel::fblock(f, iy, ix) * cx;
+    using Scalar = typename P::Scalar;
+    using Kernel = CubicCatmulRomKernel<Scalar, T>;
+    return Kernel::interpolate(f, p);
 }
 
 // cubic interpolate within a Field3 to get the value at p(x,y,z).
@@ -217,19 +232,19 @@ const T cubic(const Field3<T, Z, Y, X>& f, const P& p)
     assert(0 <= iz && iz < f.size());
     assert(0 <= iy && iy < f(0).rows());
     assert(0 <= ix && ix < f(0).cols());
-    const auto                cy = Kernel::cint(ry);
-    const auto                cx = Kernel::cint(rx).transpose().eval();
-    typename Kernel::Vector4V zf;
+    const typename Kernel::RowVector4S cy = Kernel::cint(ry);
+    const typename Kernel::Vector4S    cx = Kernel::cint(rx).transpose();
+    typename Kernel::Vector4V          zf;
     for (int z = 0; z < 4; z++)
         zf(z) = cy * Kernel::fblock(f(std::clamp<Eigen::Index>(iz + z - 1, 0, f.size() - 1)), iy, ix) * cx;
-    return Kernel::cint(rz) * zf;
+    return Kernel::interpolate4(zf, rz);
 }
 
 // cubic interpolate a Field3 into a Field2 at a given z.
 template<typename S, typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
 const Field2<T, Y, X> cubic_z(const Field3<T, Z, Y, X>& f, const S z)
 {
-    using Kernel = CubicCatmulRomKernel<S, Field2<T, Y, X>>;
+    using Kernel = CubicCatmulRomKernel<S, SField2<T, Y, X>>;
     return Kernel::interpolate(f, z);
 }
 
@@ -255,7 +270,8 @@ const Field2<T, Y, X> cubic_z(const Field3<T, Z, Y, X>& f, const S z)
  */
 
 // Do a single iteration of summing 3x3 adjacent values of Field2.
-template<typename T, int Y, int X> void sum33(Field2<T, Y, X>& f)
+template<typename T, int Y, int X>
+void sum33(Field2<T, Y, X>& f)
 {
     const Eigen::Index y = f.rows();
     const Eigen::Index x = f.cols();
@@ -277,7 +293,8 @@ template<typename T, int Y, int X> void sum33(Field2<T, Y, X>& f)
 }
 
 // GausianSmooth (almost) a Field2 with multiple iterations of 3x3 averaging.
-template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> void smooth(Field2<T, Y, X>& f, const int n = 6)
+template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
+void smooth(Field2<T, Y, X>& f, const int n = 6)
 {
     double m = 1.0;
     for (int i = 0; i < n; i++) {
@@ -288,7 +305,8 @@ template<typename T, int Y = Eigen::Dynamic, int X = Eigen::Dynamic> void smooth
 }
 
 // Do a single iteration of summing 3 adjacent layers of Field3.
-template<typename T, int Z, int Y, int X> void sum3(Field3<T, Z, Y, X>& f)
+template<typename T, int Z, int Y, int X>
+void sum3(Field3<T, Z, Y, X>& f)
 {
     const Eigen::Index z = f.size();
     const Eigen::Index y = f(0).rows();

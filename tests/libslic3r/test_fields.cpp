@@ -173,90 +173,64 @@ SCENARIO("Test Field3 Smoothing", "[Fields]")
     };
 }
 
-TEST_CASE("Benchmark Field2 cubic()", "[Fields]")
+TEST_CASE("Benchmark Field2.cubic()", "[Fields]")
 {
     Eigen::Index n     = 100;
     Eigen::Index steps = n - 3;
     double       dstep = double(n) / double(steps);
-    SECTION("Using T=float")
+    SECTION("Field2.cubic()")
     {
         std::stringstream title;
-        title << "f2<float> size=" << n << "x" << n;
-        Field2<float> f2(n, n);
-        f2.setRandom(n, n);
+        Field2<double>    f2d(n, n);
+        Field2<float>     f2f(n, n);
+        f2d.setRandom(n, n);
+        f2f = f2d.cast<float>();
+        title << "Field2<float> size=" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             float d = (i % steps) * dstep;
-            return cubic(f2, Vec2f(d, d));
+            return cubic(f2f, Vec2f(d, d));
         };
-    };
-    SECTION("Using T=double")
-    {
-        std::stringstream title;
-        title << "f2<double> size=" << n << "x" << n;
-        Field2<double> f2(n, n);
-        f2.setRandom(n, n);
+        title = std::stringstream();
+        title << "Field2<double> size=" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             double d = (i % steps) * dstep;
-            return cubic(f2, Vec2d(d, d));
+            return cubic(f2d, Vec2d(d, d));
         };
     };
 };
 
-TEST_CASE("Benchmark Field3 cubic()", "[Fields]")
+TEST_CASE("Benchmark Field3.cubic()", "[Fields]")
 {
+    // We use steps and dstep as a cheap way to calculate semi-random floats
+    // to interpolate in the range 0 to n-1.
     Eigen::Index n     = 100;
     Eigen::Index steps = n - 3;
     double       dstep = double(n) / double(steps);
-    SECTION("Using T=float")
+    SECTION("Field3.cubic()")
     {
         std::stringstream title;
-        title << "f3<float> size=" << n << "x" << n << "x" << n;
-        Field3<float> f3(n, n, n);
-        for (Index z = 0; z < f3.size(); z++) {
-            f3(z).setRandom(n, n);
+        Field3<double>    f3d(n, n, n);
+        Field3<float>     f3f(n, n, n);
+        for (int z = 0; z < n; z++) {
+            f3d[z].setRandom(n, n);
+            f3f[z] = f3d[z].cast<float>();
         }
+        title << "Field3<float> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             float d = (i % steps) * dstep;
-            return cubic(f3, Vec3f(d, d, d));
+            return cubic(f3f, Vec3f(d, d, d));
         };
-    };
-    SECTION("Using T=double")
-    {
-        std::stringstream title;
-        title << "f3<double> size=" << n << "x" << n << "x" << n;
-        Field3<double> f3(n, n, n);
-        for (Index z = 0; z < f3.size(); z++) {
-            f3(z).setRandom(n, n);
-        }
+        title = std::stringstream();
+        title << "Field3<double> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
-            float d = (i % steps) * dstep;
-            return cubic(f3, Vec3d(d, d, d));
+            double d = (i % steps) * dstep;
+            return cubic(f3d, Vec3d(d, d, d));
         };
     };
-    /*
-    SECTION("Using T=Vec3f")
-    {
-        std::stringstream title;
-        title << "f3<Vec3f> size=" << n << "x" << n << "x" << n;
-        Field3<Vec3f> f3(n, n, n);
-        for (Index z = 0; z < f3.lays(); z++) {
-          for (Index y = 0; y < f3.rows(); y++) {
-            for (Index x = 0; x < f3.cols(); x++) {
-              f3(z,y,x) = Vec3f(x,y,z);
-            }
-          }
-        }
-        BENCHMARK(title.str(), i)
-        {
-          float d = (i % steps) * dstep;
-          return cubic(f3, Vec3f(d, d, d));
-        };
-    };
-     */
 };
 
 TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
@@ -264,29 +238,24 @@ TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
     Eigen::Index n     = 100;
     Eigen::Index steps = n - 3;
     double       dstep = double(n) / double(steps);
-    SECTION("Using T=float")
+    SECTION("Field3.cubic_z()")
     {
         std::stringstream title;
-        title << "f3<float> size=" << n << "x" << n << "x" << n;
-        Field3<float> f3(n, n, n);
-        for (Index z = 0; z < f3.size(); z++) {
-            f3(z).setRandom(n, n);
+        Field3<double>    f3d(n, n, n);
+        Field3<float>     f3f(n, n, n);
+        for (int z = 0; z < n; z++) {
+            f3d[z].setRandom(n, n);
+            f3f[z] = f3d[z].cast<float>();
         }
+        title << "Field3<float> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             float d = (i % steps) * dstep;
             // TODO: make this work.
             //return cubic_z(f3, d);
         };
-    };
-    SECTION("Using T=double")
-    {
-        std::stringstream title;
-        title << "f3<double> size=" << n << "x" << n << "x" << n;
-        Field3<double> f3(n, n, n);
-        for (Index z = 0; z < f3.size(); z++) {
-            f3(z).setRandom(n, n);
-        }
+        title = std::stringstream();
+        title << "Field3<double> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             double d = (i % steps) * dstep;
@@ -298,11 +267,11 @@ TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
 
 TEST_CASE("Benchmark Field2 smooth()", "[Fields]")
 {
-    SECTION("Using T=float")
+    SECTION("Field2<float>.smooth()")
     {
         for (Index n = 50; n <= 200; n *= 2) {
             std::stringstream title;
-            title << "size=" << n << "x" << n;
+            title << "f2<float> size=" << n << "x" << n;
             Field2<float> f2(n, n);
             f2.setRandom(n, n);
             BENCHMARK(title.str())
@@ -312,11 +281,11 @@ TEST_CASE("Benchmark Field2 smooth()", "[Fields]")
             };
         }
     };
-    SECTION("Using T=double")
+    SECTION("Field2<double>.smooth()")
     {
         for (Index n = 50; n <= 200; n *= 2) {
             std::stringstream title;
-            title << "size=" << n << "x" << n;
+            title << "f2<double> size=" << n << "x" << n;
             Field2<double> f2(n, n);
             f2.setRandom(n, n);
             BENCHMARK(title.str())
@@ -346,11 +315,11 @@ TEST_CASE("Benchmark Field2 smooth()", "[Fields]")
 
 TEST_CASE("Benchmark Field3 smooth()", "[Fields]")
 {
-    SECTION("Using T=float")
+    SECTION("Field3<float>.smooth()")
     {
         for (Index n = 50; n <= 200; n *= 2) {
             std::stringstream title;
-            title << "size=" << n << "x" << n << "x" << n;
+            title << "f3<float> size=" << n << "x" << n << "x" << n;
             Field3<float> f3(n, n, n);
             for (Index z = 0; z < f3.size(); z++) {
                 f3(z).setRandom(n, n);
@@ -362,11 +331,11 @@ TEST_CASE("Benchmark Field3 smooth()", "[Fields]")
             };
         }
     };
-    SECTION("Using T=double")
+    SECTION("Field3<double>.smooth()")
     {
         for (Index n = 50; n <= 200; n *= 2) {
             std::stringstream title;
-            title << "size=" << n << "x" << n << "x" << n;
+            title << "f3<double> size=" << n << "x" << n << "x" << n;
             Field3<double> f3(n, n, n);
             for (Index z = 0; z < f3.size(); z++) {
                 f3(z).setRandom(n, n);
