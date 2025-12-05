@@ -132,8 +132,11 @@ public:
     EIGEN_DEVICE_FUNC inline const Scalar& coeff(Index index) const { return m_expression.coeff(index); }
 
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const ExpressionType& nestedExpression() const { return m_expression; }
-    // EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const internal::remove_all_t<NestedExpressionType>& matrix() const { return m_expression; }
-    // EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const auto array() const { return m_expression.array(); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE ExpressionType& nestedExpression() { return m_expression; }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const auto& matrix() const { return m_expression.derived().matrix(); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE auto& matrix() { return m_expression.derived().matrix(); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE const auto& array() const { return m_expression.derived().array(); }
+    EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE auto& array() { return m_expression.derived().array(); }
 
     // EIGEN_DEVICE_FUNC void resize(Index newSize) { m_expression.resize(newSize); }
     // EIGEN_DEVICE_FUNC void resize(Index rows, Index cols) { m_expression.resize(rows, cols); }

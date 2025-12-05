@@ -16,13 +16,6 @@ using namespace Catch::Matchers;
  * https://catch2-temp.readthedocs.io/en/latest/test-cases-and-sections.html
  */
 
-// Methods to wrap/unwrap using casting.
-// template<typename Matrix_> ScalarWrapper<Matrix_>& _wrap(Matrix_& m) { return static_cast<ScalarWrapper<Matrix_>&>(m); }
-// template<typename Matrix_> Matrix_&               _unwrap(ScalarWrapper<Matrix_>& m) { return static_cast<Matrix_&>(m); }
-
-// define the wrapping class and conversion methods we want to test.
-#define wrap(a) scalar(a)
-#define unwrap(a) (a).nestedExpression()
 
 // Eigen natively supports using Arrays as scalars inside Matrix, Vector, and
 // Array, but it has some limitations. We include tests to test this and
@@ -308,22 +301,22 @@ SCENARIO("Test ScalarWrapper<Vector3f> inside a Matrix", "[ScalarWrapper]")
         // Matrix2V3f                      m2v3f({{v0, v1}, {v2, v3}});
         // Matrix2V3f                      m2v3f({v0, v1, v2, v3});
         // Matrix2V3f                      m2v3f(v0, v1, v2, v3);
-        Matrix2V3f m2v3f{{wrap(v0), wrap(v1)}, {wrap(v2), wrap(v3)}};
+        Matrix2V3f m2v3f{{scalar(v0), scalar(v1)}, {scalar(v2), scalar(v3)}};
         m2v3f(0, 0) = v0;
         m2v3f(0, 1) = v1;
         m2v3f(1, 0) = v2;
         m2v3f(1, 1) = v3;
         Matrix2f m2f{{0, 1}, {2, 3}};
         // Matrix2V3f m1{{v0,v1},{v2,v3}};
-        THEN("Check wrap and unwrap operations.")
+        THEN("Check scalar() and matrix() operations.")
         {
             CHECK(v0 == Vector3f(0, 0, 0));
-            CHECK(unwrap(wrap(v0)) == Vector3f(0, 0, 0));
+            CHECK(scalar(v0).matrix() == Vector3f(0, 0, 0));
             // CHECK(m2v3f(0, 0) == v0); need to uwrap before we can compare.
-            CHECK(unwrap(m2v3f(0, 0)) == v0);
-            CHECK(unwrap(m2v3f(0, 1)) == v1);
-            CHECK(unwrap(m2v3f(1, 0)) == v2);
-            CHECK(unwrap(m2v3f(1, 1)) == v3);
+            CHECK(m2v3f(0, 0).matrix() == v0);
+            CHECK(m2v3f(0, 1).matrix() == v1);
+            CHECK(m2v3f(1, 0).matrix() == v2);
+            CHECK(m2v3f(1, 1).matrix() == v3);
         };
         WHEN("Matrix2<ScalarWrapper<Vector3f>> instances are added and subtracted.")
         {
@@ -337,14 +330,14 @@ SCENARIO("Test ScalarWrapper<Vector3f> inside a Matrix", "[ScalarWrapper]")
             };
             THEN("Check m2v3f.array() + scalar(v3f) results.")
             {
-                CHECK(((m2v3f.array() + wrap(v1)) == (wrap(v1) + m2v3f.array())).all());
-                CHECK((m2v3f.array() + wrap(v0)).matrix() == m2v3f);
-                CHECK((m2v3f.array() + wrap(v1)).matrix() == Matrix2V3f({{wrap(v0 + v1), wrap(v1 + v1)}, {wrap(v2 + v1), wrap(v3 + v1)}}));
-                CHECK((wrap(v2) + m2v3f.array()).matrix() == Matrix2V3f({{wrap(v2 + v0), wrap(v2 + v1)}, {wrap(v2 + v2), wrap(v2 + v3)}}));
-                CHECK(unwrap((m2v3f.array() + wrap(v1))(0, 0)) == v0 + v1);
-                CHECK(unwrap((m2v3f.array() + wrap(v1))(0, 1)) == v1 + v1);
-                CHECK(unwrap((m2v3f.array() + wrap(v1))(1, 0)) == v2 + v1);
-                CHECK(unwrap((m2v3f.array() + wrap(v1))(1, 1)) == v3 + v1);
+                CHECK(((m2v3f.array() + scalar(v1)) == (scalar(v1) + m2v3f.array())).all());
+                CHECK((m2v3f.array() + scalar(v0)).matrix() == m2v3f);
+                CHECK((m2v3f.array() + scalar(v1)).matrix() == Matrix2V3f({{scalar(v0 + v1), scalar(v1 + v1)}, {scalar(v2 + v1), scalar(v3 + v1)}}));
+                CHECK((scalar(v2) + m2v3f.array()).matrix() == Matrix2V3f({{scalar(v2 + v0), scalar(v2 + v1)}, {scalar(v2 + v2), scalar(v2 + v3)}}));
+                CHECK((m2v3f.array() + scalar(v1))(0, 0).matrix() == v0 + v1);
+                CHECK((m2v3f.array() + scalar(v1))(0, 1).matrix() == v1 + v1);
+                CHECK((m2v3f.array() + scalar(v1))(1, 0).matrix() == v2 + v1);
+                CHECK((m2v3f.array() + scalar(v1))(1, 1).matrix() == v3 + v1);
             };
         };
         WHEN("Instances multiplied.")
@@ -352,23 +345,23 @@ SCENARIO("Test ScalarWrapper<Vector3f> inside a Matrix", "[ScalarWrapper]")
             THEN("Check m2f * scalar(v3f) gives m2v3f.")
             {
                 CHECK(Matrix2V3f::Zero() == 0.0f * m2v3f);
-                CHECK((m2f * wrap(v1)) == (wrap(v1) * m2f));
-                CHECK((m2f * wrap(v0)) == Matrix2V3f::Zero());
-                // CHECK(m2f * wrap(v1) == Matrix2V3f({{v1*0.0f, v1*1.0f}, {v1*2.0f, v1*3.0f}}));
-                CHECK(m2f * wrap(v1) == Matrix2V3f({{wrap(v1 * 0.0f), wrap(v1 * 1.0f)}, {wrap(v1 * 2.0f), wrap(v1 * 3.0f)}}));
-                CHECK(unwrap((m2f * wrap(v1))(0, 0)) == v0);
-                CHECK(unwrap((m2f * wrap(v1))(0, 1)) == v1);
-                CHECK(unwrap((m2f * wrap(v1))(1, 0)) == 2 * v1);
-                CHECK(unwrap((m2f * wrap(v1))(1, 1)) == 3 * v1);
+                CHECK((m2f * scalar(v1)) == (scalar(v1) * m2f));
+                CHECK((m2f * scalar(v0)) == Matrix2V3f::Zero());
+                // CHECK(m2f * scalar(v1) == Matrix2V3f({{v1*0.0f, v1*1.0f}, {v1*2.0f, v1*3.0f}}));
+                CHECK(m2f * scalar(v1) == Matrix2V3f({{scalar(v1 * 0.0f), scalar(v1 * 1.0f)}, {scalar(v1 * 2.0f), scalar(v1 * 3.0f)}}));
+                CHECK((m2f * scalar(v1))(0, 0).matrix() == v0);
+                CHECK((m2f * scalar(v1))(0, 1).matrix() == v1);
+                CHECK((m2f * scalar(v1))(1, 0).matrix() == 2 * v1);
+                CHECK((m2f * scalar(v1))(1, 1).matrix() == 3 * v1);
             };
             THEN("Check m2v3f * N gives m2v3f.")
             {
                 CHECK((m2v3f * 2.0f) == (2.0f * m2v3f));
                 CHECK((m2v3f * 0.0f) == Matrix2V3f::Zero());
-                CHECK(unwrap((m2v3f * 2.0f)(0, 0)) == 2 * v0);
-                CHECK(unwrap((m2v3f * 2.0f)(0, 1)) == 2 * v1);
-                CHECK(unwrap((m2v3f * 2.0f)(1, 0)) == 2 * v2);
-                CHECK(unwrap((m2v3f * 2.0f)(1, 1)) == 2 * v3);
+                CHECK((m2v3f * 2.0f)(0, 0).matrix() == 2 * v0);
+                CHECK((m2v3f * 2.0f)(0, 1).matrix() == 2 * v1);
+                CHECK((m2v3f * 2.0f)(1, 0).matrix() == 2 * v2);
+                CHECK((m2v3f * 2.0f)(1, 1).matrix() == 2 * v3);
             };
             THEN("Check m2f * m2v3f gives m2v3f.")
             {
