@@ -214,8 +214,8 @@ TEST_CASE("Benchmark Field3.cubic()", "[Fields]")
         Field3<double>    f3d(n, n, n);
         Field3<float>     f3f(n, n, n);
         for (int z = 0; z < n; z++) {
-            f3d[z].setRandom(n, n);
-            f3f[z] = f3d[z].cast<float>();
+            f3d(z).setRandom(n, n);
+            f3f(z) = f3d(z).cast<float>();
         }
         title << "Field3<float> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
@@ -241,26 +241,44 @@ TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
     SECTION("Field3.cubic_z()")
     {
         std::stringstream title;
-        Field3<double>    f3d(n, n, n);
-        Field3<float>     f3f(n, n, n);
+        Field3<double>    f3xd(n, n, n), f3yd(n, n, n), f3zd(n, n, n);
+        Field3<float>     f3xf(n, n, n), f3yf(n, n, n), f3zf(n, n, n);
+        Field3<SVec3<double>> f3v3d(n,n,n);
+        Field3<SVec3<float>> f3v3f(n,n,n);
         for (int z = 0; z < n; z++) {
-            f3d[z].setRandom(n, n);
-            f3f[z] = f3d[z].cast<float>();
+            f3xd(z).setRandom(n, n);
+            f3yd(z).setRandom(n, n);
+            f3zd(z).setRandom(n, n);
+            f3xf(z) = f3xd(z).cast<float>();
+            f3yf(z) = f3yd(z).cast<float>();
+            f3zf(z) = f3zd(z).cast<float>();
+          for (Eigen::Index y=0; y< n; y++) {
+            for (Eigen::Index x=0; x< n; x++) {
+              f3v3d(x,y,z) = Vec3d(f3xd(x,y,z), f3yd(x,y,z), f3zd(x,y,z));
+              f3v3f(x,y,z) = Vec3f(f3xf(x,y,z), f3yf(x,y,z), f3zf(x,y,z));
+            }
+          }
         }
-        title << "Field3<float> size=" << n << "x" << n << "x" << n;
+        title << "3 x Field3<float> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             float d = (i % steps) * dstep;
             // TODO: make this work.
-            //return cubic_z(f3, d);
+            Field2<float> f2xf = cubic_z(f3xf, d);
+            Field2<float> f2yf = cubic_z(f3yf, d);
+            Field2<float> f2zf = cubic_z(f3zf, d);
+            return Vec3f(f2xf(1,1), f2yf(1,1), f2zf(1,1));
         };
         title = std::stringstream();
-        title << "Field3<double> size=" << n << "x" << n << "x" << n;
+        title << "3 x Field3<double> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
             double d = (i % steps) * dstep;
             // TODO: make this work.
-            //return cubic_z(f3, d);
+            Field2<double> f2xd = cubic_z(f3xd, d);
+            Field2<double> f2yd = cubic_z(f3yd, d);
+            Field2<double> f2zd = cubic_z(f3zd, d);
+            return Vec3d(f2xd(1,1), f2yd(1,1), f2zd(1,1));
         };
     };
 };

@@ -57,20 +57,16 @@ using _Field3 = Eigen::Vector<SField2<T, Y, X>, Z>;
 
 // A 3D Field of type T.
 //
-// Note this is implemented as a subclass because nesting a matrix as a
-// custom scalar type inside a vector didn't just work. So I created this
-// subclass and just added redefinitions of any methods and operators that
-// didn't compile or work properly. There is almost certainly a better way to
-// do this, maybe using the unsupported Eigen::Tensor stuff, but that isn't
-// included with the old v3.3.7 Eigen included in OrcaSlicer.
+// Note this is implemented as a subclass of _Field3 because we want to add
+// some extra Field3 specific methods.
 template<typename T, int Z = Eigen::Dynamic, int Y = Eigen::Dynamic, int X = Eigen::Dynamic>
-class Field3 : public Eigen::Vector<Field2<T, Y, X>, Z>
+class Field3 : public _Field3<T, Z, Y, X>
 {
 public:
-    typedef Eigen::Vector<Field2<T, Y, X>, Z> Base;
-    Field3(void) : Eigen::Vector<Field2<T, Y, X>, Z>() {}
+    typedef _Field3<T, Z, Y, X> Base;
+//    Field3(void) : Base() {}
 
-    Field3(const Eigen::Index z, const Eigen::Index y = 0, const Eigen::Index x = 0) : Eigen::Vector<Field2<T, Y, X>, Z>(z)
+    Field3(const Eigen::Index z, const Eigen::Index y = 0, const Eigen::Index x = 0) : Base(z)
     {
         if (y > 0 && x > 0) {
             for (Eigen::Index i = 0; i < z; i++)
@@ -79,23 +75,23 @@ public:
     }
 
     template<typename OtherDerived>
-    Field3(const Eigen::MatrixBase<OtherDerived>& other) : Eigen::Vector<Field2<T, Y, X>, Z>(other)
+    Field3(const Eigen::MatrixBase<OtherDerived>& other) : Base(other)
     {}
 
     template<typename OtherDerived>
     Field3& operator=(const Eigen::MatrixBase<OtherDerived>& other)
     {
-        this->Eigen::Vector<Field2<T, Y, X>, Z>::operator=(other);
+        this->Base::operator=(other);
         return *this;
     }
-
-    Field3& operator*=(const T v)
+/*
+    Field3& operator*=(const T& v)
     {
         for (Eigen::Index i = 0; i < this->size(); i++)
             (*this)(i) *= v;
         return *this;
     }
-
+*/
     inline Eigen::Index lays() const { return Base::size(); }
     inline Eigen::Index rows() const { return Base::coeffRef(0).rows(); }
     inline Eigen::Index cols() const { return Base::coeffRef(0).cols(); }
@@ -116,21 +112,20 @@ public:
     }
 
     Field3& setZero() { return setConstant(T(0)); }
-
+/*
     inline const auto& coeff(const Eigen::Index z) const { return Base::coeff(z); }
-    inline const auto& coeff(const Eigen::Index z, const Eigen::Index y) const { return Base::coeff(z).coeff(y); }
+    inline const auto& coeff(const Eigen::Index z, const Eigen::Index y) const { return Base::coeff(z).row(y); }
     inline const auto& coeff(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) const { return Base::coeff(z).coeff(y, x); }
-    inline auto&       coeffRef(const Eigen::Index z) { return Base::coeffRef(z); }
-    inline auto&       coeffRef(const Eigen::Index z, const Eigen::Index y) { return Base::coeffRef(z).coeffRef(y); }
+    inline auto& coeffRef(const Eigen::Index z) { return Base::coeffRef(z); }
+    inline auto& coeffRef(const Eigen::Index z, const Eigen::Index y) { return Base::coeffRef(z).row(y); }
     inline auto& coeffRef(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) { return Base::coeffRef(z).coeffRef(y, x); }
-
-    inline const auto& operator()(const Eigen::Index z) const { return Base::operator()(z); }
-    inline const auto& operator()(const Eigen::Index z, const Eigen::Index y) const { return Base::operator()(z)(y); }
-    inline const auto& operator()(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) const
-    { return Base::operator()(z)(y, x); }
-    inline auto& operator()(const Eigen::Index z) { return Base::operator()(z); }
-    inline auto& operator()(const Eigen::Index z, const Eigen::Index y) { return Base::operator()(z)(y); }
-    inline auto& operator()(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) { return Base::operator()(z)(y, x); }
+*/
+    inline const auto& operator()(const Eigen::Index z) const { return Base::operator()(z).nestedExpression(); }
+    inline const auto& operator()(const Eigen::Index z, const Eigen::Index y) const { return operator()(z).row(y); }
+    inline const auto& operator()(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) const { return operator()(z)(y, x); }
+    inline auto& operator()(const Eigen::Index z) { return Base::operator()(z).nestedExpression(); }
+    inline auto& operator()(const Eigen::Index z, const Eigen::Index y) { return operator()(z).row(y); }
+    inline auto& operator()(const Eigen::Index z, const Eigen::Index y, const Eigen::Index x) { return operator()(z)(y, x); }
 };
 
 // A 2D Vector Field of Vec3 of type T.
@@ -344,7 +339,7 @@ void smooth(Field3<T, Z, Y, X>& f, const int n = 6)
         m *= 3.0;
     }
     // Now divide the sums by 3^n to get the average.
-    f *= T(1 / m);
+    f = f * T(1 / m);
 }
 
 /*********************************************
