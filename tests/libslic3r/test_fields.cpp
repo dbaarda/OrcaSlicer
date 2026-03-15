@@ -1,6 +1,6 @@
 #define NOMINMAX
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <test_utils.hpp>
 
 #include <fstream>
@@ -55,6 +55,17 @@ TEST_CASE("Test Field2", "[Fields]")
 }
 
  */
+
+typedef SVec3<float>   SVec3f;
+typedef SVec3<double>  SVec3d;
+typedef Field2<float>  Field2f;
+typedef Field2<double> Field2d;
+typedef Field2<SVec3f> Field2V3f;
+typedef Field2<SVec3d> Field2V3d;
+typedef Field3<float>  Field3f;
+typedef Field3<double> Field3d;
+typedef Field3<SVec3f> Field3V3f;
+typedef Field3<SVec3d> Field3V3d;
 
 SCENARIO("Test Field2 Smoothing", "[Fields]")
 {
@@ -240,11 +251,11 @@ TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
     double       dstep = double(n) / double(steps);
     SECTION("Field3.cubic_z()")
     {
-        std::stringstream title;
-        Field3<double>    f3xd(n, n, n), f3yd(n, n, n), f3zd(n, n, n);
-        Field3<float>     f3xf(n, n, n), f3yf(n, n, n), f3zf(n, n, n);
-        Field3<SVec3<double>> f3v3d(n,n,n);
-        Field3<SVec3<float>> f3v3f(n,n,n);
+        std::stringstream     title;
+        Field3<double>        f3xd(n, n, n), f3yd(n, n, n), f3zd(n, n, n);
+        Field3<float>         f3xf(n, n, n), f3yf(n, n, n), f3zf(n, n, n);
+        Field3<SVec3<double>> f3v3d(n, n, n);
+        Field3<SVec3<float>>  f3v3f(n, n, n);
         for (int z = 0; z < n; z++) {
             f3xd(z).setRandom(n, n);
             f3yd(z).setRandom(n, n);
@@ -252,33 +263,39 @@ TEST_CASE("Benchmark Field3 cubic_z()", "[Fields]")
             f3xf(z) = f3xd(z).cast<float>();
             f3yf(z) = f3yd(z).cast<float>();
             f3zf(z) = f3zd(z).cast<float>();
-          for (Eigen::Index y=0; y< n; y++) {
-            for (Eigen::Index x=0; x< n; x++) {
-              f3v3d(x,y,z) = Vec3d(f3xd(x,y,z), f3yd(x,y,z), f3zd(x,y,z));
-              f3v3f(x,y,z) = Vec3f(f3xf(x,y,z), f3yf(x,y,z), f3zf(x,y,z));
+            for (Eigen::Index y = 0; y < n; y++) {
+                for (Eigen::Index x = 0; x < n; x++) {
+                    f3v3d(x, y, z) = Vec3d(f3xd(x, y, z), f3yd(x, y, z), f3zd(x, y, z));
+                    f3v3f(x, y, z) = Vec3f(f3xf(x, y, z), f3yf(x, y, z), f3zf(x, y, z));
+                }
             }
-          }
         }
         title << "3 x Field3<float> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
-            float d = (i % steps) * dstep;
-            // TODO: make this work.
+            float         d    = (i % steps) * dstep;
             Field2<float> f2xf = cubic_z(f3xf, d);
             Field2<float> f2yf = cubic_z(f3yf, d);
             Field2<float> f2zf = cubic_z(f3zf, d);
-            return Vec3f(f2xf(1,1), f2yf(1,1), f2zf(1,1));
+            return Vec3f(f2xf(1, 1), f2yf(1, 1), f2zf(1, 1));
         };
         title = std::stringstream();
         title << "3 x Field3<double> size=" << n << "x" << n << "x" << n;
         BENCHMARK(title.str(), i)
         {
-            double d = (i % steps) * dstep;
-            // TODO: make this work.
+            double         d    = (i % steps) * dstep;
             Field2<double> f2xd = cubic_z(f3xd, d);
             Field2<double> f2yd = cubic_z(f3yd, d);
             Field2<double> f2zd = cubic_z(f3zd, d);
-            return Vec3d(f2xd(1,1), f2yd(1,1), f2zd(1,1));
+            return Vec3d(f2xd(1, 1), f2yd(1, 1), f2zd(1, 1));
+        };
+        title = std::stringstream();
+        title << "3 x Field3<Vec3f> size=" << n << "x" << n << "x" << n;
+        BENCHMARK(title.str(), i)
+        {
+            float    f     = (i % steps) * dstep;
+            //Field2V3f f2v3f = cubic_z(f3v3f, f);
+            //return f2v3f;
         };
     };
 };
