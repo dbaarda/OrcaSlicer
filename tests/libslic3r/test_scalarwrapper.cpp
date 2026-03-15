@@ -1,6 +1,6 @@
 #define NOMINMAX
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <test_utils.hpp>
 
 #include <fstream>
@@ -16,6 +16,146 @@ using namespace Catch::Matchers;
  * https://catch2-temp.readthedocs.io/en/latest/test-cases-and-sections.html
  */
 
+// Strangely, Eigen doesn't define convenience types for 1x1 matrixes.
+typedef Eigen::Matrix<float, 1, 1>  Matrix1f;
+typedef Eigen::Matrix<double, 1, 1> Matrix1d;
+
+/******************************************************************************
+ * IS_VALID() checks if an eigen expression is valid.
+ *
+ * The idea here was to use SFINAE to check if an expression was valid and
+ * didn't trigger compiler errors. Sadly this doesn't work, with some eigen
+ * expressions having valid types with compiler errors on eval(), some having
+ * valid eval() with compiler errors on indexing, and most of these errors
+ * seem to be non-SFINAE-safe, requiring the checks to be commented out. */
+template<typename T, typename = void>
+constexpr bool is_valid = false;
+
+template<typename T>
+constexpr bool is_valid<T, std::void_t<decltype(std::declval<T>().eval())>> = true;
+// constexpr bool is_valid<T, std::void_t<decltype(std::declval<T>()(0))> > = true;
+// constexpr bool is_valid<T, std::void_t<typename Eigen::internal::traits<T>::Scalar>> = true;
+// constexpr bool is_valid<T, std::void_t<typename T::Scalar>> = true;
+
+#define IS_VALID(expr) is_valid<decltype(expr)>
+// #define IS_VALID(expr) Eigen::internal::has_ReturnType<decltype(expr)>::value
+
+/******************************************************************************
+ * IS_COND() checks if an expression is a CHECK'able boolean condition. */
+template<typename T>
+constexpr bool is_condition = std::is_convertible_v<T, bool>;
+
+#define IS_COND(expr) is_condition<decltype(expr)>
+
+/******************************************************************************
+ * IS_TRUE() checks if an expression is "true", with special handling for
+ * Arrays.
+ *
+ * Normal condition expressions are just converted into a bool. However, for
+ * Arrays, a1 == a2 is not a condition but an array of scalar == scalar
+ * results. For Arrays of normal scalars this is an array of bools, but for
+ * nested arrays this should be an array of arrays of bools, so an expression
+ * with an array result are considered "true" if all the Array elements are
+ * considered "true". However, == with nested arrays doesn't work because
+ * eigen assumes == of elements always returns a bool. */
+template<typename T>
+constexpr std::enable_if_t<is_condition<T>, bool> is_true(const T& v)
+{ return bool(v); }
+
+template<typename D>
+constexpr bool is_true(const Eigen::ArrayBase<D>& a)
+{
+    // We apply is_true() to each value to convert nested Arrays into bools first.
+    return a.unaryExpr([](auto v) { return is_true(v); }).all();
+    // return a.all();
+}
+
+#define IS_TRUE(expr) is_true(expr)
+
+/******************************************************************************
+ * IS_EQ() checks if two expressions are equal.
+ *
+ * Because == doesn't return a bool for arrays the idea was to use a smarter
+ * is_equ() templated function instead. However, CHECK() nicely displays the
+ * matrix contents for == comparisons, so in the end it was better to just
+ * use it on arrays and use a0.matrix() == a1.matrix() checks. */
+template<typename T1, typename T2>
+constexpr std::enable_if_t<is_condition<decltype(std::declval<T1>() == std::declval<T2>())>, bool> is_eq(const T1& v1, const T2& v2)
+{ return v1 == v2; }
+
+template<typename D1, typename D2>
+constexpr bool is_eq(const Eigen::ArrayBase<D1>& a1, const Eigen::ArrayBase<D2>& a2)
+{ return a1.matrix() == a2.matrix(); }
+
+#define IS_EQ(a1, a2) (a1).matrix() == (a2).matrix()
+
+// These check basic Eigen Array and Matrix operations to show what works and
+// what doesn't, and to verify that any of our defined eigen extensions
+// haven't broken their compilation or execution.
+SCENARIO("Using Eigen for basic Array and Vector operations", "[Eigen][BasicArray][BasicVector]")
+{
+    // Note the commented out checks show various different operations
+    // that don't work but we can't check without generating a compiler error.
+    GIVEN("A simple Array3f a3f{1,2,3}")
+    {
+        Array3f a3f(1, 2, 3);
+        THEN("array operations work correctly")
+        {
+            // CHECK_FALSE(IS_VALID(a3f + Array3d(1, 2, 3))); // cannot add arrays with different Scalars.
+            CHECK(IS_VALID(a3f + Array3f(1, 2, 3)));       // can add arrays with the same Scalars.
+            CHECK_FALSE(IS_COND(a3f == Array3f(0, 0, 0))); // Cannot check array == array because the result isn't a condition.
+            CHECK(IS_EQ(a3f, Array3f(1, 2, 3)));           // Can check IS_EQ(array, array) instead.
+            CHECK_FALSE(IS_EQ(a3f, Array3f(1, 2, 0)));
+            CHECK(IS_TRUE(a3f == Array3f(1, 2, 3))); // Can check IS_TRUE(array == array) also.
+            CHECK_FALSE(IS_TRUE(a3f == Array3f(0, 2, 3)));
+            CHECK(a3f.matrix() == Vector3f(1, 2, 3)); // Can check array.matrix() == vector.
+            CHECK_FALSE(a3f.matrix() == Vector3f(1, 0, 3));
+            CHECK(IS_EQ(a3f + 1.0f, Array3f(2, 3, 4)));                   // add array + scalar.
+            CHECK(IS_EQ(1 + a3f, Array3f(2, 3, 4)));                      // add scalar + array.
+            CHECK(IS_EQ(a3f - 1.0f, Array3f(0, 1, 2)));                   // subtract array - scalar.
+            CHECK(IS_EQ(1 - a3f, Array3f(0, -1, -2)));                    // subtract scalar - array.
+            CHECK(IS_EQ(2.0f * a3f, Array3f(2, 4, 6)));                   // multiply scalar * array.
+            CHECK(IS_EQ(a3f * 2, Array3f(2, 4, 6)));                      // multiply array * scalar.
+            CHECK(IS_EQ(2.0f / a3f, Array3f(2.0 / 1, 2.0 / 2, 2.0 / 3))); // divide scalar / array.
+            CHECK(IS_EQ(a3f / 2, Array3f(1 / 2.0, 2 / 2.0, 3 / 2.0)));    // divide array / scalar.
+            CHECK(IS_EQ(a3f + Array3f(1, 2, 3), Array3f(2, 4, 6)));       // add arrays.
+            CHECK(IS_EQ(a3f - Array3f(1, 2, 3), Array3f(0, 0, 0)));       // subtract arrays.
+            CHECK(IS_EQ(a3f * Array3f(1, 2, 3), Array3f(1, 4, 9)));       // multiply arrays.
+            CHECK(IS_EQ(a3f / Array3f(1, 2, 3), Array3f(1, 1, 1)));       // divide arrays.
+        };
+    };
+    GIVEN("A simple Vector3f v3f{1,2,3}")
+    {
+        Vector3f v3f(1, 2, 3);
+        THEN("vector operations work correctly.")
+        {
+            // CHECK_FALSE(IS_VALID(v3f + Vector3d(1, 2, 3))); // cannot add vectors with different Scalars.
+            CHECK(IS_VALID(v3f + Vector3f(1, 2, 3))); // can add vectors with the same Scalars.
+            CHECK(IS_COND(v3f == Vector3f(0, 0, 0))); // Can check vector == vector because the result is a condition.
+            CHECK(IS_EQ(v3f, Vector3f(1, 2, 3)));     // Can check IS_EQ(vector, vector).
+            CHECK_FALSE(IS_EQ(v3f, Vector3f(1, 2, 0)));
+            CHECK(IS_TRUE(v3f == Vector3f(1, 2, 3))); // Can check IS_TRUE(vector == vector) also.
+            CHECK_FALSE(IS_TRUE(v3f == Vector3f(0, 2, 3)));
+            CHECK(IS_EQ(v3f.array(), Array3f(1, 2, 3))); // Can check IS_EQ(vector.array() == array).
+            CHECK_FALSE(IS_EQ(v3f.array(), Array3f(1, 0, 3)));
+            // CHECK_FALSE(IS_VALID(v3f + 1.0f));    // add vector + scalar.
+            // CHECK_FALSE(IS_VALID(1 + v3f));       // add scalar + vector.
+            // CHECK_FALSE(IS_VALID(v3f - 1.0f));    // subtract vector - scalar.
+            // CHECK_FALSE(IS_VALID(1 - v3f));     // subtract scalar - vector.
+            CHECK(2.0f * v3f == Vector3f(2, 4, 6)); // multiply scalar * vector.
+            CHECK(v3f * 2 == Vector3f(2, 4, 6));    // multiply vector * scalar.
+            // CHECK_FALSE(IS_VALID(2.0f / v3f)); // divide scalar / vector.
+            CHECK(v3f / 2 == Vector3f(1 / 2.0, 2 / 2.0, 3 / 2.0));                // divide vector / scalar.
+            CHECK(v3f + Vector3f(1, 2, 3) == Vector3f(2, 4, 6));                  // add vectors.
+            CHECK(v3f - Vector3f(1, 2, 3) == Vector3f(0, 0, 0));                  // subtract vectors.
+            CHECK(RowVector3f(1, 2, 3) * v3f == Matrix1f(1 * 1 + 2 * 2 + 3 * 3)); // multiply vectors.
+            CHECK(RowVector3f(1, 2, 3) * v3f == Matrix1f(1 * 1 + 2 * 2 + 3 * 3));
+            CHECK(v3f * RowVector3f(1, 2, 3) == Matrix3f({{1, 2, 3}, {2, 4, 6}, {3, 6, 9}}));
+            // CHECK_FALSE(IS_INVALID(v3f*Vector3f(1, 2, 3)));
+            // CHECK_FALSE(IS_VALID(v3f / Vector3f(1, 2, 3)));       // divide vectors.
+        };
+    };
+};
 
 // Note defining these ScalarBinaryOpTraits entries is required to make
 // operations like `Array<Array<int>> + int` or `Array<Array<int>> *
@@ -40,125 +180,124 @@ struct ScalarBinaryOpTraits<Scalar_, Array<Scalar_, Rows_, Cols_, Options_, MaxR
 // Eigen natively supports using Arrays as scalars inside Matrix, Vector, and
 // Array, but it has some limitations. We include tests to test this and
 // highlight the limitations.
-SCENARIO("Test Eigen's Nesting an Array inside an Array", "[ScalarWrapper]")
+SCENARIO("Using Eigen for nesting Arrays inside an Array", "[Eigen][NestedArray]")
 {
-    GIVEN("Nested Array types are defined and instances are initialized.")
+    GIVEN("A nested Array3A3f a3a3f{a0,a1,a2}")
     {
         typedef Array<Array3f, 3, 1> Array3A3f;
         Array3f                      a0(1, 2, 3), a1(2, 3, 4), a2(3, 4, 5), a3(4, 5, 6);
         Array3A3f                    a3a3f(a0, a1, a2);
-        THEN("Check basic array operations")
+        THEN("Correct operations are valid.")
         {
-            // These check basic Array operations to show what works and what
-            // doesn't, and to verify that any defined eigen extensions
-            // haven't broken their compilation or execution.
-            //
-            // Note the commented out checks show various different Array
-            // operations that don't work. This includes showing that `==`
-            // for arrays generates a component-wise array of bool which
-            // cannot be cast into a bool for the check. However, `==` for
-            // Matrix does generate a single bool.
-            //
-            // CHECK(Array3f(0,0,0) == Array3f(0,0,0));  // cannot check if array == array.
-            CHECK((Array3f(0, 0, 0) == Array3f(0, 0, 0)).all());                              // check (array == array).all().
-            CHECK(Array3f(1, 2, 3).matrix() == Vector3f(1, 2, 3));                            // check array.matrix() == vector.
-            CHECK((Array3f(1, 2, 3) + 1.0f).matrix() == Vector3f(2, 3, 4));                   // add array + scalar.
-            CHECK((1 + Array3f(1, 2, 3)).matrix() == Vector3f(2, 3, 4));                      // add scalar + array.
-            CHECK((Array3f(1, 2, 3) - 1.0f).matrix() == Vector3f(0, 1, 2));                   // subtract array - scalar.
-            CHECK((1 - Array3f(1, 2, 3)).matrix() == Vector3f(0, -1, -2));                    // subtract scalar - array.
-            CHECK((2.0f * Array3f(1, 2, 3)).matrix() == Vector3f(2, 4, 6));                   // multiply scalar * array.
-            CHECK((Array3f(1, 2, 3) * 2).matrix() == Vector3f(2, 4, 6));                      // multiply array * scalar.
-            CHECK((2.0f / Array3f(1, 2, 3)).matrix() == Vector3f(2.0 / 1, 2.0 / 2, 2.0 / 3)); // divide scalar / array.
-            CHECK((Array3f(1, 2, 3) / 2).matrix() == Vector3f(1 / 2.0, 2 / 2.0, 3 / 2.0));    // divide array / scalar.
-            CHECK((Array3f(1, 2, 3) + Array3f(1, 2, 3)).matrix() == Vector3f(2, 4, 6));       // add arrays.
-            CHECK((Array3f(1, 2, 3) - Array3f(1, 2, 3)).matrix() == Vector3f(0, 0, 0));       // subtract arrays.
-            CHECK((Array3f(1, 2, 3) * Array3f(1, 2, 3)).matrix() == Vector3f(1, 4, 9));       // multiply arrays.
-            CHECK((Array3f(1, 2, 3) / Array3f(1, 2, 3)).matrix() == Vector3f(1, 1, 1));       // divide arrays.
-            // CHECK((Array3f(1, 2, 3) + Array3d(1, 2, 3)).matrix() == Vector3d(1, 1, 1));       // add arrays with promotable scalars.
-        };
-        WHEN("Array<Array3f> instances are added.")
+            CHECK(IS_VALID(a3a3f + a3a3f));
+            CHECK(IS_VALID((a3a3f + a3a3f)(0)));
+            CHECK(IS_VALID(a3a3f * a3a3f));
+            CHECK(IS_VALID((a3a3f * a3a3f)(0)));
+            CHECK(IS_VALID(a3a3f / a3a3f));
+            CHECK(IS_VALID((a3a3f / a3a3f)(0)));
+        }
+        THEN("Incorrect operations are invalid")
+        {
+            CHECK(IS_VALID(a3a3f == a3a3f));      // Strangely we can eval a nested array == operation...
+            CHECK(IS_VALID((a3a3f == a3a3f)(0))); // .. but we can't index the result.
+            CHECK(IS_VALID(a3a3f != a3a3f));      // Also we can eval a nested array != operation...
+            CHECK(IS_VALID((a3a3f != a3a3f)(0))); // .. but we can't index the result.
+            // CHECK(IS_VALID((a3a3f + 1.0f)));
+            // CHECK(IS_VALID((1 + a3a3f)));
+            // CHECK(IS_VALID((a3a3f - 1.0f)));
+            // CHECK(IS_VALID((1 - a3a3f)));
+            // CHECK(IS_VALID((a3a3f * 2.0f)));
+            // CHECK(IS_VALID((2 * a3a3f)));
+            // CHECK(IS_VALID((a3a3f / 2.0f)));
+            // CHECK(IS_VALID((2 / a3a3f)));
+        }
+        WHEN("adding a3a3f + a3a3f")
         {
             auto ans = a3a3f + a3a3f;
-            THEN("Check a3a3f + a3a3f = 2 * a3a3f.")
+            THEN("the result is correct")
             {
-                CHECK(ans(0).matrix() == (2 * a0).matrix());
-                CHECK(ans(1).matrix() == (2 * a1).matrix());
-                CHECK(ans(2).matrix() == (2 * a2).matrix());
+                // CHECK(IS_TRUE(a3a3f + a3a3f == 2 * a3a3f));
+                // CHECK(IS_EQ(a3a3f + a3a3f, Array3A3f(2 * a0, 2 * a1, 2 * a2)));
+                CHECK(IS_EQ(ans(0), 2 * a0));
+                CHECK(IS_EQ(ans(1), 2 * a1));
+                CHECK(IS_EQ(ans(2), 2 * a2));
             };
         };
-        WHEN("Array<Array3f> instances are subtracted.")
+        WHEN("subtracting a3a3f - a3a3f")
         {
             auto ans  = a3a3f - a3a3f;
             auto zero = Array3A3f::Zero();
-            THEN("Check a3a3f - a3a3f = Array3A3f::Zero().")
+            THEN("the result is all zeros")
             {
                 CHECK(ans(0).matrix() == zero(0).matrix());
                 CHECK(ans(1).matrix() == zero(1).matrix());
                 CHECK(ans(2).matrix() == zero(2).matrix());
             };
         };
-        WHEN("Array<Array3f> instances are multiplied.")
+        WHEN("multiplying a3a3f * a3a3f")
         {
             auto ans = a3a3f * a3a3f;
-            THEN("Check a3a3f * a3a3f results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0).matrix() == (a0 * a0).matrix());
                 CHECK(ans(1).matrix() == (a1 * a1).matrix());
                 CHECK(ans(2).matrix() == (a2 * a2).matrix());
             };
         };
-        WHEN("Array<Array3f> instances are divided.")
+        WHEN("dividing a3a3f / a3a3f.")
         {
             auto ans = a3a3f / a3a3f;
-            THEN("Check a3a3f / a3a3f results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0).matrix() == (a0 / a0).matrix());
                 CHECK(ans(1).matrix() == (a1 / a1).matrix());
                 CHECK(ans(2).matrix() == (a2 / a2).matrix());
             };
         };
-        WHEN("Array<Array3f> is added to Array3f.")
+        WHEN("adding a3a3f + a3")
         {
             auto ans = a3a3f + a3;
-            THEN("Check a3a3f + a3 results.")
+            THEN("the result is corrects.")
             {
                 CHECK(ans(0).matrix() == (a0 + a3).matrix());
                 CHECK(ans(1).matrix() == (a1 + a3).matrix());
                 CHECK(ans(2).matrix() == (a2 + a3).matrix());
             };
         };
-        WHEN("Array3f is added to Array<Array3f>.")
+        WHEN("adding a3 + a3a3f")
         {
             auto ans = a3 + a3a3f;
-            THEN("Check a3 + a3a3f results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0).matrix() == (a3 + a0).matrix());
                 CHECK(ans(1).matrix() == (a3 + a1).matrix());
                 CHECK(ans(2).matrix() == (a3 + a2).matrix());
             };
         };
-        WHEN("Array<Array3f> is multiplied by Array3f.")
+        WHEN("multiplying a3a3f * a3")
         {
             auto ans = a3a3f * a3;
-            THEN("Check a3a3f * a3 results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0).matrix() == (a0 * a3).matrix());
                 CHECK(ans(1).matrix() == (a1 * a3).matrix());
                 CHECK(ans(2).matrix() == (a2 * a3).matrix());
             };
         };
-        WHEN("Array3f is multiplied by Array<Array3f>.")
+        WHEN("multiplying a3 * a3a3f")
         {
             auto ans = a3 * a3a3f;
-            THEN("Check a3 * a3a3f results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0).matrix() == (a3 * a0).matrix());
                 CHECK(ans(1).matrix() == (a3 * a1).matrix());
                 CHECK(ans(2).matrix() == (a3 * a2).matrix());
             };
         };
-        /* The following doesn't work because a3a3f + 7.0f doesn't compile.
-        WHEN("Array<Array3f> is added to float.")
+        /*
+        // The following doesn't work because a3a3f + 7.0f doesn't compile
+        // without the additional ScalarBinaryOpTraits<> defined.
+        WHEN("adding a3a3f + 7.0f")
         {
             auto ans = a3a3f + 7.0f;
             THEN("Check a3a3f + float results.")
@@ -172,48 +311,18 @@ SCENARIO("Test Eigen's Nesting an Array inside an Array", "[ScalarWrapper]")
     };
 };
 
-SCENARIO("Test Eigen's Nesting an Array inside a Matrix", "[ScalarWrapper]")
+SCENARIO("Using Eigen's Nesting an Array inside a Matrix", "[Eigen][NestedArray]")
 {
-    GIVEN("Nested Array types are defined and instances are initialized.")
+    GIVEN("A Nested Array Matrix2A3f m2a3f{{a0,a1},{a2,a3}}")
     {
         typedef Matrix<Array3f, 2, 2> Matrix2A3f;
         Array3f                       a0(0, 0, 0), a1(0, 1, 1), a2(1, 0, 2), a3(1, 1, 3);
         Matrix2A3f                    m2a3f{{a0, a1}, {a2, a3}};
         Matrix2f                      m2f{{0, 1}, {2, 3}};
-        THEN("Check basic matrix operations")
-        {
-            // These check basic Matrix operations to show what works and
-            // what doesn't, and to verify that any defined eigen extensions
-            // haven't broken their compilation or execution.
-            //
-            // Note the commented out checks show various different Matrix
-            // operations that don't work. This includes showing that `Matrix
-            // + Scalar` and `Scalar / Matrix` are not supported operations.
-            //
-            CHECK(Vector3f(1, 2, 3) == Vector3f(1, 2, 3));                // check vector == vector.
-            CHECK((Vector3f(1, 2, 3).array() == Array3f(1, 2, 3)).all()); // check (vector.array() == array).all().
-            // CHECK((Vector3f(1, 2, 3) + 1.0f) == Vector3f(2, 3, 4));       // add vector + scalar.
-            // CHECK((1 + Vector3f(1, 2, 3)) == Vector3f(2, 3, 4));          // add scalar + vector.
-            // CHECK((Vector3f(1, 2, 3) - 1.0f) == Vector3f(0, 1, 2));       // subtract vector - scalar.
-            // CHECK((1 - Vector3f(1, 2, 3)) == Vector3f(0, -1, -2));        // subtract scalar - vector.
-            CHECK((2.0f * Vector3f(1, 2, 3)) == Vector3f(2, 4, 6)); // multiply scalar * vector.
-            CHECK((Vector3f(1, 2, 3) * 2) == Vector3f(2, 4, 6));    // multiply vector * scalar.
-            // CHECK((2.0f / Vector3f(1, 2, 3)) == Vector3f(2.0 / 1, 2.0 / 2, 2.0 / 3));           // divide scalar / vector.
-            CHECK((Vector3f(1, 2, 3) / 2) == Vector3f(1 / 2.0, 2 / 2.0, 3 / 2.0)); // divide vector / scalar.
-            CHECK((Vector3f(1, 2, 3) + Vector3f(1, 2, 3)) == Vector3f(2, 4, 6));   // add vectors.
-            CHECK((Vector3f(1, 2, 3) - Vector3f(1, 2, 3)) == Vector3f(0, 0, 0));   // subtract vectors.
-            // CHECK((Vector3f(1, 2, 3) * Vector3f(1, 2, 3)) ==
-            //       (Vector3f(1, 2, 3) * Vector3f(1, 2, 3))); // multiply vectors.
-            // CHECK((Vector3f(1, 2, 3) / Vector3f(1, 2, 3)) ==
-            //       (Vector3f(1, 2, 3) / Vector3f(1, 2, 3))); // divide vectors.
-            CHECK((RowVector3f(1, 2, 3) * Vector3f(1, 2, 3)) == (RowVector3f(1, 2, 3) * Vector3f(1, 2, 3))); // multiply rowvector * vector.
-            CHECK((Vector3f(1, 2, 3) * RowVector3f(1, 2, 3)) == (Vector3f(1, 2, 3) * RowVector3f(1, 2, 3))); // multiply vector * rowvector.
-            // CHECK((Vector3f(1, 2, 3) + Vector3d(1, 2, 3)) == Vector3d(2, 4, 6)); // add vectors with promotable scalars.
-        };
-        WHEN("Matrix2<Array3f> instances are added.")
+        WHEN("adding m2a3f + m2a3f")
         {
             auto ans = m2a3f + m2a3f;
-            THEN("Check m2a3f + m2a3f = 2 * m2a3f.")
+            THEN("the result is 2 * m2a3f")
             {
                 CHECK(ans(0, 0).matrix() == (2 * a0).matrix());
                 CHECK(ans(0, 1).matrix() == (2 * a1).matrix());
@@ -221,11 +330,11 @@ SCENARIO("Test Eigen's Nesting an Array inside a Matrix", "[ScalarWrapper]")
                 CHECK(ans(1, 1).matrix() == (2 * a3).matrix());
             };
         };
-        WHEN("Matrix2<Array3f> instances are subtracted.")
+        WHEN("subtracting m2a3f - m2a3f")
         {
             auto ans  = m2a3f - m2a3f;
             auto zero = Matrix2A3f::Zero();
-            THEN("Check m2a3f - m2a3f = Matrix2A3f::Zero().")
+            THEN("the result is Matrix2A3f::Zero().")
             {
                 CHECK(ans(0, 0).matrix() == zero(0, 0).matrix());
                 CHECK(ans(0, 1).matrix() == zero(0, 1).matrix());
@@ -233,10 +342,10 @@ SCENARIO("Test Eigen's Nesting an Array inside a Matrix", "[ScalarWrapper]")
                 CHECK(ans(1, 1).matrix() == zero(1, 1).matrix());
             };
         };
-        WHEN("Matrix2<Array3f> instances are multiplied.")
+        WHEN("multiplying m2a3f * m2a3f.")
         {
             auto ans = m2a3f * m2a3f;
-            THEN("Check m2a3f * m2a3f results.")
+            THEN("the result is correct.")
             {
                 CHECK(ans(0, 0).matrix() == (a0 * a0 + a1 * a2).matrix());
                 CHECK(ans(0, 1).matrix() == (a0 * a1 + a1 * a3).matrix());
@@ -247,10 +356,10 @@ SCENARIO("Test Eigen's Nesting an Array inside a Matrix", "[ScalarWrapper]")
         // Matrix2<Array3f> / Matrix2<Array3f> doesn't work because you can't divide matrixes.
         // Matrix2<Array3f> + Array3f doesn't work because you can't add a matrix to a scalar.
         // Array3f + Matrix2<Array3f> doesn't work because you can't add a scalar to a matrix.
-        WHEN("Matrix2<Array3f> is multiplied by Array3f.")
+        WHEN("multiplying m2a3f * a3")
         {
             auto ans = m2a3f * a3;
-            THEN("Check m2a3f * a3 results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0, 0).matrix() == (a0 * a3).matrix());
                 CHECK(ans(0, 1).matrix() == (a1 * a3).matrix());
@@ -258,10 +367,10 @@ SCENARIO("Test Eigen's Nesting an Array inside a Matrix", "[ScalarWrapper]")
                 CHECK(ans(1, 1).matrix() == (a3 * a3).matrix());
             };
         };
-        WHEN("Array3f is multiplied by Matrix2<Array3f>.")
+        WHEN("multiplying a3 * m2a3f")
         {
             auto ans = a3 * m2a3f;
-            THEN("Check a3 * m2a3f results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0, 0).matrix() == (a3 * a0).matrix());
                 CHECK(ans(0, 1).matrix() == (a3 * a1).matrix());
@@ -269,10 +378,10 @@ SCENARIO("Test Eigen's Nesting an Array inside a Matrix", "[ScalarWrapper]")
                 CHECK(ans(1, 1).matrix() == (a3 * a3).matrix());
             };
         };
-        WHEN("Matrix2<Array3f> is divided by Array3f.")
+        WHEN("dividing m2a3f / a3")
         {
             auto ans = m2a3f / a3;
-            THEN("Check m2a3f / a3 results.")
+            THEN("the result is correct")
             {
                 CHECK(ans(0, 0).matrix() == (a0 / a3).matrix());
                 CHECK(ans(0, 1).matrix() == (a1 / a3).matrix());
@@ -352,8 +461,10 @@ SCENARIO("Test ScalarWrapper<Vector3f> inside a Matrix", "[ScalarWrapper]")
             {
                 CHECK(((m2v3f.array() + scalar(v1)) == (scalar(v1) + m2v3f.array())).all());
                 CHECK((m2v3f.array() + scalar(v0)).matrix() == m2v3f);
-                CHECK((m2v3f.array() + scalar(v1)).matrix() == Matrix2V3f({{scalar(v0 + v1), scalar(v1 + v1)}, {scalar(v2 + v1), scalar(v3 + v1)}}));
-                CHECK((scalar(v2) + m2v3f.array()).matrix() == Matrix2V3f({{scalar(v2 + v0), scalar(v2 + v1)}, {scalar(v2 + v2), scalar(v2 + v3)}}));
+                CHECK((m2v3f.array() + scalar(v1)).matrix() ==
+                      Matrix2V3f({{scalar(v0 + v1), scalar(v1 + v1)}, {scalar(v2 + v1), scalar(v3 + v1)}}));
+                CHECK((scalar(v2) + m2v3f.array()).matrix() ==
+                      Matrix2V3f({{scalar(v2 + v0), scalar(v2 + v1)}, {scalar(v2 + v2), scalar(v2 + v3)}}));
                 CHECK((m2v3f.array() + scalar(v1))(0, 0).matrix() == v0 + v1);
                 CHECK((m2v3f.array() + scalar(v1))(0, 1).matrix() == v1 + v1);
                 CHECK((m2v3f.array() + scalar(v1))(1, 0).matrix() == v2 + v1);
