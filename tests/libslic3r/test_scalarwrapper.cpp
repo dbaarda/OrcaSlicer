@@ -54,10 +54,9 @@ constexpr bool is_condition = std::is_convertible_v<T, bool>;
  * Normal condition expressions are just converted into a bool. However, for
  * Arrays, a1 == a2 is not a condition but an array of scalar == scalar
  * results. For Arrays of normal scalars this is an array of bools, but for
- * nested arrays this should be an array of arrays of bools, so an expression
- * with an array result are considered "true" if all the Array elements are
- * considered "true". However, == with nested arrays doesn't work because
- * eigen assumes == of elements always returns a bool. */
+ * nested arrays using == would give an array of arrays of bools. However, ==
+ * with nested arrays doesn't work because eigen assumes == of scalars always
+ * returns a single bool. */
 template<typename T>
 constexpr std::enable_if_t<is_condition<T>, bool> is_true(const T& v)
 { return bool(v); }
@@ -416,6 +415,129 @@ SCENARIO("Using Eigen's Nesting an Array inside a Matrix", "[Eigen][NestedArray]
             };
         };
         */
+    };
+};
+
+SCENARIO("ScalarWrapper can wrap arrays and matrixs", "[ScalarWrapper]")
+{
+    GIVEN("Values v1=Vector3f(2,3,4) and a1=Array3f(3,4,5)")
+    {
+        typedef ScalarWrapper<Vector3f> SVector3f;
+        typedef ScalarWrapper<Array3f>  SArray3f;
+        Vector3f                        v1(2, 3, 4);
+        Array3f                         a1(3, 4, 5);
+        WHEN("sv1 and sa1 are auto-typed wrappers around lvalues v1 and a1")
+        {
+            auto sv1 = ScalarWrapper(v1);
+            auto sa1 = ScalarWrapper(a1);
+            THEN("derived(), matrix(), and array() return the right values")
+            {
+                CHECK(sv1.derived() == Vector3f(2, 3, 4));
+                CHECK((sa1.derived() == Array3f(3, 4, 5)).all());
+                CHECK(sv1.matrix() == Vector3f(2, 3, 4));
+                CHECK(sa1.matrix() == Vector3f(3, 4, 5));
+                CHECK((sa1.array() == Array3f(3, 4, 5)).all());
+                CHECK((sv1.array() == Array3f(2, 3, 4)).all());
+            };
+            AND_WHEN("mutating sv1 derived(), matrix(), and array() elements with +=1")
+            {
+                sv1.derived()(0) += 1;
+                sv1.matrix()(1) += 1;
+                sv1.array()(2) += 1;
+                THEN("sv1 elements have been incremented")
+                {
+                    CHECK(sv1.derived() == Vector3f(3, 4, 5));
+                    AND_THEN("v1 elements have been incremented") { CHECK(v1 == Vector3f(3, 4, 5)); };
+                };
+            };
+            AND_WHEN("mutating with sv1 *= 2")
+            {
+                sv1 *= 2;
+                THEN("v1 is mutated")
+                {
+                    CHECK(sv1.derived() == v1);
+                    CHECK(v1 == Vector3f(4, 6, 8));
+                };
+            };
+            AND_WHEN("mutating with v1*=2")
+            {
+                v1 *= 2;
+                THEN("sv1 has been doubled")
+                {
+                    CHECK(sv1.derived() == v1);
+                    CHECK(sv1.derived() == Vector3f(4, 6, 8));
+                };
+            };
+            AND_WHEN("sv1 is set to another sv2 wrapper around lvalue v2={5,6,7}")
+            {
+                Vector3f v2(5, 6, 7);
+                auto     sv2 = ScalarWrapper(v2);
+                sv1          = sv2;
+                THEN("v1 now equals v2")
+                {
+                    CHECK(v1 == v2);
+                    CHECK(v1 == Vector3f(5, 6, 7));
+                };
+                AND_WHEN("mutating with v2*=2")
+                {
+                    v2 *= 2;
+                    THEN("sv2 is doubled")
+                    {
+                        CHECK(sv2.derived() == v2);
+                        CHECK(sv2.derived() == Vector3f(10, 12, 14));
+                        AND_THEN("v1 is not changed like v2")
+                        {
+                            CHECK(v1 != v2);
+                            CHECK(v1 == Vector3f(5, 6, 7));
+                        };
+                    };
+                };
+            };
+        };
+        WHEN("Intializing with auto wrappers around rvalues sv1=ScalarWrapper(Vector3f(2, 3, 4)) and sa1=ScalarWrapper(Array3f(3, 4, 5))")
+        {
+            auto sv1 = ScalarWrapper(Vector3f(2, 3, 4));
+            auto sa1 = ScalarWrapper(Array3f(3, 4, 5));
+            THEN("sv1 and sa1 have the right values")
+            {
+                CHECK(sv1.derived() == Vector3f(2, 3, 4));
+                CHECK((sa1.derived() == Array3f(3, 4, 5)).all());
+            };
+            AND_WHEN("mutating sv1 derived(), matrix(), and array() elements with +=1")
+            {
+                sv1.derived()(0) += 1;
+                sv1.matrix()(1) += 1;
+                sv1.array()(2) += 1;
+                THEN("sv1 elements have been incremented") { CHECK(sv1.derived() == Vector3f(3, 4, 5)); };
+            };
+            AND_WHEN("mutating with sv1 *= 2")
+            {
+                sv1 *= 2;
+                THEN("sv1 is doubled") { CHECK(sv1.derived() == Vector3f(4, 6, 8)); };
+            };
+        };
+        WHEN("Initializing with explicit-typed lvalues initialized with sv1{2,3,4} and sa1{3,4,5}")
+        {
+            SVector3f sv1{2, 3, 4};
+            SArray3f  sa1{3, 4, 5};
+            THEN("sv1 and sa1 have the right values")
+            {
+                CHECK(sv1.derived() == Vector3f(2, 3, 4));
+                CHECK((sa1.derived() == Array3f(3, 4, 5)).all());
+            };
+            AND_WHEN("mutating sv1 derived(), matrix(), and array() elements with +=1")
+            {
+                sv1.derived()(0) += 1;
+                sv1.matrix()(1) += 1;
+                sv1.array()(2) += 1;
+                THEN("sv1 elements have been incremented") { CHECK(sv1.derived() == Vector3f(3, 4, 5)); };
+            };
+            AND_WHEN("mutating with sv1 *= 2")
+            {
+                sv1 *= 2;
+                THEN("sv1 is doubled") { CHECK(sv1.derived() == Vector3f(4, 6, 8)); };
+            };
+        };
     };
 };
 
