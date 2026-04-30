@@ -24,6 +24,10 @@
  */
 namespace Eigen {
 
+namespace internal {
+// TODO: we need to make plain_matrix_type<D> work for ScalarWrappers around expressions.
+}
+
 template<typename ExpressionType>
 class ScalarWrapper;
 
