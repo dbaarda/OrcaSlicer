@@ -627,3 +627,367 @@ SCENARIO("Test ScalarWrapper<Vector3f> inside a Matrix", "[ScalarWrapper]")
         };
     };
 }
+
+// The following is to setup benchmarking of different ways to do a tri-cubic
+// interpolation of a 3D field.
+
+// Get the compile-time size of a VXY field.
+constexpr int N_VXY(int N) { return (N == Eigen::Dynamic) ? Eigen::Dynamic : N * N; }
+// Get the compile-time size of a VXYZ field.
+constexpr int N_VXYZ(int N) { return (N == Eigen::Dynamic) ? Eigen::Dynamic : N * N * N; }
+
+// 1D Field implementation types.
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field1D_VX = Eigen::Vector<Scalar, N>;
+
+template<typename Scalar, int N = Eigen::Dynamic, int S = Eigen::Dynamic>
+using MapField1D_VX = Eigen::Map<Field1D_VX<Scalar, S>>;
+
+// 2D Field implementation types.
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field2D_VXY = Field1D_VX<Scalar, N_VXY(N)>;
+
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field2D_MXY = Eigen::Matrix<Scalar, N, N>;
+
+template<typename Scalar, int N = Eigen::Dynamic, int S = Eigen::Dynamic>
+using MapField2D_MXY = Eigen::Map<Field2D_MXY<Scalar, S>, 0, Eigen::OuterStride<N>>;
+
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field2D_VYVX = Field1D_VX<ScalarWrapper<Field1D_VX<Scalar, N>>, N>;
+
+template<typename Scalar, int N = Eigen::Dynamic>
+using MapField2D_VYVX = Field1D_VX<ScalarWrapper<MapField1D_VX<Scalar, N>>, N>;
+
+// 3D Field implementation types.
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field3D_VXYZ = Eigen::Vector<Scalar, N_VXYZ(N)>;
+
+template<typename Scalar, int N = Eigen::Dynamic> // indexed with (x+y*n,z)
+using Field3D_MXYZ = Eigen::Matrix<Scalar, N_VXY(N), N>;
+
+template<typename Scalar, int N = Eigen::Dynamic> // indexed with (x,y+z*n)
+using Field3D_MX_YZ = Eigen::Matrix<Scalar, N, N_VXY(N)>;
+
+// TODO: this needs a NullaryExpr to work properly?
+// template<typename Scalar, int N=Eigen::Dynamic, int S=Eigen::Dynamic>
+// using MapField3D_MXY_Z = Eigen::Map<Field3D_MXYZ<Scalar, S>, 0, Eigen::OuterStride<N_VXY(N)>>;
+
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field3D_VZMXY = Field1D_VX<ScalarWrapper<Field2D_MXY<Scalar, N>>, N>;
+
+template<typename Scalar, int N = Eigen::Dynamic, int S = Eigen::Dynamic>
+using MapField3D_VZMXY = Eigen::Vector<ScalarWrapper<MapField2D_MXY<Scalar, N, S>>, S>;
+
+template<typename Scalar, int N = Eigen::Dynamic>
+using Field3D_VZVYVX = Eigen::Vector<ScalarWrapper<Field2D_VYVX<Scalar, N>>, N>;
+
+template<typename Scalar, int N = Eigen::Dynamic>
+using MapField3D_VZVYVX = Eigen::Vector<ScalarWrapper<MapField2D_VYVX<Scalar, N>>, N>;
+
+// Get the index for (x,y) in a size n VXY field.
+constexpr int idx_VXY(int x, int y, int n) { return x + y * n; }
+// Get the index for index xy in a size s VXY view at (x,y) of a size n VXY field.
+constexpr int blk_VXY(int xy, int x, int y, int n, int s) { return idx_VXY(x + xy % s, y + xy / s, n); }
+// Get the index for (x,y,z) in a size n VXYZ field.
+constexpr int idx_VXYZ(int x, int y, int z, int n) { return x + (y + z * n) * n; }
+// Get the index for index xyz in a size s VXYZ view at (x,y,z) of a size n VXYZ field.
+constexpr int blk_VXYZ(int xyz, int x, int y, int z, int n, int s)
+{ return idx_VXYZ(x + xyz % s, y + (xyz / s) % s, z + xyz / (s * s), n); }
+// Indexer for size s VXY views at (x,y) in a size n VXY field.
+struct blkidx_VXY
+{
+    const int _x, _y, _n, _s;
+    constexpr blkidx_VXY(int x, int y, int n, int s) : _x{x}, _y{y}, _n{n}, _s{s} {}
+    constexpr int size() const { return _s * _s; }
+    constexpr int operator[](int xy) const { return blk_VXY(xy, _x, _y, _n, _s); }
+};
+
+// The following are for getting size 4 1D, 4x4 2D, and 4x4x4 3D blocks from
+// 3D fields.
+template<typename Scalar, int N = Eigen::Dynamic>
+auto get4(Field3D_MXYZ<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{
+    int n = f.cols();
+    return f.template block<4, 1>(idx_VXY(x, y, n), z);
+    // return f(seqN(idx_VXY(x,y,n), fix<4>), z);
+    // return MapField1D_VX<Scalar,4>(f.data() + idx_VXY(x,y,n));
+    // return Field1D_VX::NullaryExpr(4,[&f, xyo=idx_VXY(x,y,n), zo=z](Index x) -> Scalar& { return f(xyo+x, zo); });
+}
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto get44(Field3D_MXYZ<Scalar, N>& f, const Eigen::Index x, const Eigen::Index y, const Eigen::Index z)
+{
+    int n = f.cols();
+    assert(f.rows() == n * n);
+    return f.reshaped(n, n * n).template block<4, 4>(x, idx_VXY(y, z, n));
+    // return f.reshaped(n, n*n)(seqN(x,fix<4>),seqN(idx_VXY(y,z,n), fix<4>));
+    // return MapField2D_MXY<Scalar, N, 4>(f.data() + idx_VXYZ(x,y,z,n), 4, 4, OuterStride<N>(n));
+    // return Field2D_MXY::NullaryExpr(4,4,[&f, xo=x, yo=y, zo=z](Index x, Index y) -> Scalar& { return f(idx_VXY(xo+x,yo+y), zo); });
+}
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto get444(Field3D_MXYZ<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{
+    int n = f.cols();
+    assert(f.rows() == n * n);
+    auto a1 = (f.template middleCols<4>(z)).template reshaped<RowMajor>(n, 4 * n);          // (XY,Z), select Z, -> (Y, ZX)
+    auto a2 = a1.template middleRows<4>(y).template reshaped<ColMajor>(fix<4 * 4>, n);      // (Y,ZX), select Y, -> (YZ, X)
+    auto a3 = a2.template middleCols<4>(x).template reshaped<RowMajor>(fix<4>, fix<4 * 4>); // (YZ,X), select X, -> (Z, XY)
+    return a3.transpose().template reshaped<ColMajor>(fix<4>, fix<4 * 4>);                  // (Z,XY) -> (XY,Z) -> (X, YZ)
+
+    // return f(blkidx_VXY(x,y,n,4), seqN(z, fix<4>));
+    // return Field3D_MXYZ<Scalar,4>::NullaryExpr(4*4,4,[&f, xo=x, yo=y, zo=z](Index xy, Index z){ return f(win_VXY(xy,xo,yo,n,4),zo); });
+}
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto get44(Field3D_VZMXY<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{
+    int n = f.size();
+    return f(z).derived().template block<4, 4>(x, y);
+    // return f(z).derived()(seqN(x, fix<4>), seqN(y, fix<4>));
+    // return MapField2D_MXY<Scalar, 4, N>(f(z).derived().data() + x + y*n, 4, 4, OuterStride<N>(n));
+    // return Field2D_MXY::NullaryExpr(4,4,[&f, xo=x, yo=y, zo=z](Index x, Index y) -> Scalar& { return f(zo)(xo+x,yo+y); });
+}
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto& get44(Field3D_VZVYVX<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{
+    return Field2D_VYVX<Scalar, 4>::NullaryExpr(
+        [&f, xo = x, yo = y, zo = z](int y) { return ScalarWrapper(f(zo)(yo + y).derived().segment<4>(xo)); });
+    // return Field2D_MXY::NullaryExpr(4,4,[&f, xo=x, yo=y, zo=z](Index x, Index y) -> Scalar& { return f(zo).derived()(yo+y),derived()(xo+x); });
+}
+
+template<typename Scalar>
+struct cubic
+{
+    // This is the matrix for storing (multiple sets of) the 4 points to interoplate with.
+    template<int Cols = Dynamic, int MaxCols = Cols>
+    using FMatrix = Matrix<Scalar, 4, Cols, 0, 4, MaxCols>;
+    // This is the matrix for storing(multiple sets of) the 4 cubic interpolation coefficients.
+    template<int Rows = Dynamic, int MaxRows = Rows>
+    using CMatrix = Matrix<Scalar, Rows, 4, 0, MaxRows, 4>;
+    // This is the matrix for storing the intermediate and final interpolation results.
+    template<typename FSource>
+    using AMatrix = Matrix<typename FSource::Scalar, Dynamic, Dynamic, 0, 4, std::min(FSource::MaxColsAtCompileTime / 4, Dynamic)>;
+
+    template<typename C, typename F>
+    inline static auto cubicN(const Eigen::MatrixBase<C>& c, const Eigen::MatrixBase<F>& f)
+    {
+        assert(c.cols() == 4 && c.rows() >= 1);
+        assert(f.rows() == 4 && f.cols() % (1 << (2 * (c.rows() - 1))) == 0);
+        AMatrix<F> fn = c.row(0) * f;
+        for (int r = 1; r < c.rows(); r++) {
+            fn = c.row(r) * fn.reshaped(fix<4>, AutoSize);
+        }
+        return fn;
+    }
+};
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto getF1(Field3D_MXYZ<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{ return get4(f, x, y, z); }
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto getF2(Field3D_MXYZ<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{ return get44(f, x, y, z); }
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto getF3(Field3D_MXYZ<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{
+    typename cubic<Scalar>::template FMatrix<4 * 4> ans;
+    for (auto i = 0; i < 4; i++)
+        ans.template block<4, 4>(0, i * 4) = get44(f, x, y, z + i);
+    // ans << get44(f, x, y, z), get44(f, x, y, z + 1), get44(f, x, y, z + 2), get44(f, x, y, z + 3);
+    // assert(ans.rows() == 4);
+    // assert(ans.cols() == 4 * 4);
+    return ans;
+}
+
+template<typename Scalar, int N = Eigen::Dynamic>
+auto getF3stdvec(Field3D_MXYZ<Scalar, N>& f, Eigen::Index x, Eigen::Index y, Eigen::Index z)
+{
+    typename std::vector<typename cubic<Scalar>::template FMatrix<4>> fs{get44(f, x, y, z), get44(f, x, y, z + 1), get44(f, x, y, z + 2),
+                                                                         get44(f, x, y, z + 3)};
+    return fs;
+}
+
+template<typename C, typename F>
+inline static auto cubic3stdvec(const Eigen::MatrixBase<C>& c, const F& f)
+{
+    using Scalar = typename C::Scalar;
+
+    assert(c.cols() == 4 && c.rows() == 3);
+    Vector<Scalar, 4> fz;
+    auto              c2 = c.topRows(2);
+    fz(0)                = cubic<Scalar>::cubicN(c2, f[0])(0);
+    fz(1)                = cubic<Scalar>::cubicN(c2, f[1])(0);
+    fz(2)                = cubic<Scalar>::cubicN(c2, f[2])(0);
+    fz(3)                = cubic<Scalar>::cubicN(c2, f[3])(0);
+    return cubic<Scalar>::cubicN(c.row(2), fz);
+}
+
+// Helper functions for getting random x,y,z in range 0-(n-3)] for iteration i.
+int          lcg(int i) { return int((1103515245u * uint32_t(i) + 12345u) & 0x7fffffff); }
+Eigen::Index getx(int i, int n) { return lcg(i) % (n - 3); }
+Eigen::Index gety(int i, int n) { return lcg(i + 1) % (n - 3); }
+Eigen::Index getz(int i, int n) { return lcg(i + 2) % (n - 3); }
+
+// Helper function for building SECTION/BENCHMARK/ETC titles.
+template<typename... Args>
+std::string title(Args&&... args)
+{
+    std::stringstream ss;
+    (ss << ... << std::forward<Args>(args));
+    return ss.str();
+}
+
+SCENARIO("Benchmark ScalarWrapper", "[ScalarWrapper][!benchmark]")
+{
+    GIVEN("Classes are defined and instances are initialized.")
+    {
+        constexpr Eigen::Index N = 300;
+        Eigen::Index           n = N;
+        // These are the interpolation coefficients.
+        THEN("benchmark reshape()")
+        {
+            Field3D_MXYZ<float> f3f;
+            f3f.setRandom(n * n, n);
+            Matrix4f A = Matrix4f::Random();
+            BENCHMARK(title("reshape() to shift axies and index for block3 with incremental expressions"), i)
+            {
+                auto x  = getx(i, n);
+                auto y  = gety(i, n);
+                auto z  = getz(i, n);
+                auto a1 = f3f.template reshaped<ColMajor>(n, n * n);
+                auto a2 = a1(seqN(x, fix<4>), blkidx_VXY(y, z, n, 4));
+                auto a3 = A.row(0) * a2;
+                auto a4 = a3.template reshaped<ColMajor>(fix<4>, fix<4>);
+                auto a5 = A.row(1) * a4;
+                auto a6 = a5.reshaped();
+                auto a7 = A.row(2) * a6;
+                return a7.eval();
+            };
+            BENCHMARK(title("reshape() to shift axies and index for block3 as a single line expression"), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return (A.row(2) *
+                        ((A.row(1) * ((A.row(0) * ((f3f.template reshaped<ColMajor>(n, n * n))(seqN(x, fix<4>), blkidx_VXY(y, z, n, 4))))
+                                          .template reshaped<ColMajor>(fix<4>, fix<4>)))
+                             .reshaped()))
+                    .eval();
+            };
+            BENCHMARK(title("Map to shift axies and index for block3"), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return (A.row(2) * ((A.row(1) * ((A.row(0) * (MatrixXf::Map(f3f.data(), n, n * n)(seqN(x, fix<4>), blkidx_VXY(y, z, n, 4))))
+                                                     .template reshaped<ColMajor>(fix<4>, fix<4>))))
+                                       .reshaped())
+                    .eval();
+            };
+        };
+        THEN("benchmark cubicN()")
+        {
+            std::stringstream         suffix;
+            cubic<double>::CMatrix<3> c3d;
+            cubic<float>::CMatrix<3>  c3f;
+            c3d.setRandom(3, 4);
+            c3f = c3d.cast<float>();
+            Field3D_MXYZ<double> f3d;
+            Field3D_MXYZ<float>  f3f;
+            f3d.setRandom(n * n, n);
+            f3f = f3d.cast<float>();
+            REQUIRE(f3f.cols() == n);
+            REQUIRE(f3f.rows() == n * n);
+            REQUIRE(f3d.cols() == n);
+            REQUIRE(f3d.rows() == n * n);
+            REQUIRE(c3f.cols() == 4);
+            REQUIRE(c3f.rows() == 3);
+            REQUIRE(c3d.cols() == 4);
+            REQUIRE(c3d.rows() == 3);
+            CHECK(getF3(f3d, 1, 2, 3) == get444(f3d, 1, 2, 3));
+            BENCHMARK(title("Field3D_MXYZ<float>(", f3f.rows(), ", ", f3f.cols(), ") cubic1"), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<float>::cubicN(c3f.row(0), getF1(f3f, x, y, z));
+            };
+            BENCHMARK(title("Field3D_MXYZ<double>(", f3f.rows(), ", ", f3f.cols(), ") cubic1"), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<double>::cubicN(c3d.row(0), getF1(f3d, x, y, z));
+            };
+            BENCHMARK(title("Field3D_MXYZ<float> cubic2 size=", n, "x", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<float>::cubicN(c3f.topRows(2), getF2(f3f, x, y, z));
+            };
+
+            BENCHMARK(title("Field3D_MXYZ<double> cubic2 size=", n, "x", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<double>::cubicN(c3d.topRows(2), getF2(f3d, x, y, z));
+            };
+            BENCHMARK(title("cubicN(c3f, getF3(MXYZf, x, y, z) size=", n, "x", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<float>::cubicN(c3f, getF3(f3f, x, y, z));
+            };
+            BENCHMARK(title("cubic3stdvec(c3f, getF3stdvec(MXYZf, x, y, z)) size=", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic3stdvec(c3f, getF3stdvec(f3f, x, y, z));
+            };
+            BENCHMARK(title("cubicN(c3d, MXYZd(blkidx_VXY(x,y,n,4), seqN(z, fix<4>)).reshaped(fix<4>,fix<4*4>)) size=", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<double>::cubicN(c3d, f3d(blkidx_VXY(x, y, n, 4), seqN(z, fix<4>)).reshaped(fix<4>, fix<4 * 4>));
+            };
+            BENCHMARK(title("cubicN(c3d, MXYZd.reshaped(n,n*n)(seqN(x, fix<4>), blkidx_VXY(y,z,n,4))) size=", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<double>::cubicN(c3d, f3d.reshaped(n, n * n)(seqN(x, fix<4>), blkidx_VXY(y, z, n, 4)));
+            };
+            BENCHMARK(title("cubicN(c3d, getF3(MXYZd, x, y, z)) size=", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<double>::cubicN(c3d, getF3(f3d, x, y, z));
+            };
+            BENCHMARK(title("cubicN(c3d, get444(MXYZd,x,y,z)) size=", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic<double>::cubicN(c3d, get444(f3d, x, y, z));
+            };
+            BENCHMARK(title("cubic3stdvec(c3d, getF3stdvec(MXYZd, x, y, z)) size=", n), i)
+            {
+                auto x = getx(i, n);
+                auto y = gety(i, n);
+                auto z = getz(i, n);
+                return cubic3stdvec(c3d, getF3stdvec(f3d, x, y, z));
+            };
+        };
+    };
+};
