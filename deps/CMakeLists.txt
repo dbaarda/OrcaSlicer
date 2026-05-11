@@ -332,8 +332,6 @@ endif ()
 set(DEP_Boost_COMPONENTS system iostreams filesystem thread log locale regex date_time)
 include(Boost/Boost.cmake)
 
-include(Eigen/Eigen.cmake)
-
 include(Cereal/Cereal.cmake)
 include(Qhull/Qhull.cmake)
 include(GLEW/GLEW.cmake)
@@ -349,6 +347,7 @@ include(OpenVDB/OpenVDB.cmake)
 
 include(GMP/GMP.cmake)
 include(MPFR/MPFR.cmake)
+include(Eigen/Eigen.cmake)
 include(CGAL/CGAL.cmake)
 
 include(NLopt/NLopt.cmake)
@@ -414,7 +413,6 @@ include(OpenCV/OpenCV.cmake)
 
 set(_dep_list
     dep_Boost
-    dep_Eigen
     dep_TBB
     ${OPENSSL_PKG}
     ${CURL_PKG}
@@ -425,6 +423,7 @@ set(_dep_list
     dep_OpenVDB
     dep_OpenCSG
     dep_OpenCV
+    dep_Eigen
     dep_CGAL
     dep_GLFW
     dep_OCCT
