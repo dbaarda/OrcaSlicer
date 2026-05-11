@@ -329,10 +329,10 @@ if (NOT EXPAT_FOUND)
 endif ()
 
 # The order of includes respects the dependencies between libraries
-include(Eigen/Eigen.cmake)
-
 set(DEP_Boost_COMPONENTS system iostreams filesystem thread log locale regex date_time)
 include(Boost/Boost.cmake)
+
+include(Eigen/Eigen.cmake)
 
 include(Cereal/Cereal.cmake)
 include(Qhull/Qhull.cmake)
@@ -413,8 +413,8 @@ include(OCCT/OCCT.cmake)
 include(OpenCV/OpenCV.cmake)
 
 set(_dep_list
-    dep_Eigen
     dep_Boost
+    dep_Eigen
     dep_TBB
     ${OPENSSL_PKG}
     ${CURL_PKG}
