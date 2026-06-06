@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Slic3rPE\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-13 09:31-0300\n"
+"POT-Creation-Date: 2026-05-22 02:24+0800\n"
 "PO-Revision-Date: 2026-02-28 00:59\n"
 "Last-Translator: Handle <mail@bysb.net>\n"
 "Language-Team: \n"
@@ -110,8 +110,8 @@ msgstr "执行"
 msgid "On highlighted overhangs only"
 msgstr "仅对高亮悬垂区生效"
 
-msgid "Erase all painting"
-msgstr "擦除所有绘制"
+msgid "Erase all"
+msgstr ""
 
 msgid "Highlight overhang areas"
 msgstr "高亮悬垂区域"
@@ -179,6 +179,9 @@ msgstr "根据当前设置的悬垂角度来高亮片面。"
 
 msgid "No auto support"
 msgstr "无自动支撑"
+
+msgid "Done"
+msgstr "完成"
 
 msgid "Support Generated"
 msgstr "已生成支撑"
@@ -330,6 +333,12 @@ msgstr "零件选择"
 msgid "Fixed step drag"
 msgstr "固定拖动步长"
 
+msgid "Context Menu"
+msgstr ""
+
+msgid "Toggle Auto-Drop"
+msgstr ""
+
 msgid "Single sided scaling"
 msgstr "单面缩放"
 
@@ -478,6 +487,18 @@ msgstr "切割位置"
 msgid "Build Volume"
 msgstr "打印体积"
 
+msgid "Multiple"
+msgstr "多个"
+
+msgid "Count"
+msgstr ""
+
+msgid "Gap"
+msgstr ""
+
+msgid "Spacing"
+msgstr "间距"
+
 msgid "Part"
 msgstr "零件"
 
@@ -585,12 +606,6 @@ msgstr "编辑连接件"
 msgid "Add connectors"
 msgstr "添加连接件"
 
-msgid "Reset cut"
-msgstr "重置"
-
-msgid "Reset cutting plane and remove connectors"
-msgstr "重置切割平面并移除连接器"
-
 msgid "Upper part"
 msgstr "上半部分"
 
@@ -608,6 +623,9 @@ msgstr "切割后"
 
 msgid "Cut to parts"
 msgstr "切割为零件"
+
+msgid "Reset cutting plane and remove connectors"
+msgstr "重置切割平面并移除连接器"
 
 msgid "Perform cut"
 msgstr "执行切割"
@@ -832,6 +850,9 @@ msgstr "默认字体"
 
 msgid "Advanced"
 msgstr "高级"
+
+msgid "Reset all options except the text and operation"
+msgstr ""
 
 msgid ""
 "The text cannot be written using the selected font. Please try choosing a "
@@ -1472,15 +1493,6 @@ msgid ""
 "feature 2 has been feature 1"
 msgstr "特征1已经被重置，特征2变成特征1"
 
-msgid "Warning: please select Plane's feature."
-msgstr "警告:请选择面特征。"
-
-msgid "Warning: please select Point's or Circle's feature."
-msgstr "警告:请选择点或圆特征。"
-
-msgid "Warning: please select two different meshes."
-msgstr "警告:请选择两个不同的网格。"
-
 msgid "Copy to clipboard"
 msgstr "复制到剪贴板"
 
@@ -1531,6 +1543,15 @@ msgstr "（移动中）"
 
 msgid "Point and point assembly"
 msgstr "点对点装配"
+
+msgid "Warning: please select two different meshes."
+msgstr "警告:请选择两个不同的网格。"
+
+msgid "Warning: please select Plane's feature."
+msgstr "警告:请选择面特征。"
+
+msgid "Warning: please select Point's or Circle's feature."
+msgstr "警告:请选择点或圆特征。"
 
 msgid ""
 "It is recommended to assemble the objects first,\n"
@@ -1718,6 +1739,18 @@ msgstr "已经是最新版本。"
 msgid "Info"
 msgstr "信息"
 
+msgid "Loading printer & filament profiles"
+msgstr ""
+
+msgid "Creating main window"
+msgstr ""
+
+msgid "Loading current preset"
+msgstr ""
+
+msgid "Showing main window"
+msgstr ""
+
 msgid ""
 "The OrcaSlicer configuration file may be corrupted and cannot be parsed.\n"
 "OrcaSlicer has attempted to recreate the configuration file.\n"
@@ -1776,6 +1809,23 @@ msgid ""
 "The version of Orca Slicer is too low and needs to be updated to the latest "
 "version before it can be used normally."
 msgstr "此逆戟鲸切片器的版本过低，需更新至最新版本方可正常使用"
+
+#, c-format, boost-format
+msgid ""
+"Failed to connect to OrcaCloud.\n"
+"Please check your network connectivity\n"
+"(HTTP %u): %s"
+msgstr ""
+
+#, c-format, boost-format
+msgid ""
+"Failed to connect to OrcaCloud.\n"
+"Please check your network connectivity\n"
+"(HTTP %u)"
+msgstr ""
+
+msgid "Cloud Error"
+msgstr ""
 
 msgid "Retrieving printer information, please try again later."
 msgstr "正在获取打印机信息，请稍后重试。"
@@ -2326,11 +2376,11 @@ msgstr "自动调整对象朝向以提高打印质量。"
 msgid "Edit"
 msgstr "编辑"
 
-msgid "Delete this filament"
-msgstr "移除此耗材"
-
 msgid "Merge with"
 msgstr "与其合并"
+
+msgid "Delete this filament"
+msgstr "移除此耗材"
 
 msgid "Select All"
 msgstr "全选"
@@ -4513,9 +4563,6 @@ msgstr "停止干燥"
 msgid "Proceed"
 msgstr "继续"
 
-msgid "Done"
-msgstr "完成"
-
 msgid "Retry"
 msgstr "重试"
 
@@ -4776,33 +4823,6 @@ msgstr "支撑转换层"
 msgid "Mixed"
 msgstr "混合"
 
-msgid "mm/s"
-msgstr "毫米/秒"
-
-msgid "mm/s²"
-msgstr "mm/s²"
-
-msgid "Flow rate"
-msgstr "流量"
-
-msgid "mm³/s"
-msgstr "毫米立方/秒"
-
-msgid "Fan speed"
-msgstr "风扇速度"
-
-msgid "°C"
-msgstr "°C"
-
-msgid "Time"
-msgstr "时间"
-
-msgid "Actual speed profile"
-msgstr "实际速度曲线"
-
-msgid "Speed: "
-msgstr "速度: "
-
 msgid "Height: "
 msgstr "层高: "
 
@@ -4835,6 +4855,33 @@ msgstr ""
 
 msgid "PA: "
 msgstr "PA："
+
+msgid "mm/s"
+msgstr "毫米/秒"
+
+msgid "mm/s²"
+msgstr "mm/s²"
+
+msgid "mm³/s"
+msgstr "毫米立方/秒"
+
+msgid "Flow rate"
+msgstr "流量"
+
+msgid "Fan speed"
+msgstr "风扇速度"
+
+msgid "°C"
+msgstr "°C"
+
+msgid "Time"
+msgstr "时间"
+
+msgid "Speed: "
+msgstr "速度: "
+
+msgid "Actual speed profile"
+msgstr "实际速度曲线"
 
 msgid "Statistics of All Plates"
 msgstr "所有盘切片信息"
@@ -5152,9 +5199,6 @@ msgstr "调整朝向"
 msgid "Arrange options"
 msgstr "自动摆放选项"
 
-msgid "Spacing"
-msgstr "间距"
-
 msgid "0 means auto spacing."
 msgstr "0 表示自动间距。"
 
@@ -5289,7 +5333,7 @@ msgstr "体积："
 msgid "Size:"
 msgstr "尺寸："
 
-#, c-format, boost-format
+#, boost-format
 msgid ""
 "Conflicts of G-code paths have been found at layer %d, Z = %.2lfmm. Please "
 "separate the conflicted objects farther (%s <-> %s)."
@@ -5675,6 +5719,15 @@ msgstr "导出当前选择的预设"
 msgid "Export"
 msgstr "导出"
 
+msgid "Sync Presets"
+msgstr ""
+
+msgid "Pull and apply the latest presets from OrcaCloud"
+msgstr ""
+
+msgid "You must be logged in to sync presets from cloud."
+msgstr ""
+
 msgid "Quit"
 msgstr "退出程序"
 
@@ -5798,6 +5851,9 @@ msgid "View"
 msgstr "视图"
 
 msgid "Preset Bundle"
+msgstr ""
+
+msgid "Syncing presets from cloud…"
 msgstr ""
 
 msgid "Help"
@@ -6141,8 +6197,8 @@ msgid ""
 "The .gcode.3mf file contains no G-code data. Please slice it with Orca "
 "Slicer and export a new .gcode.3mf file."
 msgstr ""
-".gcode.3mf文件中不包含G-code数据。请使用Orca Slicer进行切片并导出新的."
-"gcode.3mf文件。"
+".gcode.3mf文件中不包含G-code数据。请使用Orca Slicer进行切片并导出新"
+"的.gcode.3mf文件。"
 
 #, c-format, boost-format
 msgid "File '%s' was lost! Please download it again."
@@ -8230,18 +8286,32 @@ msgstr "使用自由视角"
 msgid "If enabled, use free camera. If not enabled, use constrained camera."
 msgstr "如果启用，使用自由视角。如果未启用，使用约束视角。"
 
-msgid "Swap pan and rotate mouse buttons"
-msgstr "交换鼠标按钮的平移与旋转功能"
-
-msgid ""
-"If enabled, swaps the left and right mouse buttons pan and rotate functions."
-msgstr "启用后，将左键和右键的平移与旋转功能对调"
-
 msgid "Reverse mouse zoom"
 msgstr "反转鼠标缩放"
 
 msgid "If enabled, reverses the direction of zoom with mouse wheel."
 msgstr "如果启用，使用鼠标滚轮缩放的方向会反转。"
+
+msgid "Pan"
+msgstr ""
+
+msgid "Left Mouse Drag"
+msgstr ""
+
+msgid "Set the action that dragging the left mouse button should perform."
+msgstr ""
+
+msgid "Middle Mouse Drag"
+msgstr ""
+
+msgid "Set the action that dragging the middle mouse button should perform."
+msgstr ""
+
+msgid "Right Mouse Drag"
+msgstr ""
+
+msgid "Set the action that dragging the right mouse button should perform."
+msgstr ""
 
 msgid "Clear my choice on..."
 msgstr "清除我的选择..."
@@ -8264,6 +8334,59 @@ msgstr "同步打印机预设"
 msgid ""
 "Clear my choice for synchronizing printer preset after loading the file."
 msgstr "加载文件后清除我对同步打印机预设的选择。"
+
+msgid "Graphics"
+msgstr ""
+
+msgid "Anti-aliasing"
+msgstr ""
+
+msgid "MSAA Multiplier"
+msgstr ""
+
+msgid ""
+"Set the Multi-Sample Anti-Aliasing level.\n"
+"Higher values result in smoother edges, but the impact on performance is "
+"exponential.\n"
+"Lower values improve performance, at the cost of jagged edges.\n"
+"If disabled, its recommended to enable FXAA to reduce jagged edges with "
+"minimal performance impact.\n"
+"\n"
+"Requires application restart."
+msgstr ""
+
+msgid "Disabled"
+msgstr "禁用"
+
+msgid "FXAA post-processing"
+msgstr ""
+
+msgid ""
+"Applies Fast Approximate Anti-Aliasing as a screen-space pass.\n"
+"Useful for disabling or reducing the MSAA setting to improve performance.\n"
+"\n"
+"Takes effect immediately."
+msgstr ""
+
+msgid "FPS"
+msgstr ""
+
+msgid "FPS cap"
+msgstr ""
+
+msgid "(0 = unlimited)"
+msgstr ""
+
+msgid ""
+"Limits viewport frame rate to reduce GPU load and power usage.\n"
+"Set to 0 for unlimited frame rate."
+msgstr ""
+
+msgid "Show FPS overlay"
+msgstr ""
+
+msgid "Displays current viewport FPS in the top-right corner."
+msgstr ""
 
 msgid "Login region"
 msgstr "登录区域"
@@ -8407,6 +8530,15 @@ msgstr "开发者模式"
 
 msgid "Skip AMS blacklist check"
 msgstr "跳过AMS黑名单检查"
+
+msgid "(Experimental) Keep painted feature after mesh change"
+msgstr ""
+
+msgid ""
+"Attempt to keep painted features (color/seam/support/fuzzy etc.) after "
+"changing the object mesh (such as cut/reload from disk/simplify/fix etc.)\n"
+"Highly experimental! Slow and may create artifact."
+msgstr ""
 
 msgid "Allow Abnormal Storage"
 msgstr "允许异常存储"
@@ -9433,8 +9565,8 @@ msgstr ""
 msgid ""
 "When recording timelapse without toolhead, it is recommended to add a "
 "\"Timelapse Wipe Tower\" \n"
-"by right-click the empty position of build plate and choose \"Add Primitive"
-"\"->\"Timelapse Wipe Tower\"."
+"by right-click the empty position of build plate and choose \"Add "
+"Primitive\"->\"Timelapse Wipe Tower\"."
 msgstr ""
 "在录制无工具头延时摄影视频时，建议添加“延时摄影擦料塔”\n"
 "右键单击打印板的空白位置，选择“添加标准模型”->“延时摄影擦料塔”。"
@@ -10029,6 +10161,32 @@ msgstr "不保存"
 msgid "Discard"
 msgstr "放弃"
 
+msgid "the new profile"
+msgstr ""
+
+#, boost-format
+msgid ""
+"Switch to\n"
+"\"%1%\"\n"
+"discarding any changes made in\n"
+"\"%2%\"."
+msgstr ""
+
+#, boost-format
+msgid ""
+"All \"New Value\" settings modified in\n"
+"\"%1%\"\n"
+"will be transferred to\n"
+"\"%2%\"."
+msgstr ""
+
+#, boost-format
+msgid ""
+"All \"New Value\" settings are saved in\n"
+"\"%1%\"\n"
+"and \"%2%\" will open without any changes."
+msgstr ""
+
 msgid "Click the right mouse button to display the full text."
 msgstr "单击鼠标右键显示全文。"
 
@@ -10570,6 +10728,9 @@ msgstr "点此下载"
 msgid "Login"
 msgstr "登录"
 
+msgid "Login failed. Please try again."
+msgstr ""
+
 msgid "[Action Required] "
 msgstr "[需要操作] "
 
@@ -10605,6 +10766,18 @@ msgstr "显示键盘快捷键列表"
 
 msgid "Global shortcuts"
 msgstr "全局快捷键"
+
+msgid "Pan View"
+msgstr ""
+
+msgid "Rotate View"
+msgstr ""
+
+msgid "Middle mouse button"
+msgstr ""
+
+msgid "Zoom View"
+msgstr ""
 
 msgid ""
 "Auto orients selected objects or all objects. If there are selected objects, "
@@ -11069,9 +11242,6 @@ msgstr "不能放置在"
 
 msgid "Internal Bridge"
 msgstr "内部搭桥"
-
-msgid "Multiple"
-msgstr "多个"
 
 #, boost-format
 msgid "Failed to calculate line width of %1%. Cannot get value of \"%2%\" "
@@ -12651,9 +12821,6 @@ msgstr ""
 "存在多个具有不同桥接角度的区域，则该岛屿的最后一个区域将被选为角度参考\n"
 "4. 全部应用 - 为内部和面向外部的桥接生成第二桥接层\n"
 
-msgid "Disabled"
-msgstr "禁用"
-
 msgid "External bridge only"
 msgstr "仅外部桥接"
 
@@ -13251,6 +13418,18 @@ msgstr "自动冲洗"
 msgid "Auto For Match"
 msgstr "自动匹配"
 
+msgid "Enable filament dynamic map"
+msgstr ""
+
+msgid "Enable dynamic filament mapping during print."
+msgstr ""
+
+msgid "Has filament switcher"
+msgstr ""
+
+msgid "Printer has a filament switcher hardware (e.g., AMS)."
+msgstr ""
+
 msgid "Flush temperature"
 msgstr "冲洗温度"
 
@@ -13709,6 +13888,17 @@ msgid ""
 "Using multiple lines for the infill pattern, if supported by infill pattern."
 msgstr "如果填充图案支持，使用多线进行填充。"
 
+msgid "Z-buckling bias optimization (experimental)"
+msgstr ""
+
+msgid ""
+"Tightens the gyroid wave along the Z (vertical) axis at low infill density "
+"to shorten the effective vertical column length and improve Z-axis "
+"compression buckling resistance. Filament use is preserved. No effect at "
+"~30% sparse infill density and above. Only applies when Sparse infill "
+"pattern is set to Gyroid."
+msgstr ""
+
 msgid "Sparse infill pattern"
 msgstr "稀疏填充图案"
 
@@ -13869,8 +14059,8 @@ msgid "mm/s² or %"
 msgstr "mm/s² 或 %"
 
 msgid ""
-"Acceleration of sparse infill. If the value is expressed as a percentage (e."
-"g. 100%), it will be calculated based on the default acceleration."
+"Acceleration of sparse infill. If the value is expressed as a percentage "
+"(e.g. 100%), it will be calculated based on the default acceleration."
 msgstr ""
 "稀疏填充的加速度。如果该值表示为百分比（例如100%），则将根据默认加速度进行计"
 "算。"
@@ -13996,10 +14186,10 @@ msgstr "满速风扇在"
 
 msgid ""
 "Fan speed will be ramped up linearly from zero at layer "
-"\"close_fan_the_first_x_layers\" to maximum at layer \"full_fan_speed_layer"
-"\". \"full_fan_speed_layer\" will be ignored if lower than "
-"\"close_fan_the_first_x_layers\", in which case the fan will be running at "
-"maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1."
+"\"close_fan_the_first_x_layers\" to maximum at layer "
+"\"full_fan_speed_layer\". \"full_fan_speed_layer\" will be ignored if lower "
+"than \"close_fan_the_first_x_layers\", in which case the fan will be running "
+"at maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1."
 msgstr ""
 "风扇速度将从“禁用第一层”的零转速，线性上升到“全风扇速度层”的最大转速。\n"
 "如果低于“禁用风扇第一层”，则“全风扇速度第一层”将被忽略，在这种情况下，风扇将"
@@ -14454,6 +14644,30 @@ msgstr ""
 "此功能可帮助某些难以启动的低功率、PWM风扇顺利运转起来，或用于让风扇在启动后尽"
 "快提升转速。\n"
 "设为 0 以禁用。"
+
+msgid "Minimum non-zero part cooling fan speed"
+msgstr ""
+
+msgid ""
+"Some part-cooling fans cannot start spinning when commanded below a certain "
+"PWM duty cycle. When set above 0, any non-zero part-cooling fan command will "
+"be raised to at least this percentage so the fan reliably starts. A fan "
+"command of 0 (fan off) is always honoured exactly. This clamp is applied "
+"after every other fan calculation (first-layer ramp, layer-time "
+"interpolation, overhang/bridge/support-interface/ironing overrides), so "
+"scaling still operates within the range [this value, 100%].\n"
+"If your firmware already disables the fan below a threshold (for example "
+"Klipper's [fan] off_below: 0.10 shuts the fan off whenever the commanded "
+"duty cycle is below 10%), this option and the firmware threshold should "
+"ideally be set to the same value. Matching them (e.g. off_below: 0.10 in "
+"Klipper and 10% here) guarantees the slicer never emits a non-zero value "
+"that the firmware would silently drop, and the fan never receives a value "
+"below the one you know it can actually spool at.\n"
+"Set to 0 to deactivate."
+msgstr ""
+
+msgid "%"
+msgstr ""
 
 msgid "Time cost"
 msgstr "耗时"
@@ -15905,8 +16119,8 @@ msgid "Role base wipe speed"
 msgstr "自动擦拭速度"
 
 msgid ""
-"The wipe speed is determined by the speed of the current extrusion role. e."
-"g. if a wipe action is executed immediately following an outer wall "
+"The wipe speed is determined by the speed of the current extrusion role. "
+"e.g. if a wipe action is executed immediately following an outer wall "
 "extrusion, the speed of the outer wall extrusion will be utilized for the "
 "wipe action."
 msgstr ""
@@ -16255,6 +16469,19 @@ msgstr "冲刷剩余的耗材丝进入擦拭塔"
 msgid "Enable filament ramming"
 msgstr "启用耗材尖端成型"
 
+msgid "Tool change on wipe tower"
+msgstr ""
+
+msgid ""
+"Force the toolhead to travel to the wipe tower before issuing the tool "
+"change command (Tx). Only relevant for multi-extruder (multi-toolhead) "
+"printers using a Type 2 wipe tower. By default Orca skips the travel on "
+"multi-toolhead machines because the firmware handles the head swap, which "
+"can result in the Tx command being issued above the printed part. Enable "
+"this option if you want the tool change to always be issued above the wipe "
+"tower instead."
+msgstr ""
+
 msgid "No sparse layers (beta)"
 msgstr "无稀疏层 （实验功能）"
 
@@ -16573,8 +16800,14 @@ msgstr "阈值角度"
 
 msgid ""
 "Support will be generated for overhangs whose slope angle is below the "
-"threshold."
-msgstr "将会为悬垂角度低于阈值的模型表面生成支撑。"
+"threshold. The smaller this value is, the steeper the overhang that can be "
+"printed without support.\n"
+"Note: If set to 0, normal supports use the Threshold overlap instead, while "
+"tree supports fall back to a default value of 30."
+msgstr ""
+"将会为倾斜角度低于阈值的悬垂生成支撑。该值越小，可在不使用支撑的情况下打印的"
+"悬垂就越陡。\n"
+"注意：若设置为 0，普通支撑将改用阈值支撑比例，而树状支撑将回退到默认值 30。"
 
 msgid "Threshold overlap"
 msgstr "阈值支撑比例"
@@ -16723,8 +16956,8 @@ msgstr "激活温度控制"
 
 msgid ""
 "Enable this option for automated chamber temperature control. This option "
-"activates the emitting of an M191 command before the \"machine_start_gcode"
-"\"\n"
+"activates the emitting of an M191 command before the "
+"\"machine_start_gcode\"\n"
 " which sets the chamber temperature and waits until it is reached. In "
 "addition, it emits an M141 command at the end of the print to turn off the "
 "chamber heater, if present.\n"
@@ -17624,11 +17857,11 @@ msgid "Debug level"
 msgstr "调试等级"
 
 msgid ""
-"Sets debug logging level. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:"
-"trace\n"
+"Sets debug logging level. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, "
+"5:trace\n"
 msgstr ""
-"设置调试日志的等级。0:fatal， 1:error， 2:warning， 3:info， 4:debug， 5:"
-"trace\n"
+"设置调试日志的等级。0:fatal， 1:error， 2:warning， 3:info， 4:debug， "
+"5:trace\n"
 
 msgid "Enable timelapse for print"
 msgstr "为打印启用延时摄影"
@@ -18357,10 +18590,10 @@ msgid ""
 msgstr ""
 "请从我们的wiki中找到动态流量校准的详细信息。\n"
 "\n"
-"通常情况下，校准是不必要的。当您开始单色/单耗材打印，并在打印开始菜单中勾选"
-"了“动态流量校准”选项时，打印机将按照旧的方式在打印前校准耗材；当您开始多色/多"
-"耗材打印时，打印机将在每次换耗材时使用默认的补偿参数，这在大多数情况下会产生"
-"良好的效果。\n"
+"通常情况下，校准是不必要的。当您开始单色/单耗材打印，并在打印开始菜单中勾选了"
+"“动态流量校准”选项时，打印机将按照旧的方式在打印前校准耗材；当您开始多色/多耗"
+"材打印时，打印机将在每次换耗材时使用默认的补偿参数，这在大多数情况下会产生良"
+"好的效果。\n"
 "\n"
 "有些情况可能导致校准结果不可靠，例如打印板的附着力不足。清洗构建或者使用胶水"
 "可以增强打印板的附着力。您可以在我们的wiki上找到更多相关信息。\n"
@@ -19290,8 +19523,8 @@ msgstr ""
 "你想重写预设吗"
 
 msgid ""
-"We would rename the presets as \"Vendor Type Serial @printer you selected"
-"\".\n"
+"We would rename the presets as \"Vendor Type Serial @printer you "
+"selected\".\n"
 "To add preset for more printers, please go to printer selection"
 msgstr ""
 "我们将会把预设重命名为“供应商类型名 @ 您选择的打印机”\n"
@@ -19452,6 +19685,18 @@ msgid ""
 "The system preset does not allow creation. \n"
 "Please re-enter the printer model or nozzle diameter."
 msgstr "不允许创建系统级预设。请重新输入打印机型号或喷嘴直径。"
+
+msgid ""
+"\n"
+"\n"
+"Available nozzle profiles for this printer:"
+msgstr ""
+
+msgid ""
+"\n"
+"\n"
+"Choose YES to switch existing preset:"
+msgstr ""
 
 msgid "Printer Created Successfully"
 msgstr "创建打印机成功"
@@ -19685,32 +19930,6 @@ msgid ""
 msgstr ""
 "喷嘴类型与打印机实际喷嘴类型不匹配。\n"
 "请单击上面的同步按钮并重新启动校准。"
-
-#, c-format, boost-format
-msgid "nozzle size in preset: %d"
-msgstr "预设喷嘴尺寸：%d"
-
-#, c-format, boost-format
-msgid "nozzle size memorized: %d"
-msgstr "已记住喷嘴尺寸：%d"
-
-msgid ""
-"The size of nozzle type in preset is not consistent with memorized nozzle. "
-"Did you change your nozzle lately?"
-msgstr "预设中的喷嘴类型与已记住的喷嘴尺寸不一致。您最近有更换喷嘴吗？"
-
-#, c-format, boost-format
-msgid "nozzle[%d] in preset: %.1f"
-msgstr "预设中的 [%d] 喷嘴：%.1f"
-
-#, c-format, boost-format
-msgid "nozzle[%d] memorized: %.1f"
-msgstr "[%d] 喷嘴已记住：%.1f"
-
-msgid ""
-"Your nozzle type in preset is not consistent with memorized nozzle. Did you "
-"change your nozzle lately?"
-msgstr "您预设中的喷嘴类型与已记住的喷嘴不一致。您最近有更换喷嘴吗？"
 
 #, c-format, boost-format
 msgid "Printing %1s material with %2s nozzle may cause nozzle damage."
@@ -20185,8 +20404,8 @@ msgid ""
 "to this wiki: Printing Tips for High Temp / Engineering materials."
 msgstr ""
 "打印此耗材时，可能有喷嘴堵塞、渗漏、翘曲和层间强度低的风险。为了获得更好的结"
-"果，请参考此英文wiki：Printing Tips for High Temp / Engineering "
-"materials（“高温/工程材料的打印技巧”）"
+"果，请参考此英文wiki：Printing Tips for High Temp / Engineering materials"
+"（“高温/工程材料的打印技巧”）"
 
 msgid ""
 "To get better transparent or translucent results with the corresponding "
@@ -20254,8 +20473,8 @@ msgid ""
 "wiki: PVA Printing Guide."
 msgstr ""
 "这是一种水溶性支撑耗材，通常只用作支撑结构，不用于模型本体。打印此类耗材需要"
-"满足较多条件，为了获得更好的打印质量，请参考这个英文wiki：PVA Printing "
-"Guide（“PVA打印指南”）"
+"满足较多条件，为了获得更好的打印质量，请参考这个英文wiki：PVA Printing Guide"
+"（“PVA打印指南”）"
 
 msgid ""
 "This is a non-water-soluble support filament, and usually it is only for the "
@@ -20549,26 +20768,17 @@ msgstr "最大角度"
 msgid "Detection radius"
 msgstr "检测半径"
 
-msgid "Remove selected points"
-msgstr "删除已选择的点"
+msgid "Selected"
+msgstr ""
 
-msgid "Remove all"
-msgstr "删除所有点"
+msgid "Auto-generate"
+msgstr ""
 
-msgid "Auto-generate points"
-msgstr "自动生成点"
+msgid "Generate brim ears using Max angle and Detection radius"
+msgstr ""
 
-msgid "Add a brim ear"
-msgstr "加入一个耳状Brim"
-
-msgid "Delete a brim ear"
-msgstr "删除一个耳状Brim"
-
-msgid "Adjust head diameter"
-msgstr "调整喷头直径"
-
-msgid "Adjust section view"
-msgstr "调整剖面视图"
+msgid "Add or Select"
+msgstr ""
 
 msgid ""
 "Warning: The brim type is not set to \"painted\", the brim ears will not "
@@ -20578,8 +20788,8 @@ msgstr "警告：Brim类型未设置为绘制模式，耳状Brim将不会生效�
 msgid "Set the brim type of this object to \"painted\""
 msgstr "将此对象的边缘类型设置为\"绘制\""
 
-msgid " invalid brim ears"
-msgstr " 个无效耳状Brim"
+msgid "invalid brim ears"
+msgstr ""
 
 msgid "Brim Ears"
 msgstr "耳状帽檐"
@@ -20841,14 +21051,13 @@ msgstr ""
 "如何使用键盘快捷键\n"
 "您知道吗？Orca Slicer提供了广泛的键盘快捷键和3D场景操作。"
 
-#: resources/data/hints.ini: [hint:Reverse on odd]
+#: resources/data/hints.ini: [hint:Reverse on even]
 msgid ""
-"Reverse on odd\n"
-"Did you know that <b>Reverse on odd</b> feature can significantly improve "
-"the surface quality of your overhangs?"
+"Reverse on even\n"
+"Did you know that <b>Reverse on even</b> feature can significantly improve "
+"the surface quality of your overhangs? However, it can cause wall "
+"inconsistencies so use carefully!"
 msgstr ""
-"奇数层反转\n"
-"您知道吗？<b>奇数层反转</b>功能可以显著提高您悬垂的表面质量。"
 
 #: resources/data/hints.ini: [hint:Cut Tool]
 msgid ""
@@ -21115,6 +21324,78 @@ msgid ""
 msgstr ""
 "避免翘曲\n"
 "您知道吗？打印ABS这类易翘曲材料时，适当提高热床温度可以降低翘曲的概率。"
+
+#~ msgid "Erase all painting"
+#~ msgstr "擦除所有绘制"
+
+#~ msgid "Reset cut"
+#~ msgstr "重置"
+
+#~ msgid "Swap pan and rotate mouse buttons"
+#~ msgstr "交换鼠标按钮的平移与旋转功能"
+
+#~ msgid ""
+#~ "If enabled, swaps the left and right mouse buttons pan and rotate "
+#~ "functions."
+#~ msgstr "启用后，将左键和右键的平移与旋转功能对调"
+
+#, c-format, boost-format
+#~ msgid "nozzle size in preset: %d"
+#~ msgstr "预设喷嘴尺寸：%d"
+
+#, c-format, boost-format
+#~ msgid "nozzle size memorized: %d"
+#~ msgstr "已记住喷嘴尺寸：%d"
+
+#~ msgid ""
+#~ "The size of nozzle type in preset is not consistent with memorized "
+#~ "nozzle. Did you change your nozzle lately?"
+#~ msgstr "预设中的喷嘴类型与已记住的喷嘴尺寸不一致。您最近有更换喷嘴吗？"
+
+#, c-format, boost-format
+#~ msgid "nozzle[%d] in preset: %.1f"
+#~ msgstr "预设中的 [%d] 喷嘴：%.1f"
+
+#, c-format, boost-format
+#~ msgid "nozzle[%d] memorized: %.1f"
+#~ msgstr "[%d] 喷嘴已记住：%.1f"
+
+#~ msgid ""
+#~ "Your nozzle type in preset is not consistent with memorized nozzle. Did "
+#~ "you change your nozzle lately?"
+#~ msgstr "您预设中的喷嘴类型与已记住的喷嘴不一致。您最近有更换喷嘴吗？"
+
+#~ msgid "Remove selected points"
+#~ msgstr "删除已选择的点"
+
+#~ msgid "Remove all"
+#~ msgstr "删除所有点"
+
+#~ msgid "Auto-generate points"
+#~ msgstr "自动生成点"
+
+#~ msgid "Add a brim ear"
+#~ msgstr "加入一个耳状Brim"
+
+#~ msgid "Delete a brim ear"
+#~ msgstr "删除一个耳状Brim"
+
+#~ msgid "Adjust head diameter"
+#~ msgstr "调整喷头直径"
+
+#~ msgid "Adjust section view"
+#~ msgstr "调整剖面视图"
+
+#~ msgid " invalid brim ears"
+#~ msgstr " 个无效耳状Brim"
+
+#~ msgid ""
+#~ "Reverse on odd\n"
+#~ "Did you know that <b>Reverse on odd</b> feature can significantly improve "
+#~ "the surface quality of your overhangs?"
+#~ msgstr ""
+#~ "奇数层反转\n"
+#~ "您知道吗？<b>奇数层反转</b>功能可以显著提高您悬垂的表面质量。"
 
 #~ msgid "Pen size"
 #~ msgstr "画笔尺寸"

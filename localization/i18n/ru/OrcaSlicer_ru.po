@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OrcaSlicer V2.3.2 beta2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-13 09:31-0300\n"
+"POT-Creation-Date: 2026-05-22 02:24+0800\n"
 "PO-Revision-Date: 2026-02-25 13:38+0300\n"
 "Last-Translator: Felix14_v2\n"
 "Language-Team: Felix14_v2 (ДС/ТГ: @felix14_v2, почта: aleks111001@list.ru), "
@@ -16,8 +16,8 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
 "X-Generator: Poedit 3.8\n"
 
 # В большинстве мест подставляется в "%s экструдер", но также тянется и в
@@ -130,8 +130,8 @@ msgstr "Выполнить"
 msgid "On highlighted overhangs only"
 msgstr "Только на подсвеченных нависаниях"
 
-msgid "Erase all painting"
-msgstr "Очистить всё"
+msgid "Erase all"
+msgstr ""
 
 msgid "Highlight overhang areas"
 msgstr "Выделить зоны нависания"
@@ -207,6 +207,9 @@ msgstr "Выделение граней по углу нависания."
 # это в рисование поддержки идет после - Выделение граней по углу свеса.
 msgid "No auto support"
 msgstr "Автоподдержка отключена"
+
+msgid "Done"
+msgstr "Готово"
 
 msgid "Support Generated"
 msgstr "Поддержка сгенерирована"
@@ -361,6 +364,12 @@ msgstr "Выбрать часть"
 msgid "Fixed step drag"
 msgstr "Сместить с шагом"
 
+msgid "Context Menu"
+msgstr ""
+
+msgid "Toggle Auto-Drop"
+msgstr ""
+
 msgid "Single sided scaling"
 msgstr "Масштабирование без привязки к центру"
 
@@ -509,6 +518,21 @@ msgstr "Положение сечения"
 msgid "Build Volume"
 msgstr "Область построения"
 
+msgid "Multiple"
+msgstr "Множитель"
+
+msgid "Count"
+msgstr ""
+
+msgid "Gap"
+msgstr ""
+
+# В английском тут в кучу намешаны и "отступ", и "интервал". Используется в
+# настройках авторасстановки моделей (в значении отступа) и в окне настроек
+# рэмминга (в значении интервала, но там процент, так что не прям критично)
+msgid "Spacing"
+msgstr "Отступ"
+
 msgid "Part"
 msgstr "Часть"
 
@@ -618,12 +642,6 @@ msgstr "Редактировать соединения"
 msgid "Add connectors"
 msgstr "Добавить соединения"
 
-msgid "Reset cut"
-msgstr "Сброс сечения"
-
-msgid "Reset cutting plane and remove connectors"
-msgstr "Сброс позиции секущей плоскости и удаление всех соединений"
-
 msgid "Upper part"
 msgstr "Верхняя часть"
 
@@ -642,6 +660,9 @@ msgstr "Результат"
 
 msgid "Cut to parts"
 msgstr "Объединить в сборку"
+
+msgid "Reset cutting plane and remove connectors"
+msgstr "Сброс позиции секущей плоскости и удаление всех соединений"
 
 msgid "Perform cut"
 msgstr "Разрезать"
@@ -876,6 +897,9 @@ msgstr "Шрифт по умолчанию"
 
 msgid "Advanced"
 msgstr "Расширенные"
+
+msgid "Reset all options except the text and operation"
+msgstr ""
 
 msgid ""
 "The text cannot be written using the selected font. Please try choosing a "
@@ -1542,18 +1566,6 @@ msgstr ""
 "Выбор элемента 1 отменён,\n"
 "элемент 2 стал элементом 1"
 
-# Зачем здесь "внимание"? Это просто руководство к действию
-msgid "Warning: please select Plane's feature."
-msgstr "Внимание: выберите плоскость."
-
-# Зачем здесь "внимание"? Это просто руководство к действию
-msgid "Warning: please select Point's or Circle's feature."
-msgstr "Внимание: выберите точку или окружность."
-
-# Зачем здесь "внимание"? Это просто руководство к действию
-msgid "Warning: please select two different meshes."
-msgstr "Внимание: выберите элемент на втором объекте."
-
 msgid "Copy to clipboard"
 msgstr "Копировать в буфер обмена"
 
@@ -1606,6 +1618,18 @@ msgstr "(подвижная)"
 
 msgid "Point and point assembly"
 msgstr "Сборка по точкам"
+
+# Зачем здесь "внимание"? Это просто руководство к действию
+msgid "Warning: please select two different meshes."
+msgstr "Внимание: выберите элемент на втором объекте."
+
+# Зачем здесь "внимание"? Это просто руководство к действию
+msgid "Warning: please select Plane's feature."
+msgstr "Внимание: выберите плоскость."
+
+# Зачем здесь "внимание"? Это просто руководство к действию
+msgid "Warning: please select Point's or Circle's feature."
+msgstr "Внимание: выберите точку или окружность."
 
 msgid ""
 "It is recommended to assemble the objects first,\n"
@@ -1810,6 +1834,18 @@ msgstr "Установлена последняя версия программ�
 msgid "Info"
 msgstr "Информация"
 
+msgid "Loading printer & filament profiles"
+msgstr ""
+
+msgid "Creating main window"
+msgstr ""
+
+msgid "Loading current preset"
+msgstr ""
+
+msgid "Showing main window"
+msgstr ""
+
 msgid ""
 "The OrcaSlicer configuration file may be corrupted and cannot be parsed.\n"
 "OrcaSlicer has attempted to recreate the configuration file.\n"
@@ -1877,6 +1913,23 @@ msgid ""
 msgstr ""
 "Слишком старая версия Orca Slicer. Для корректной работы обновите программу "
 "до последней версии."
+
+#, c-format, boost-format
+msgid ""
+"Failed to connect to OrcaCloud.\n"
+"Please check your network connectivity\n"
+"(HTTP %u): %s"
+msgstr ""
+
+#, c-format, boost-format
+msgid ""
+"Failed to connect to OrcaCloud.\n"
+"Please check your network connectivity\n"
+"(HTTP %u)"
+msgstr ""
+
+msgid "Cloud Error"
+msgstr ""
 
 msgid "Retrieving printer information, please try again later."
 msgstr "Получение информации о принтере, попробуйте позднее."
@@ -2212,9 +2265,9 @@ msgid ""
 "No  - Do not change these settings for me"
 msgstr ""
 "На верхней поверхности модели присутствует рельефный текст. Для достижения "
-"оптимального результата рекомендуется установить «Порог одного "
-"периметра» (min_width_top_surface) равным 0, чтобы избежать проблем в работе "
-"настройки «Только один периметр на верхней поверхности».\n"
+"оптимального результата рекомендуется установить «Порог одного периметра» "
+"(min_width_top_surface) равным 0, чтобы избежать проблем в работе настройки "
+"«Только один периметр на верхней поверхности».\n"
 "\n"
 "Да – применить рекомендуемые настройки\n"
 "Нет – ничего не менять"
@@ -2439,11 +2492,11 @@ msgstr "Автоориентация модели для улучшения ка
 msgid "Edit"
 msgstr "Правка"
 
-msgid "Delete this filament"
-msgstr "Удалить этот филамент"
-
 msgid "Merge with"
 msgstr "Объединить с"
+
+msgid "Delete this filament"
+msgstr "Удалить этот филамент"
 
 msgid "Select All"
 msgstr "Выбрать всё"
@@ -4865,9 +4918,6 @@ msgstr "Остановить сушку"
 msgid "Proceed"
 msgstr "Продолжить"
 
-msgid "Done"
-msgstr "Готово"
-
 msgid "Retry"
 msgstr "Повтор"
 
@@ -5141,41 +5191,6 @@ msgstr "Переходный слой"
 msgid "Mixed"
 msgstr "Смешанный"
 
-msgid "mm/s"
-msgstr "мм/с"
-
-msgid "mm/s²"
-msgstr "мм/с²"
-
-# В идеале должно быть "Объёмный расход", но кое-как пытаемся совместить с
-# меню калибровок. Используется в табличке просмотра слоёв в значении "расход"
-# и в меню калибровок в значении "поток".
-msgid "Flow rate"
-msgstr "Расход"
-
-msgid "mm³/s"
-msgstr "мм³/с"
-
-# Костыль для обхода переноса одной буквы на строку – 0хлаждение, пока
-# попробуем просто обдув. "Скорость вентилятора" тут не очень уместно, т.к.
-# отображается в просмотре кода не в % (косяк орки) а в единицах, + длинная
-# строка растягивает панель свойств линии.
-msgid "Fan speed"
-msgstr "Обдув"
-
-msgid "°C"
-msgstr "°C"
-
-msgid "Time"
-msgstr "Время"
-
-# Перед строкой подставляется кнопка "Показать"/"Скрыть"
-msgid "Actual speed profile"
-msgstr "график расчётной скорости"
-
-msgid "Speed: "
-msgstr "Скорость: "
-
 msgid "Height: "
 msgstr "Высота: "
 
@@ -5209,6 +5224,41 @@ msgstr ""
 
 msgid "PA: "
 msgstr "PA: "
+
+msgid "mm/s"
+msgstr "мм/с"
+
+msgid "mm/s²"
+msgstr "мм/с²"
+
+msgid "mm³/s"
+msgstr "мм³/с"
+
+# В идеале должно быть "Объёмный расход", но кое-как пытаемся совместить с
+# меню калибровок. Используется в табличке просмотра слоёв в значении "расход"
+# и в меню калибровок в значении "поток".
+msgid "Flow rate"
+msgstr "Расход"
+
+# Костыль для обхода переноса одной буквы на строку – 0хлаждение, пока
+# попробуем просто обдув. "Скорость вентилятора" тут не очень уместно, т.к.
+# отображается в просмотре кода не в % (косяк орки) а в единицах, + длинная
+# строка растягивает панель свойств линии.
+msgid "Fan speed"
+msgstr "Обдув"
+
+msgid "°C"
+msgstr "°C"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "Speed: "
+msgstr "Скорость: "
+
+# Перед строкой подставляется кнопка "Показать"/"Скрыть"
+msgid "Actual speed profile"
+msgstr "график расчётной скорости"
 
 msgid "Statistics of All Plates"
 msgstr "Статистика по всем столам"
@@ -5553,12 +5603,6 @@ msgstr "Ориентация"
 msgid "Arrange options"
 msgstr "Параметры расстановки"
 
-# В английском тут в кучу намешаны и "отступ", и "интервал". Используется в
-# настройках авторасстановки моделей (в значении отступа) и в окне настроек
-# рэмминга (в значении интервала, но там процент, так что не прям критично)
-msgid "Spacing"
-msgstr "Отступ"
-
 msgid "0 means auto spacing."
 msgstr "0 - автоматический отступ."
 
@@ -5697,7 +5741,7 @@ msgstr "Объём:"
 msgid "Size:"
 msgstr "Размер:"
 
-#, c-format, boost-format
+#, boost-format
 msgid ""
 "Conflicts of G-code paths have been found at layer %d, Z = %.2lfmm. Please "
 "separate the conflicted objects farther (%s <-> %s)."
@@ -6119,6 +6163,15 @@ msgstr "Экспортировать текущую конфигурацию в 
 msgid "Export"
 msgstr "Экспорт"
 
+msgid "Sync Presets"
+msgstr ""
+
+msgid "Pull and apply the latest presets from OrcaCloud"
+msgstr ""
+
+msgid "You must be logged in to sync presets from cloud."
+msgstr ""
+
 msgid "Quit"
 msgstr "Выход"
 
@@ -6245,6 +6298,9 @@ msgid "View"
 msgstr "Вид"
 
 msgid "Preset Bundle"
+msgstr ""
+
+msgid "Syncing presets from cloud…"
 msgstr ""
 
 msgid "Help"
@@ -8928,21 +8984,32 @@ msgstr ""
 "Если включено, используется свободное вращение камеры. Если выключено, "
 "используется вращение камеры с ограничениями."
 
-# Поменять местами кнопки перемещение и поворота камеры
-msgid "Swap pan and rotate mouse buttons"
-msgstr "Поменять местами перемещение и вращение камеры"
-
-msgid ""
-"If enabled, swaps the left and right mouse buttons pan and rotate functions."
-msgstr ""
-"Поменять местами функции перемещения и вращения камеры для левой и правой "
-"кнопок мыши."
-
 msgid "Reverse mouse zoom"
 msgstr "Инвертировать приближение"
 
 msgid "If enabled, reverses the direction of zoom with mouse wheel."
 msgstr "Инвертировать масштабирование с помощью колеса мыши."
+
+msgid "Pan"
+msgstr ""
+
+msgid "Left Mouse Drag"
+msgstr ""
+
+msgid "Set the action that dragging the left mouse button should perform."
+msgstr ""
+
+msgid "Middle Mouse Drag"
+msgstr ""
+
+msgid "Set the action that dragging the middle mouse button should perform."
+msgstr ""
+
+msgid "Right Mouse Drag"
+msgstr ""
+
+msgid "Set the action that dragging the right mouse button should perform."
+msgstr ""
 
 msgid "Clear my choice on..."
 msgstr "Сброс выбора по умолчанию"
@@ -8970,6 +9037,59 @@ msgstr "Синхронизация профиля принтера"
 msgid ""
 "Clear my choice for synchronizing printer preset after loading the file."
 msgstr "Отменить выбор для синхронизации профиля принтера при открытии файла."
+
+msgid "Graphics"
+msgstr ""
+
+msgid "Anti-aliasing"
+msgstr ""
+
+msgid "MSAA Multiplier"
+msgstr ""
+
+msgid ""
+"Set the Multi-Sample Anti-Aliasing level.\n"
+"Higher values result in smoother edges, but the impact on performance is "
+"exponential.\n"
+"Lower values improve performance, at the cost of jagged edges.\n"
+"If disabled, its recommended to enable FXAA to reduce jagged edges with "
+"minimal performance impact.\n"
+"\n"
+"Requires application restart."
+msgstr ""
+
+msgid "Disabled"
+msgstr "Отключено"
+
+msgid "FXAA post-processing"
+msgstr ""
+
+msgid ""
+"Applies Fast Approximate Anti-Aliasing as a screen-space pass.\n"
+"Useful for disabling or reducing the MSAA setting to improve performance.\n"
+"\n"
+"Takes effect immediately."
+msgstr ""
+
+msgid "FPS"
+msgstr ""
+
+msgid "FPS cap"
+msgstr ""
+
+msgid "(0 = unlimited)"
+msgstr ""
+
+msgid ""
+"Limits viewport frame rate to reduce GPU load and power usage.\n"
+"Set to 0 for unlimited frame rate."
+msgstr ""
+
+msgid "Show FPS overlay"
+msgstr ""
+
+msgid "Displays current viewport FPS in the top-right corner."
+msgstr ""
 
 msgid "Login region"
 msgstr "Регион входа"
@@ -9117,6 +9237,15 @@ msgstr "Режим разработчика"
 
 msgid "Skip AMS blacklist check"
 msgstr "Пропуск проверки материалов в AMS из файла чёрного списка"
+
+msgid "(Experimental) Keep painted feature after mesh change"
+msgstr ""
+
+msgid ""
+"Attempt to keep painted features (color/seam/support/fuzzy etc.) after "
+"changing the object mesh (such as cut/reload from disk/simplify/fix etc.)\n"
+"Highly experimental! Slow and may create artifact."
+msgstr ""
 
 msgid "Allow Abnormal Storage"
 msgstr "Игнорировать неисправность хранилища"
@@ -10255,8 +10384,8 @@ msgstr ""
 msgid ""
 "When recording timelapse without toolhead, it is recommended to add a "
 "\"Timelapse Wipe Tower\" \n"
-"by right-click the empty position of build plate and choose \"Add Primitive"
-"\"->\"Timelapse Wipe Tower\"."
+"by right-click the empty position of build plate and choose \"Add "
+"Primitive\"->\"Timelapse Wipe Tower\"."
 msgstr ""
 "При записи таймлапса со скрытием головы рекомендуется добавить черновую "
 "башню таймлапса.\n"
@@ -10913,6 +11042,32 @@ msgstr "Не сохранять"
 msgid "Discard"
 msgstr "Не сохранять"
 
+msgid "the new profile"
+msgstr ""
+
+#, boost-format
+msgid ""
+"Switch to\n"
+"\"%1%\"\n"
+"discarding any changes made in\n"
+"\"%2%\"."
+msgstr ""
+
+#, boost-format
+msgid ""
+"All \"New Value\" settings modified in\n"
+"\"%1%\"\n"
+"will be transferred to\n"
+"\"%2%\"."
+msgstr ""
+
+#, boost-format
+msgid ""
+"All \"New Value\" settings are saved in\n"
+"\"%1%\"\n"
+"and \"%2%\" will open without any changes."
+msgstr ""
+
 msgid "Click the right mouse button to display the full text."
 msgstr "Нажмите правой кнопкой мыши, чтобы отобразить полный текст."
 
@@ -11501,6 +11656,9 @@ msgstr "Нажмите здесь, чтобы загрузить его."
 msgid "Login"
 msgstr "Войти"
 
+msgid "Login failed. Please try again."
+msgstr ""
+
 msgid "[Action Required] "
 msgstr "[Требуется действие] "
 
@@ -11536,6 +11694,18 @@ msgstr "Показать список сочетаний клавиш"
 
 msgid "Global shortcuts"
 msgstr "Глобальные горячие клавиши"
+
+msgid "Pan View"
+msgstr ""
+
+msgid "Rotate View"
+msgstr ""
+
+msgid "Middle mouse button"
+msgstr ""
+
+msgid "Zoom View"
+msgstr ""
 
 msgid ""
 "Auto orients selected objects or all objects. If there are selected objects, "
@@ -12032,9 +12202,6 @@ msgstr " нельзя заправить в "
 
 msgid "Internal Bridge"
 msgstr "Внутренний мост"
-
-msgid "Multiple"
-msgstr "Множитель"
 
 #, boost-format
 msgid "Failed to calculate line width of %1%. Cannot get value of \"%2%\" "
@@ -13908,9 +14075,6 @@ msgstr ""
 "4. Везде – создавать доп. слой как для внутренних, так и для внешних "
 "мостов.\n"
 
-msgid "Disabled"
-msgstr "Отключено"
-
 msgid "External bridge only"
 msgstr "Внешние мосты"
 
@@ -14663,6 +14827,18 @@ msgstr "Авто для промывки"
 msgid "Auto For Match"
 msgstr "Авто для сопоставления"
 
+msgid "Enable filament dynamic map"
+msgstr ""
+
+msgid "Enable dynamic filament mapping during print."
+msgstr ""
+
+msgid "Has filament switcher"
+msgstr ""
+
+msgid "Printer has a filament switcher hardware (e.g., AMS)."
+msgstr ""
+
 msgid "Flush temperature"
 msgstr "Температура прочистки"
 
@@ -15184,6 +15360,17 @@ msgstr ""
 "Внимание: плотность заполнения будет скорректирована для сохранения того же "
 "расхода материала."
 
+msgid "Z-buckling bias optimization (experimental)"
+msgstr ""
+
+msgid ""
+"Tightens the gyroid wave along the Z (vertical) axis at low infill density "
+"to shorten the effective vertical column length and improve Z-axis "
+"compression buckling resistance. Filament use is preserved. No effect at "
+"~30% sparse infill density and above. Only applies when Sparse infill "
+"pattern is set to Gyroid."
+msgstr ""
+
 msgid "Sparse infill pattern"
 msgstr "Шаблон заполнения"
 
@@ -15396,8 +15583,8 @@ msgid "mm/s² or %"
 msgstr "мм/с² или %"
 
 msgid ""
-"Acceleration of sparse infill. If the value is expressed as a percentage (e."
-"g. 100%), it will be calculated based on the default acceleration."
+"Acceleration of sparse infill. If the value is expressed as a percentage "
+"(e.g. 100%), it will be calculated based on the default acceleration."
 msgstr ""
 "Ускорение на разреженном заполнении. Можно указать процент от ускорения по "
 "умолчанию."
@@ -15544,10 +15731,10 @@ msgstr "Полная скорость вентилятора на слое"
 
 msgid ""
 "Fan speed will be ramped up linearly from zero at layer "
-"\"close_fan_the_first_x_layers\" to maximum at layer \"full_fan_speed_layer"
-"\". \"full_fan_speed_layer\" will be ignored if lower than "
-"\"close_fan_the_first_x_layers\", in which case the fan will be running at "
-"maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1."
+"\"close_fan_the_first_x_layers\" to maximum at layer "
+"\"full_fan_speed_layer\". \"full_fan_speed_layer\" will be ignored if lower "
+"than \"close_fan_the_first_x_layers\", in which case the fan will be running "
+"at maximum allowed speed at layer \"close_fan_the_first_x_layers\" + 1."
 msgstr ""
 "Интенсивность охлаждения будет линейно увеличиваться от нуля со слоя "
 "заданным параметром «Не включать вентилятор на первых» до заданной "
@@ -15702,8 +15889,9 @@ msgstr ""
 "Максимальная величина отклонения сегментов оболочки. \n"
 "\n"
 "Внимание! Режимы «Экструзия» и «Совместный» не будут работать, если значение "
-"превышает ширину периметра. Если при нарезке возникает ошибка Flow::"
-"spacing(), проверьте, что значение меньше выражения: [∅ сопла - h слоя/4]."
+"превышает ширину периметра. Если при нарезке возникает ошибка "
+"Flow::spacing(), проверьте, что значение меньше выражения: [∅ сопла - h слоя/"
+"4]."
 
 msgid "Fuzzy skin point distance"
 msgstr "Длина сегментов"
@@ -16083,6 +16271,30 @@ msgstr ""
 "недостаточен для запуска вентилятора после остановки или для более быстрого "
 "увеличения скорости его вращения.\n"
 "Установите 0 для отключения."
+
+msgid "Minimum non-zero part cooling fan speed"
+msgstr ""
+
+msgid ""
+"Some part-cooling fans cannot start spinning when commanded below a certain "
+"PWM duty cycle. When set above 0, any non-zero part-cooling fan command will "
+"be raised to at least this percentage so the fan reliably starts. A fan "
+"command of 0 (fan off) is always honoured exactly. This clamp is applied "
+"after every other fan calculation (first-layer ramp, layer-time "
+"interpolation, overhang/bridge/support-interface/ironing overrides), so "
+"scaling still operates within the range [this value, 100%].\n"
+"If your firmware already disables the fan below a threshold (for example "
+"Klipper's [fan] off_below: 0.10 shuts the fan off whenever the commanded "
+"duty cycle is below 10%), this option and the firmware threshold should "
+"ideally be set to the same value. Matching them (e.g. off_below: 0.10 in "
+"Klipper and 10% here) guarantees the slicer never emits a non-zero value "
+"that the firmware would silently drop, and the fan never receives a value "
+"below the one you know it can actually spool at.\n"
+"Set to 0 to deactivate."
+msgstr ""
+
+msgid "%"
+msgstr "%"
 
 msgid "Time cost"
 msgstr "Стоимость часа печати"
@@ -17804,8 +18016,8 @@ msgid "Role base wipe speed"
 msgstr "Местная скорость очистки"
 
 msgid ""
-"The wipe speed is determined by the speed of the current extrusion role. e."
-"g. if a wipe action is executed immediately following an outer wall "
+"The wipe speed is determined by the speed of the current extrusion role. "
+"e.g. if a wipe action is executed immediately following an outer wall "
 "extrusion, the speed of the outer wall extrusion will be utilized for the "
 "wipe action."
 msgstr ""
@@ -18247,6 +18459,19 @@ msgstr "Прочистка сопла от остатков материала �
 msgid "Enable filament ramming"
 msgstr "Включить рэмминг прутка"
 
+msgid "Tool change on wipe tower"
+msgstr ""
+
+msgid ""
+"Force the toolhead to travel to the wipe tower before issuing the tool "
+"change command (Tx). Only relevant for multi-extruder (multi-toolhead) "
+"printers using a Type 2 wipe tower. By default Orca skips the travel on "
+"multi-toolhead machines because the firmware handles the head swap, which "
+"can result in the Tx command being issued above the printed part. Enable "
+"this option if you want the tool change to always be issued above the wipe "
+"tower instead."
+msgstr ""
+
 msgid "No sparse layers (beta)"
 msgstr "Без разреженных слоёв (beta)"
 
@@ -18647,10 +18872,17 @@ msgstr "Максимальный угол"
 # последнее предложение – особенность PR
 msgid ""
 "Support will be generated for overhangs whose slope angle is below the "
-"threshold."
+"threshold. The smaller this value is, the steeper the overhang that can be "
+"printed without support.\n"
+"Note: If set to 0, normal supports use the Threshold overlap instead, while "
+"tree supports fall back to a default value of 30."
 msgstr ""
-"Генерировать поддержки для поверхностей, угол нависания которых "
-"(относительно стола) меньше указанного тут значения."
+"Создавать поддержки для поверхностей с указанным или более острым углом "
+"нависания над столом. С понижением угла повышается допустимый наклон "
+"поверхности для печати без поддержки.\n"
+"Примечание: используйте 0° для переключения обычных поддержек в режим "
+"обнаружения нависаний по проценту выноса линии. Древовидные поддержки при "
+"этом будут использовать угол по умолчанию (30°)"
 
 # ??? Порог перекрытия периметров
 msgid "Threshold overlap"
@@ -18831,8 +19063,8 @@ msgstr "Вкл. контроль температуры"
 
 msgid ""
 "Enable this option for automated chamber temperature control. This option "
-"activates the emitting of an M191 command before the \"machine_start_gcode"
-"\"\n"
+"activates the emitting of an M191 command before the "
+"\"machine_start_gcode\"\n"
 " which sets the chamber temperature and waits until it is reached. In "
 "addition, it emits an M141 command at the end of the print to turn off the "
 "chamber heater, if present.\n"
@@ -19934,8 +20166,8 @@ msgid "Debug level"
 msgstr "Уровень отладки журнала"
 
 msgid ""
-"Sets debug logging level. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, 5:"
-"trace\n"
+"Sets debug logging level. 0:fatal, 1:error, 2:warning, 3:info, 4:debug, "
+"5:trace\n"
 msgstr ""
 "Задаёт параметр чувствительности записи событий в журнал:\n"
 " 0 – Критическая ошибка\n"
@@ -20522,8 +20754,8 @@ msgstr ""
 
 msgid "Unknown file format. Input file must have .3mf or .zip.amf extension."
 msgstr ""
-"Неизвестный формат файла. Входной файл должен иметь расширение *.3mf или *."
-"zip.amf."
+"Неизвестный формат файла. Входной файл должен иметь расширение *.3mf или "
+"*.zip.amf."
 
 msgid "load_obj: failed to parse"
 msgstr "load_obj: ошибка обработки"
@@ -21777,8 +22009,8 @@ msgstr ""
 "Хотите перезаписать его?"
 
 msgid ""
-"We would rename the presets as \"Vendor Type Serial @printer you selected"
-"\".\n"
+"We would rename the presets as \"Vendor Type Serial @printer you "
+"selected\".\n"
 "To add preset for more printers, please go to printer selection"
 msgstr ""
 "Мы переименуем профиль в \"Производитель Тип Серия @выбранный принтер\".\n"
@@ -21955,6 +22187,18 @@ msgid ""
 msgstr ""
 "Системный профиль не допускает создания.\n"
 "Пожалуйста, повторно введите модель принтера или диаметр сопла."
+
+msgid ""
+"\n"
+"\n"
+"Available nozzle profiles for this printer:"
+msgstr ""
+
+msgid ""
+"\n"
+"\n"
+"Choose YES to switch existing preset:"
+msgstr ""
 
 msgid "Printer Created Successfully"
 msgstr "Профиль принтера успешно создан"
@@ -22205,36 +22449,6 @@ msgid ""
 msgstr ""
 "Тип сопла не соответствует установленному соплу.\n"
 "Выполните синхронизацию и перезапустите калибровку."
-
-#, c-format, boost-format
-msgid "nozzle size in preset: %d"
-msgstr "сопло в профиле: %d"
-
-#, c-format, boost-format
-msgid "nozzle size memorized: %d"
-msgstr "Запомненный размер сопла: %d"
-
-msgid ""
-"The size of nozzle type in preset is not consistent with memorized nozzle. "
-"Did you change your nozzle lately?"
-msgstr ""
-"Диаметр сопла в профиле не соответствует сохранённому \n"
-"в памяти диаметру сопла. Вы недавно сменили сопло?"
-
-#, c-format, boost-format
-msgid "nozzle[%d] in preset: %.1f"
-msgstr "Сопло [%d] в профиле: %.1f"
-
-#, c-format, boost-format
-msgid "nozzle[%d] memorized: %.1f"
-msgstr "Сопло [%d] запомнено: %.1f"
-
-msgid ""
-"Your nozzle type in preset is not consistent with memorized nozzle. Did you "
-"change your nozzle lately?"
-msgstr ""
-"Тип сопла в профиле не соответствует сохранённому \n"
-"в памяти диаметру сопла. Вы недавно сменили сопло?"
 
 #, c-format, boost-format
 msgid "Printing %1s material with %2s nozzle may cause nozzle damage."
@@ -23170,26 +23384,17 @@ msgstr "Макс. угол"
 msgid "Detection radius"
 msgstr "Радиус обнаружения"
 
-msgid "Remove selected points"
-msgstr "Удалить выбранные"
+msgid "Selected"
+msgstr ""
 
-msgid "Remove all"
-msgstr "Удалить все"
+msgid "Auto-generate"
+msgstr ""
 
-msgid "Auto-generate points"
-msgstr "Сгенерировать автоматически"
+msgid "Generate brim ears using Max angle and Detection radius"
+msgstr ""
 
-msgid "Add a brim ear"
-msgstr "Добавить «мышиные уши»"
-
-msgid "Delete a brim ear"
-msgstr "Удалить «мышиные уши»"
-
-msgid "Adjust head diameter"
-msgstr "Настройка диаметра головы"
-
-msgid "Adjust section view"
-msgstr "Настройка вида сечения"
+msgid "Add or Select"
+msgstr ""
 
 msgid ""
 "Warning: The brim type is not set to \"painted\", the brim ears will not "
@@ -23201,8 +23406,8 @@ msgstr ""
 msgid "Set the brim type of this object to \"painted\""
 msgstr "Переключить тип каймы для этого объекта на «Вручную»."
 
-msgid " invalid brim ears"
-msgstr " недействительные «мышиные уши»"
+msgid "invalid brim ears"
+msgstr ""
 
 msgid "Brim Ears"
 msgstr "Кайма «мышиные уши»"
@@ -23432,9 +23637,9 @@ msgid ""
 "overhangs?"
 msgstr ""
 "Порядок печати периметров «Навстречу»\n"
-"Знаете ли вы, что можно использовать порядок печати периметров "
-"«Навстречу» (Inner/Outer/Inner)? Это улучшает точность, прочность и внешний "
-"вид, если у модели не очень крутые нависания."
+"Знаете ли вы, что можно использовать порядок печати периметров «Навстречу» "
+"(Inner/Outer/Inner)? Это улучшает точность, прочность и внешний вид, если у "
+"модели не очень крутые нависания."
 
 #: resources/data/hints.ini: [hint:Chamber temperature]
 msgid ""
@@ -23500,15 +23705,13 @@ msgstr ""
 "Знаете ли вы, что в Orca Slicer имеется большой список горячих клавиш для "
 "облегчения и ускорения работы с программой?"
 
-#: resources/data/hints.ini: [hint:Reverse on odd]
+#: resources/data/hints.ini: [hint:Reverse on even]
 msgid ""
-"Reverse on odd\n"
-"Did you know that <b>Reverse on odd</b> feature can significantly improve "
-"the surface quality of your overhangs?"
+"Reverse on even\n"
+"Did you know that <b>Reverse on even</b> feature can significantly improve "
+"the surface quality of your overhangs? However, it can cause wall "
+"inconsistencies so use carefully!"
 msgstr ""
-"Реверс на нависаниях\n"
-"Знаете ли вы, что функция <b>Реверс на нависаниях</b> может значительно "
-"улучшить качество поверхности нависающий частей?"
 
 #: resources/data/hints.ini: [hint:Cut Tool]
 msgid ""
@@ -23801,6 +24004,86 @@ msgstr ""
 "Знаете ли вы, что при печати материалами, склонными к короблению, таких как "
 "ABS, повышение температуры подогреваемого стола может снизить эту "
 "вероятность?"
+
+#~ msgid "Erase all painting"
+#~ msgstr "Очистить всё"
+
+#~ msgid "Reset cut"
+#~ msgstr "Сброс сечения"
+
+# Поменять местами кнопки перемещение и поворота камеры
+#~ msgid "Swap pan and rotate mouse buttons"
+#~ msgstr "Поменять местами перемещение и вращение камеры"
+
+#~ msgid ""
+#~ "If enabled, swaps the left and right mouse buttons pan and rotate "
+#~ "functions."
+#~ msgstr ""
+#~ "Поменять местами функции перемещения и вращения камеры для левой и правой "
+#~ "кнопок мыши."
+
+#, c-format, boost-format
+#~ msgid "nozzle size in preset: %d"
+#~ msgstr "сопло в профиле: %d"
+
+#, c-format, boost-format
+#~ msgid "nozzle size memorized: %d"
+#~ msgstr "Запомненный размер сопла: %d"
+
+#~ msgid ""
+#~ "The size of nozzle type in preset is not consistent with memorized "
+#~ "nozzle. Did you change your nozzle lately?"
+#~ msgstr ""
+#~ "Диаметр сопла в профиле не соответствует сохранённому \n"
+#~ "в памяти диаметру сопла. Вы недавно сменили сопло?"
+
+#, c-format, boost-format
+#~ msgid "nozzle[%d] in preset: %.1f"
+#~ msgstr "Сопло [%d] в профиле: %.1f"
+
+#, c-format, boost-format
+#~ msgid "nozzle[%d] memorized: %.1f"
+#~ msgstr "Сопло [%d] запомнено: %.1f"
+
+#~ msgid ""
+#~ "Your nozzle type in preset is not consistent with memorized nozzle. Did "
+#~ "you change your nozzle lately?"
+#~ msgstr ""
+#~ "Тип сопла в профиле не соответствует сохранённому \n"
+#~ "в памяти диаметру сопла. Вы недавно сменили сопло?"
+
+#~ msgid "Remove selected points"
+#~ msgstr "Удалить выбранные"
+
+#~ msgid "Remove all"
+#~ msgstr "Удалить все"
+
+#~ msgid "Auto-generate points"
+#~ msgstr "Сгенерировать автоматически"
+
+#~ msgid "Add a brim ear"
+#~ msgstr "Добавить «мышиные уши»"
+
+#~ msgid "Delete a brim ear"
+#~ msgstr "Удалить «мышиные уши»"
+
+#~ msgid "Adjust head diameter"
+#~ msgstr "Настройка диаметра головы"
+
+#~ msgid "Adjust section view"
+#~ msgstr "Настройка вида сечения"
+
+#~ msgid " invalid brim ears"
+#~ msgstr " недействительные «мышиные уши»"
+
+#~ msgid ""
+#~ "Reverse on odd\n"
+#~ "Did you know that <b>Reverse on odd</b> feature can significantly improve "
+#~ "the surface quality of your overhangs?"
+#~ msgstr ""
+#~ "Реверс на нависаниях\n"
+#~ "Знаете ли вы, что функция <b>Реверс на нависаниях</b> может значительно "
+#~ "улучшить качество поверхности нависающий частей?"
 
 #~ msgid "Pen size"
 #~ msgstr "Размер кисти"
@@ -25123,9 +25406,6 @@ msgstr ""
 
 #~ msgid "Set Position"
 #~ msgstr "Задание позиции"
-
-#~ msgid "%"
-#~ msgstr "%"
 
 #, boost-format
 #~ msgid "%1%"
