@@ -1284,7 +1284,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("bridge_density", coPercent);
     def->label = L("External bridge density");
     def->category = L("Strength");
-    def->tooltip = L("Controls the density (spacing) of external bridge lines. Default is 100%, range is 10% to 125%.\n\n"
+    def->tooltip = L("Controls the density (spacing) of external bridge lines.\n\n"
                      "With thick bridges set, this directly sets the line density (spacing to width ratio). For values less than 100% there are gaps between "
                      "lines, and for values greater than 100% adjacent lines overlap. Reasonable values are between 95% to 115% \n\n"
                      "Without thick bridges set, this adjusts the spacing, but the line density and spacing also depends on the layer height, bridge line "
@@ -1301,7 +1301,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("internal_bridge_density", coPercent);
     def->label = L("Internal bridge density");
     def->category = L("Strength");
-    def->tooltip = L("Controls the density (spacing) of internal bridge lines. Default is 100%, range is 10% to 125%.\n\n"
+    def->tooltip = L("Controls the density (spacing) of internal bridge lines.\n\n"
                      "With thick bridges set, this directly sets the line density (spacing to width ratio). For values less than 100% there are gaps between "
                      "lines, and for values greater than 100% adjacent lines overlap. Reasonable values are between 50% to 115%.\n\n"
                      "Without thick bridges set, this adjusts the spacing, but the line density and spacing also depends on the layer height, bridge line "
@@ -1319,7 +1319,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("bridge_flow", coFloat);
     def->label = L("Bridge flow ratio");
     def->category = L("Quality");
-    def->tooltip = L("Adjusts the volume of material for external bridge lines. Default is 1.0, range is 0 to 2.0.\n\n"
+    def->tooltip = L("Adjusts the volume of material for external bridge lines.\n\n"
                      "With thick bridges set, this adjusts the extrusion ratio without changing the line geometry, so it doesn't change the diameter or "
                      "spacing. It can be used to apply small over or under extrusion adjustments that are independent of the bridge line geometry.\n\n"
                      "Without thick bridges set, this adjusts the basic line flow and geometry for internal and external bridges in a way that mostly adjusts "
@@ -1334,8 +1334,8 @@ void PrintConfigDef::init_fff_params()
     def = this->add("bridge_line_width", coFloatOrPercent);
     def->label = L("Bridge");
     def->category = L("Quality");
-    def->tooltip = L("Bridge line width as an absolute value or percentage of the active nozzle diameter. Default is 100%, range is 0% to 100%. Setting 0 "
-                     "will use the internal solid infill width.\n\n"
+    def->tooltip = L("Bridge line width as an absolute value or percentage of the active nozzle diameter. Setting 0 will use the internal solid infill "
+                     "width.\n\n"
                      "With thick bridges set, this directly sets the bridge line's circular cross-section diameter. Reasonable values are between 1.1x to "
                      "1.5x the layer height.\n\n"
                      "Without thick bridges set, this sets the bridge line's basic geometry, and interacts with the layer height, bridge flow rate, and "
@@ -1351,7 +1351,7 @@ void PrintConfigDef::init_fff_params()
     def = this->add("internal_bridge_flow", coFloat);
     def->label = L("Internal bridge flow ratio");
     def->category = L("Quality");
-    def->tooltip = L("Adjusts the volume of material for internal bridge lines. Default is 1.0, range is 0 to 2.0.\n\n"
+    def->tooltip = L("Adjusts the volume of material for internal bridge lines.\n\n"
                      "This adjusts the extrusion ratio without changing the line geometry, so it doesn't change the diameter or spacing. It can be used to "
                      "apply small over or under extrusion adjustments that are independent of the bridge line geometry.\n\n"
                      "With thick bridges set, this adjusts the basic internal bridge line flow defined by the bridge line width setting.\n\n"
