@@ -163,8 +163,8 @@ SCENARIO("Flow: Flow math for bridges", "[Flow]") {
             THEN("Bridge width is same as nozzle diameter") {
                 REQUIRE(flow.width() == Catch::Approx(nozzle_diameter));
             }
-            THEN("Bridge spacing is same as nozzle diameter + BRIDGE_EXTRA_SPACING") {
-                REQUIRE(flow.spacing() == Catch::Approx(nozzle_diameter + BRIDGE_EXTRA_SPACING));
+            THEN("Bridge spacing is same as nozzle diameter") {
+                REQUIRE(flow.spacing() == Catch::Approx(nozzle_diameter));
             }
         }
     }
