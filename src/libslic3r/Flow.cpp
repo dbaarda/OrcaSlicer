@@ -11,11 +11,13 @@
 
 namespace Slic3r {
 
-FlowErrorNegativeSpacing::FlowErrorNegativeSpacing() :
-        FlowError("Flow::spacing() produced negative spacing. Did you set some extrusion width too small?") {}
+FlowErrorNegativeSpacing::FlowErrorNegativeSpacing()
+    : FlowError("Flow::spacing() produced negative spacing. Did you set some extrusion width too small?")
+{}
 
-FlowErrorNegativeFlow::FlowErrorNegativeFlow() :
-    FlowError("Flow::mm3_per_mm() produced negative flow. Did you set some extrusion width too small?") {}
+FlowErrorNegativeFlow::FlowErrorNegativeFlow()
+    : FlowError("Flow::mm3_per_mm() produced negative flow. Did you set some extrusion width too small?")
+{}
 
 // This static method returns a sane extrusion width default.
 float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter)
@@ -24,20 +26,18 @@ float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter)
     case frSupportMaterial:
     case frSupportMaterialInterface:
     case frSupportTransition:
-    case frTopSolidInfill:
-        return nozzle_diameter;
+    case frTopSolidInfill: return nozzle_diameter;
     default:
     case frExternalPerimeter:
     case frPerimeter:
     case frSolidInfill:
-    case frInfill:
-        return 1.125f * nozzle_diameter;
+    case frInfill: return 1.125f * nozzle_diameter;
     }
 }
 
 // Used by the Flow::extrusion_width() funtion to provide hints to the user on default extrusion width values,
 // and to provide reasonable values to the PlaceholderParser.
-static inline FlowRole opt_key_to_flow_role(const std::string &opt_key)
+static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
 {
     if (opt_key == "inner_wall_line_width" ||
         // or all the defaults:
@@ -59,15 +59,19 @@ static inline FlowRole opt_key_to_flow_role(const std::string &opt_key)
         throw Slic3r::RuntimeError("opt_key_to_flow_role: invalid argument");
 };
 
-static inline void throw_on_missing_variable(const std::string &opt_key, const char *dependent_opt_key)
+static inline void throw_on_missing_variable(const std::string& opt_key, const char* dependent_opt_key)
 {
-        throw FlowErrorMissingVariable((boost::format(L("Failed to calculate line width of %1%. Cannot get value of \"%2%\" ")) % opt_key % dependent_opt_key).str());
+    throw FlowErrorMissingVariable(
+        (boost::format(L("Failed to calculate line width of %1%. Cannot get value of \"%2%\" ")) % opt_key % dependent_opt_key).str());
 }
 
 // Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.
-double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionFloatOrPercent* opt, const ConfigOptionResolver& config, const unsigned int first_printing_extruder)
+double Flow::extrusion_width(const std::string& opt_key,
+                             const ConfigOptionFloatOrPercent* opt,
+                             const ConfigOptionResolver& config,
+                             const unsigned int first_printing_extruder)
 {
-        assert(opt != nullptr);
+    assert(opt != nullptr);
 
     auto opt_nozzle_diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
     if (opt_nozzle_diameters == nullptr)
@@ -99,45 +103,43 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionFloat
         }
 #endif
 
-        if (opt->value == 0.) {
-                // The role specific extrusion width value was set to zero, try the role non-specific extrusion width.
-                opt = config.option<ConfigOptionFloatOrPercent>("line_width");
-                if (opt == nullptr)
-                throw_on_missing_variable(opt_key, "line_width");
-        }
+    if (opt->value == 0.) {
+        // The role specific extrusion width value was set to zero, try the role non-specific extrusion width.
+        opt = config.option<ConfigOptionFloatOrPercent>("line_width");
+        if (opt == nullptr)
+            throw_on_missing_variable(opt_key, "line_width");
+    }
 
     if (opt->percent) {
         return opt->get_abs_value(nozzle_diameter);
-        }
+    }
 
-        if (opt->value == 0.) {
+    if (opt->value == 0.) {
         // If user left option to 0, calculate a sane default width.
         return auto_extrusion_width(opt_key_to_flow_role(opt_key), nozzle_diameter);
     }
 
-        return opt->value;
+    return opt->value;
 }
 
 // Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.
-double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResolver &config, const unsigned int first_printing_extruder)
-{
-    return extrusion_width(opt_key, config.option<ConfigOptionFloatOrPercent>(opt_key), config, first_printing_extruder);
-}
+double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResolver& config, const unsigned int first_printing_extruder)
+{ return extrusion_width(opt_key, config.option<ConfigOptionFloatOrPercent>(opt_key), config, first_printing_extruder); }
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
-Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent &width, float nozzle_diameter, float height)
+Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height)
 {
     if (height <= 0)
         throw Slic3r::InvalidArgument("Invalid flow height supplied to new_from_config_width()");
 
     float w;
-    if (!width.percent  && width.value <= 0.) {
+    if (!width.percent && width.value <= 0.) {
         // If user left option to 0, calculate a sane default width.
         w = auto_extrusion_width(role, nozzle_diameter);
     } else {
         // If user set a manual value, use it.
-      w = float(width.get_abs_value(nozzle_diameter));
+        w = float(width.get_abs_value(nozzle_diameter));
     }
 
     return Flow(w, height, rounded_rectangle_extrusion_spacing(w, height), nozzle_diameter, false);
@@ -160,7 +162,8 @@ Flow Flow::with_spacing(float new_spacing) const
         // distance, so adjust width by the same length as spacing.
         out.m_width += new_spacing - m_spacing;
         if (out.m_width < out.m_height)
-            throw Slic3r::InvalidArgument(L("Invalid spacing supplied to Flow::with_spacing(), check your layer height and extrusion width"));
+            throw Slic3r::InvalidArgument(
+                L("Invalid spacing supplied to Flow::with_spacing(), check your layer height and extrusion width"));
     }
     out.m_spacing = new_spacing;
     return out;
@@ -169,7 +172,7 @@ Flow Flow::with_spacing(float new_spacing) const
 // Adjust the width / height of a rounded extrusion model to reach the prescribed cross section area while maintaining extrusion spacing.
 Flow Flow::with_cross_section(float area_new) const
 {
-    assert(! m_bridge);
+    assert(!m_bridge);
     assert(m_width >= m_height);
 
     // Adjust for bridge_flow, maintain the extrusion spacing.
@@ -204,55 +207,61 @@ Flow Flow::with_cross_section(float area_new) const
 double Flow::mm3_per_mm() const
 {
     float res = m_bridge ?
-    // Area of a circle with dmr of this->width.
-    float((m_width * m_width) * PI_4) :
-    // Rectangle with semicircles at the ends.
-    float(m_height * (m_width - m_height * RRLINE_OVERLAP));
-    //assert(res > 0.);
+                    // Area of a circle with dmr of this->width.
+                    float((m_width * m_width) * PI_4) :
+                    // Rectangle with semicircles at the ends.
+                    float(m_height * (m_width - m_height * RRLINE_OVERLAP));
+    // assert(res > 0.);
     if (res <= 0.)
         throw FlowErrorNegativeFlow();
     return res;
 }
 
-Flow support_material_flow(const PrintObject *object, float layer_height)
+Flow support_material_flow(const PrintObject* object, float layer_height)
 {
-    return Flow::new_from_config_width(
-        frSupportMaterial,
-        // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
-        (object->config().support_line_width.value > 0) ? object->config().support_line_width : object->config().line_width,
-        // if object->config().support_filament == 0 (which means to not trigger tool change, but use the current extruder instead), get_at will return the 0th component.
-        float(object->print()->config().nozzle_diameter.get_at(object->config().support_filament-1)),
-        (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
+    return Flow::new_from_config_width(frSupportMaterial,
+                                       // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the
+                                       // Flow class takes care of the percent to value substitution.
+                                       (object->config().support_line_width.value > 0) ? object->config().support_line_width :
+                                                                                         object->config().line_width,
+                                       // if object->config().support_filament == 0 (which means to not trigger tool change, but use the
+                                       // current extruder instead), get_at will return the 0th component.
+                                       float(object->print()->config().nozzle_diameter.get_at(object->config().support_filament - 1)),
+                                       (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
 }
-//BBS
+// BBS
 Flow support_transition_flow(const PrintObject* object)
 {
-    //BBS: support transition of tree support is bridge flow
+    // BBS: support transition of tree support is bridge flow
     float dmr = float(object->print()->config().nozzle_diameter.get_at(object->config().support_filament - 1));
     return Flow::bridging_flow(dmr, dmr);
 }
 
-Flow support_material_1st_layer_flow(const PrintObject *object, float layer_height)
+Flow support_material_1st_layer_flow(const PrintObject* object, float layer_height)
 {
-    const PrintConfig &print_config = object->print()->config();
-    const auto &width = (print_config.initial_layer_line_width.value > 0) ? print_config.initial_layer_line_width : object->config().support_line_width;
-    return Flow::new_from_config_width(
-        frSupportMaterial,
-        // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
-        (width.value > 0) ? width : object->config().line_width,
-        float(print_config.nozzle_diameter.get_at(object->config().support_filament-1)),
-        (layer_height > 0.f) ? layer_height : float(print_config.initial_layer_print_height.value));
+    const PrintConfig& print_config = object->print()->config();
+    const auto& width               = (print_config.initial_layer_line_width.value > 0) ? print_config.initial_layer_line_width :
+                                                                                          object->config().support_line_width;
+    return Flow::new_from_config_width(frSupportMaterial,
+                                       // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the
+                                       // Flow class takes care of the percent to value substitution.
+                                       (width.value > 0) ? width : object->config().line_width,
+                                       float(print_config.nozzle_diameter.get_at(object->config().support_filament - 1)),
+                                       (layer_height > 0.f) ? layer_height : float(print_config.initial_layer_print_height.value));
 }
 
-Flow support_material_interface_flow(const PrintObject *object, float layer_height)
+Flow support_material_interface_flow(const PrintObject* object, float layer_height)
 {
-    return Flow::new_from_config_width(
-        frSupportMaterialInterface,
-        // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
-        (object->config().support_line_width > 0) ? object->config().support_line_width : object->config().line_width,
-        // if object->config().support_interface_filament == 0 (which means to not trigger tool change, but use the current extruder instead), get_at will return the 0th component.
-        float(object->print()->config().nozzle_diameter.get_at(object->config().support_interface_filament-1)),
-        (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
+    return Flow::new_from_config_width(frSupportMaterialInterface,
+                                       // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the
+                                       // Flow class takes care of the percent to value substitution.
+                                       (object->config().support_line_width > 0) ? object->config().support_line_width :
+                                                                                   object->config().line_width,
+                                       // if object->config().support_interface_filament == 0 (which means to not trigger tool change, but
+                                       // use the current extruder instead), get_at will return the 0th component.
+                                       float(object->print()->config().nozzle_diameter.get_at(object->config().support_interface_filament -
+                                                                                              1)),
+                                       (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
 }
 
-}
+} // namespace Slic3r
