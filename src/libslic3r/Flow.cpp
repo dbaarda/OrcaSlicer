@@ -11,12 +11,13 @@
 
 namespace Slic3r {
 
-FlowErrorNegativeSpacing::FlowErrorNegativeSpacing()
-    : FlowError("Flow::spacing() produced negative spacing. Did you set some extrusion width too small?")
+FlowErrorNegativeSpacing::FlowErrorNegativeSpacing() : FlowError("Flow::spacing() is negative. Did you set some extrusion width too small?")
 {}
 
-FlowErrorNegativeFlow::FlowErrorNegativeFlow()
-    : FlowError("Flow::mm3_per_mm() produced negative flow. Did you set some extrusion width too small?")
+FlowErrorNegativeHeight::FlowErrorNegativeHeight() : FlowError("Flow::height() is negative. Did you set some line setting too small?") {}
+
+FlowErrorHeightTooLarge::FlowErrorHeightTooLarge()
+    : FlowError("Flow::height() > Flow::nozzle_diameter(). Did you set layer height too large?")
 {}
 
 // This static method returns a sane extrusion width default.
@@ -61,7 +62,9 @@ static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
 
 static inline void throw_on_missing_variable(const std::string& opt_key, const char* dependent_opt_key)
 {
-	throw FlowErrorMissingVariable((boost::format(L("Failed to calculate line width of %1%. Cannot get value of \u201c%2%\u201d ")) % opt_key % dependent_opt_key).str());
+    throw FlowErrorMissingVariable(
+        (boost::format(L("Failed to calculate line width of %1%. Cannot get value of \u201c%2%\u201d ")) % opt_key % dependent_opt_key)
+            .str());
 }
 
 // Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.
@@ -155,13 +158,6 @@ Flow support_material_flow(const PrintObject* object, float layer_height)
                                        // current extruder instead), get_at will return the 0th component.
                                        float(object->print()->config().nozzle_diameter.get_at(object->config().support_filament - 1)),
                                        (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
-}
-// BBS
-Flow support_transition_flow(const PrintObject* object)
-{
-    // BBS: support transition of tree support is bridge flow
-    float dmr = float(object->print()->config().nozzle_diameter.get_at(object->config().support_filament - 1));
-    return Flow::bridging_flow(dmr, dmr);
 }
 
 Flow support_material_1st_layer_flow(const PrintObject* object, float layer_height)
