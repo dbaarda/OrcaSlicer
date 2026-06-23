@@ -77,7 +77,7 @@ void ExtrusionPath::polygons_covered_by_spacing(Polygons &out, const float scale
     bool bridge = is_bridge(this->role());
     // SoftFever: TODO Mac trigger assersion errors
 //    assert(! bridge || this->width == this->height);
-    auto flow = bridge ? Flow::bridging_flow(this->width, 0.f) : Flow(this->width, this->height, 0.f);
+    auto flow = bridge ? Flow(this->width, 0.f) : Flow(this->width, this->height, 0.f);
     polygons_append(out, offset(this->polyline.to_polyline(), 0.5f * float(flow.scaled_spacing()) + scaled_epsilon));
 }
 

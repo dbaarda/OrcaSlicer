@@ -46,7 +46,7 @@ Flow LayerRegion::bridging_flow(FlowRole role, bool thick_bridge) const
         // Get the configured nozzle_diameter for the extruder associated to the flow role requested.
         float thread_diameter = has_bridge_width ? float(bridge_width) : nozzle_diameter;
         // For thick bridges, bridge_flow_ratio is applied later and doesn't change the line geometry.
-        bridge_flow = Flow::bridging_flow(thread_diameter, nozzle_diameter);
+        bridge_flow = Flow(thread_diameter, nozzle_diameter);
     } else {
         // The same way as other slicers: Use normal extrusions. Apply bridge_flow while maintaining the original spacing.
         Flow base_flow = this->flow(role);

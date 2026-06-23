@@ -262,9 +262,6 @@ public:
         return this->with_width(width);
     }
 
-    // TODO(dbaarda): remove this and just use Flow(dmr, nozzle_diameter) everywhere.
-    static Flow bridging_flow(float dmr, float nozzle_diameter) { return Flow(dmr, nozzle_diameter); }
-
     static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height);
 
     // TODO(dbaarda): remove these and just use the helper functions.
@@ -295,18 +292,18 @@ private:
     Flow(float width, float height, float spacing, float nozzle_diameter, bool bridge)
         : m_width(width), m_height(height), m_spacing(spacing), m_nozzle_diameter(nozzle_diameter), m_bridge(bridge)
     {
-        // Negative width should never happen, unlike negative spacing or negative height, which might happen for invalid settings values.
-        assert(m_width > 0);
-        if (m_spacing < 0) {
-            throw FlowErrorNegativeSpacing();
-        }
         if (m_height < 0) {
             throw FlowErrorNegativeHeight();
         }
-        // Something sometimes uses nozzle_diameter=0 (for use default?), so ignore it.
+        // nozzle_diameter=0 is used for "unknown" so we assume it's valid.
         if (m_nozzle_diameter != 0 && m_height > m_nozzle_diameter + EPSILON) {
             throw FlowErrorHeightTooLarge();
         }
+        if (m_spacing < 0) {
+            throw FlowErrorNegativeSpacing();
+        }
+        // Negative width should never happen, unlike negative spacing or negative height, which might happen for invalid settings values.
+        assert(m_width > 0);
     }
 
     float m_width{0};

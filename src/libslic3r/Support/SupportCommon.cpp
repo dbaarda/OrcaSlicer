@@ -1704,7 +1704,7 @@ void generate_support_toolpaths(
                     // the bridging flow does not quite apply. Reduce the flow to area of an ellipse? (A = pi * a * b)
                     auto *filler = raft_contact ? filler_raft_contact : filler_interface.get();
                     auto interface_flow = layer_ex.layer->bridging ?
-                        Flow::bridging_flow(layer_ex.layer->height, support_params.support_material_bottom_interface_flow.nozzle_diameter()) :
+                        Flow(layer_ex.layer->height, support_params.support_material_bottom_interface_flow.nozzle_diameter()) :
                         (raft_contact ? &support_params.raft_interface_flow :
                          interface_as_base ? &support_params.support_material_flow : &support_params.support_material_interface_flow)
                             ->with_height(float(layer_ex.layer->height));
