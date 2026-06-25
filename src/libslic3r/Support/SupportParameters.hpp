@@ -86,7 +86,7 @@ struct SupportParameters {
         for (size_t region_id = 0; region_id < object.num_printing_regions(); ++ region_id) {
             const PrintRegion &region = object.printing_region(region_id);
             external_perimeter_width = std::max(external_perimeter_width, coordf_t(region.flow(object, frExternalPerimeter, slicing_params.layer_height).width()));
-            bridge_flow_ratio += region.config().bridge_flow;
+            bridge_flow_ratio += region.config().external_bridge_flow_ratio;
         }
         this->gap_xy = object_config.support_object_xy_distance.value;
         this->gap_xy_first_layer = object_config.support_object_first_layer_gap.value;

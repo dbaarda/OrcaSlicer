@@ -1379,7 +1379,7 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "precise_outer_wall") {
             steps.emplace_back(posPerimeters);
             steps.emplace_back(posSupportMaterial);
-        } else if (opt_key == "bridge_flow" || opt_key == "internal_bridge_flow") {
+        } else if (opt_key == "external_bridge_flow_ratio" || opt_key == "internal_bridge_flow_ratio") {
             if (m_config.support_top_z_distance > 0.) {
             	// Only invalidate due to bridging if bridging is enabled.
             	// If later "support_top_z_distance" is modified, the complete PrintObject is invalidated anyway.

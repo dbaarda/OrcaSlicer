@@ -65,7 +65,7 @@ coordf_t PrintRegion::nozzle_dmr_avg(const PrintConfig &print_config) const
 
 coordf_t PrintRegion::bridging_height_avg(const PrintConfig &print_config) const
 {
-    return this->nozzle_dmr_avg(print_config) * sqrt(m_config.bridge_flow.value);
+    return this->nozzle_dmr_avg(print_config) * sqrt(m_config.external_bridge_flow_ratio.value);
 }
 
 void PrintRegion::collect_object_printing_extruders(const PrintConfig &print_config, const PrintRegionConfig &region_config, const bool has_brim, std::vector<unsigned int> &object_extruders)

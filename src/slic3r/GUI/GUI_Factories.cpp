@@ -104,7 +104,7 @@ std::map<std::string, std::vector<SimpleSettingData>> SettingsFactory::PART_CATE
        {"ironing_flow", "", 9},
        {"ironing_spacing", "", 10},
        {"ironing_inset", "", 11},
-       {"bridge_flow", "", 11},
+       {"external_bridge_flow_ratio", "", 11},
        {"make_overhang_printable", "", 11},
        {"bridge_density", "", 1},
        {"ironing_expansion", "", 14},

@@ -6514,9 +6514,9 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         } else if (path.role() == erOverhangPerimeter) {
             _mm3_per_mm *= m_config.overhang_flow_ratio;
         } else if (path.role() == erBridgeInfill) {
-            _mm3_per_mm *= m_config.bridge_flow;
+            _mm3_per_mm *= m_config.external_bridge_flow_ratio;
         } else if (path.role() == erInternalBridgeInfill) {
-            _mm3_per_mm *= m_config.internal_bridge_flow;
+            _mm3_per_mm *= m_config.internal_bridge_flow_ratio;
         } else if (path.role() == erInternalInfill) {
             _mm3_per_mm *= m_config.sparse_infill_flow_ratio;
         } else if (path.role() == erSolidInfill) {

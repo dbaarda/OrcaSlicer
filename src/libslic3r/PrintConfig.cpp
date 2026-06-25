@@ -1314,7 +1314,7 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatOrPercent(100., true));
 
-    def = this->add("bridge_flow", coFloat);
+    def = this->add("external_bridge_flow_ratio", coFloat);
     def->label = L("External bridge flow ratio");
     def->category = L("Advanced");
     def->tooltip = L("Adjusts the volume of material for bottom external bridge lines.\n\n"
@@ -1326,7 +1326,7 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(1));
 
-    def = this->add("internal_bridge_flow", coFloat);
+    def = this->add("internal_bridge_flow_ratio", coFloat);
     def->label = L("Internal bridge flow ratio");
     def->category = L("Advanced");
     def->tooltip = L("Adjusts the volume of material for internal bridge lines.\n\n"
@@ -10296,13 +10296,13 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
     }
 
     // --bridge-flow-ratio
-    if (cfg.bridge_flow <= 0) {
-        error_message.emplace("bridge_flow", L("invalid value ") + std::to_string(cfg.bridge_flow));
+    if (cfg.external_bridge_flow_ratio <= 0) {
+        error_message.emplace("external_bridge_flow_ratio", L("invalid value ") + std::to_string(cfg.external_bridge_flow_ratio));
     }
 
     // --internal-bridge-flow-ratio
-    if (cfg.internal_bridge_flow <= 0) {
-        error_message.emplace("internal_bridge_flow", L("invalid value ") + std::to_string(cfg.internal_bridge_flow));
+    if (cfg.internal_bridge_flow_ratio <= 0) {
+        error_message.emplace("internal_bridge_flow_ratio", L("invalid value ") + std::to_string(cfg.internal_bridge_flow_ratio));
     }
 
     // extruder clearance

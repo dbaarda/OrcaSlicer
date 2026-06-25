@@ -100,7 +100,7 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
     double support_speed           = print_config.opt_float("support_speed");
     double support_interface_speed = print_config.get_abs_value("support_interface_speed");
     double bridge_speed                     = print_config.opt_float("bridge_speed");
-    double bridge_flow                = print_config.opt_float("bridge_flow");
+    double external_bridge_flow_ratio                = print_config.opt_float("external_bridge_flow_ratio");
     double inner_wall_speed                  = print_config.opt_float("inner_wall_speed");
     double outer_wall_speed         = print_config.get_abs_value("outer_wall_speed", inner_wall_speed);
     // double gap_infill_speed                   = print_config.opt_bool("filter_out_gap_fill") ? print_config.opt_float("gap_infill_speed") : 0.;
@@ -159,11 +159,11 @@ std::string PresetHints::maximum_volumetric_flow_description(const PresetBundle 
             return (speed_normal > 0.) ? speed_normal : speed_max;
         };
         auto test_flow =
-            [first_layer_extrusion_width_ptr, extrusion_width, nozzle_diameter, lh, bridging, bridge_speed, bridge_flow, limit_by_first_layer_speed, max_print_speed, &max_flow, &max_flow_extrusion_type]
+            [first_layer_extrusion_width_ptr, extrusion_width, nozzle_diameter, lh, bridging, bridge_speed, external_bridge_flow_ratio, limit_by_first_layer_speed, max_print_speed, &max_flow, &max_flow_extrusion_type]
             (FlowRole flow_role, const ConfigOptionFloatOrPercent &this_extrusion_width, double speed, const char *err_msg) {
             Flow flow = bridging ?
                 Flow::new_from_config_width(flow_role, first_positive(first_layer_extrusion_width_ptr, this_extrusion_width, extrusion_width), nozzle_diameter, lh) :
-                Flow::bridging_flow(nozzle_diameter * bridge_flow, nozzle_diameter);
+                Flow::bridging_flow(nozzle_diameter * external_bridge_flow_ratio, nozzle_diameter);
             double volumetric_flow = flow.mm3_per_mm() * (bridging ? bridge_speed : limit_by_first_layer_speed(speed, max_print_speed));
             if (max_flow < volumetric_flow) {
                 max_flow = volumetric_flow;
