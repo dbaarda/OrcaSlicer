@@ -2596,7 +2596,7 @@ public:
         const ConfigOption* opt = this->option_throw(opt_key);
         if (opt->type() != TYPE::static_type())
             throw BadOptionTypeException("Conversion to a wrong type");
-        return static_cast<TYPE*>(opt);
+        return static_cast<const TYPE*>(opt);
     }
 };
 
