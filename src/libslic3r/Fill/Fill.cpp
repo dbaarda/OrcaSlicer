@@ -951,12 +951,10 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                 }
 
                 // Calculate the actual flow we'll be using for this infill.
-		        params.bridge = is_bridge || Fill::use_bridge_flow(params.pattern);
-                const bool is_thick_bridge = surface.is_bridge() && (surface.is_internal_bridge() ? object_config.thick_internal_bridges : object_config.thick_bridges);
-				params.flow   = params.bridge ?
-					//Orca: enable thick bridge based on config
-					layerm.bridging_flow(extrusion_role, is_thick_bridge) :
-					layerm.flow(extrusion_role, (surface.thickness == -1) ? layer.height : surface.thickness);
+	        params.bridge = is_bridge || Fill::use_bridge_flow(params.pattern);
+                params.flow   = params.bridge ?
+                    layerm.bridging_flow(extrusion_role) :
+                    layerm.flow(extrusion_role, (surface.thickness == -1) ? layer.height : surface.thickness);
 
 				params.role_speed = 0;
                 if (params.extrusion_role == erBridgeInfill)

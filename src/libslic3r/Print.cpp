@@ -1664,7 +1664,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                     if (!validate_extrusion_width(region.config(), opt_key, layer_height, err_msg))
 		            	return  {err_msg, object, opt_key};
 
-            const bool allow_thin_bridge_width = object->config().thick_bridges && object->config().thick_internal_bridges;
             for (const PrintRegion &region : object->all_regions()) {
                 const auto &bridge_width_opt = region.config().bridge_line_width;
                 for (FlowRole bridge_role : { frPerimeter, frInfill, frSolidInfill, frTopSolidInfill }) {
@@ -1674,10 +1673,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                         continue;
                     if (bridge_width > nozzle_diameter) {
                         err_msg = L("Bridge line width must not exceed nozzle diameter");
-                        return { err_msg, object, "bridge_line_width" };
-                    }
-                    if (!allow_thin_bridge_width && bridge_width <= layer_height) {
-                        err_msg = L("Line width too small");
                         return { err_msg, object, "bridge_line_width" };
                     }
                 }

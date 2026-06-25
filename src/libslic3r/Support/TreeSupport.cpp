@@ -1951,7 +1951,7 @@ Polygons TreeSupport::get_trim_support_regions(
             polygons_append(polygons_trimming, offset({ expoly }, trimming_offset, SUPPORT_SURFACES_OFFSET_PARAMETERS));
             }
         }
-    if (!m_slicing_params.zero_gap_interface_top && m_object_config->thick_bridges) {
+    if (!m_slicing_params.zero_gap_interface_top) {
         // Collect all bottom surfaces, which will be extruded with a bridging flow.
         for (; i < object.layers().size(); ++i) {
             const Layer& object_layer = *object.layers()[i];
@@ -3437,7 +3437,7 @@ void TreeSupport::generate_contact_points()
   //      z_distance_top = round(z_distance_top / layer_height) * layer_height;
   //  // BBS: add extra distance if thick bridge is enabled
   //  // Note: normal support uses print_z, but tree support uses integer layers, so we need to subtract layer_height
-  //  if (!m_slicing_params.zero_gap_interface_top && m_object_config->thick_bridges) {
+  //  if (!m_slicing_params.zero_gap_interface_top) {
   //      z_distance_top += m_object->layers()[0]->regions()[0]->region().bridging_height_avg(m_object->print()->config()) - layer_height;
 		//}
   //  }

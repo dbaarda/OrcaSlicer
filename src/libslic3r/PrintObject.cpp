@@ -2792,7 +2792,7 @@ void PrintObject::bridge_over_infill()
             if (clustered_layers_for_threads.empty() ||
                 this->get_layer(clustered_layers_for_threads.back().back())->print_z <
                     this->get_layer(pair.first)->print_z -
-                        this->get_layer(pair.first)->regions()[0]->bridging_flow(frSolidInfill, true).height() * target_flow_height_factor -
+                        this->get_layer(pair.first)->regions()[0]->bridging_flow(frSolidInfill).height() * target_flow_height_factor -
                         EPSILON ||
                 intersection(layer_area_covered_by_candidates[clustered_layers_for_threads.back().back()],
                              layer_area_covered_by_candidates[pair.first])
@@ -3151,8 +3151,8 @@ void PrintObject::bridge_over_infill()
                 }
 
                 // Gather deep infill areas, where thick bridges fit
-                coordf_t spacing            = surfaces_by_layer[lidx].front().region->bridging_flow(frSolidInfill, true).scaled_spacing();
-                coordf_t target_flow_height = surfaces_by_layer[lidx].front().region->bridging_flow(frSolidInfill, true).height() *
+                coordf_t spacing            = surfaces_by_layer[lidx].front().region->bridging_flow(frSolidInfill).scaled_spacing();
+                coordf_t target_flow_height = surfaces_by_layer[lidx].front().region->bridging_flow(frSolidInfill).height() *
                                               target_flow_height_factor;
                 Polygons deep_infill_area = gather_areas_w_depth(po, lidx, target_flow_height);
 
@@ -3211,7 +3211,7 @@ void PrintObject::bridge_over_infill()
                 std::vector<CandidateSurface> expanded_surfaces;
                 expanded_surfaces.reserve(surfaces_by_layer[lidx].size());
                 for (const CandidateSurface &candidate : surfaces_by_layer[lidx]) {
-                    const Flow &flow              = candidate.region->bridging_flow(frSolidInfill, true);
+                    const Flow &flow              = candidate.region->bridging_flow(frSolidInfill);
                     Polygons    area_to_be_bridge = expand(candidate.new_polys, flow.scaled_spacing());
                     area_to_be_bridge             = intersection(area_to_be_bridge, deep_infill_area);
 
@@ -4334,7 +4334,7 @@ void PrintObject::remove_bridges_from_contacts(
             // since we're dealing with bridges, we can't assume width is larger than spacing,
             // so we take the largest value and also apply safety offset to be ensure no gaps
             // are left in between
-        Flow bridge_flow = layerm->bridging_flow(frPerimeter, object_config.thick_bridges);
+        Flow bridge_flow = layerm->bridging_flow(frPerimeter);
         float w = float(std::max(bridge_flow.scaled_width(), bridge_flow.scaled_spacing()));
         for (Polyline& polyline : overhang_perimeters)
             if (polyline.is_straight()) {

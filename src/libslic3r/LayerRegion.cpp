@@ -28,33 +28,17 @@ Flow LayerRegion::flow(FlowRole role, double layer_height) const
     return m_region->flow(*m_layer->object(), role, layer_height, m_layer->id() == 0);
 }
 
-Flow LayerRegion::bridging_flow(FlowRole role, bool thick_bridge) const
+Flow LayerRegion::bridging_flow(FlowRole role) const
 {
     const PrintRegion       &region         = this->region();
     const PrintRegionConfig &region_config  = region.config();
     const PrintObject       &print_object   = *this->layer()->object();
-    Flow bridge_flow;
     // Here this->extruder(role) - 1 may underflow to MAX_INT, but then the get_at() will fall back to zero'th element, so everything is all right.
-    auto nozzle_diameter = float(print_object.print()->config().nozzle_diameter.get_at(region.extruder(role) - 1));
-    const ConfigOptionFloatOrPercent& bridge_width_opt = region_config.bridge_line_width;
-    const double                      bridge_width      = bridge_width_opt.get_abs_value(nozzle_diameter);
-    const bool                        has_bridge_width  = bridge_width > 0.;
-    const double                      bridge_flow_ratio = region_config.bridge_flow;
+    const float nozzle_diameter = float(print_object.print()->config().nozzle_diameter.get_at(region.extruder(role) - 1));
+    const float bridge_width    = float(region_config.bridge_line_width.get_abs_value(nozzle_diameter));
 
-    if (thick_bridge) {
-        // The old Slic3r way (different from all other slicers): Use rounded extrusions.
-        // Get the configured nozzle_diameter for the extruder associated to the flow role requested.
-        float thread_diameter = has_bridge_width ? float(bridge_width) : nozzle_diameter;
-        // For thick bridges, bridge_flow_ratio is applied later and doesn't change the line geometry.
-        bridge_flow = Flow(thread_diameter, nozzle_diameter);
-    } else {
-        // The same way as other slicers: Use normal extrusions. Apply bridge_flow while maintaining the original spacing.
-        Flow base_flow = this->flow(role);
-        if (has_bridge_width)
-            base_flow = Flow(float(bridge_width), base_flow.height(), nozzle_diameter);
-        bridge_flow = base_flow.with_flow_ratio(bridge_flow_ratio);
-    }
-    return bridge_flow;
+    float diameter = bridge_width > 0 ? bridge_width : nozzle_diameter;
+    return Flow(diameter, nozzle_diameter);
 }
 
 // Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
@@ -130,7 +114,7 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
 
     g.layer_id              = (int)this->layer()->id();
     g.ext_perimeter_flow    = this->flow(frExternalPerimeter);
-    g.overhang_flow         = this->bridging_flow(frPerimeter, object_config.thick_bridges);
+    g.overhang_flow         = this->bridging_flow(frPerimeter);
     g.solid_infill_flow     = this->flow(frSolidInfill);
 
     if (this->layer()->object()->config().wall_generator.value == PerimeterGeneratorType::Arachne && !spiral_mode)
@@ -836,7 +820,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
                 }
 
                 /*
-                BridgeDetector bd(initial, lower_layer->lslices, this->bridging_flow(frInfill, object_config.thick_bridges).scaled_width());
+                BridgeDetector bd(initial, lower_layer->lslices, this->bridging_flow(frInfill).scaled_width());
                 #ifdef SLIC3R_DEBUG
                 printf("Processing bridge at layer %zu:\n", this->layer()->id());
                 #endif

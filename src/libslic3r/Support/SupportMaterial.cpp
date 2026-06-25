@@ -1249,7 +1249,7 @@ namespace SupportMaterialInternal {
             // are left in between
             // BBS
             const PrintObjectConfig& object_config = layerm.layer()->object()->config();
-            Flow perimeter_bridge_flow = layerm.bridging_flow(frPerimeter, object_config.thick_bridges);
+            Flow perimeter_bridge_flow = layerm.bridging_flow(frPerimeter);
             //FIXME one may want to use a maximum of bridging flow width and normal flow width, as the perimeters are calculated using the normal flow
             // and then turned to bridging flow, thus their centerlines are derived from non-bridging flow and expanding them by a bridging flow
             // may not expand them to the edge of their respective islands.
@@ -1781,7 +1781,7 @@ static inline std::pair<SupportGeneratorLayer*, SupportGeneratorLayer*> new_cont
 
         // Contact layer will be printed with a normal flow, but
         // it will support layers printed with a bridging flow.
-        if (object_config.thick_bridges && SupportMaterialInternal::has_bridging_extrusions(layer) && print_config.independent_support_layer_height) {
+        if (SupportMaterialInternal::has_bridging_extrusions(layer) && print_config.independent_support_layer_height) {
             coordf_t bridging_height = 0.;
             for (const LayerRegion* region : layer.regions())
                 bridging_height += region->region().bridging_height_avg(print_config);
@@ -2436,7 +2436,7 @@ static inline SupportGeneratorLayer* detect_bottom_contacts(
     }
     layer_new.bottom_z = layer.print_z;
     layer_new.idx_object_layer_below = layer_id;
-    layer_new.bridging = !slicing_params.zero_gap_interface_bottom && object.config().thick_bridges;
+    layer_new.bridging = !slicing_params.zero_gap_interface_bottom;
     //FIXME how much to inflate the bottom surface, as it is being extruded with a bridging flow? The following line uses a normal flow.
     layer_new.polygons = expand(touching, float(support_params.support_material_flow.scaled_width()), SUPPORT_SURFACES_OFFSET_PARAMETERS);
 
@@ -3170,7 +3170,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                         polygons_append(polygons_trimming, offset({ expoly }, trimming_offset, SUPPORT_SURFACES_OFFSET_PARAMETERS));
                     }
                 }
-                if (!m_slicing_params.zero_gap_interface_top && m_object_config->thick_bridges) {
+                if (!m_slicing_params.zero_gap_interface_top) {
                     // Collect all bottom surfaces, which will be extruded with a bridging flow.
                     for (; i < object.layers().size(); ++ i) {
                         const Layer &object_layer = *object.layers()[i];

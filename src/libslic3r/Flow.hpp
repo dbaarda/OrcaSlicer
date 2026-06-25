@@ -229,39 +229,21 @@ public:
 
     // Create a modified flow with a different width while maintaining the same overlap_factors. For bridge-lines this scales spacing and
     // height. For normal-lines it preserves height and adjusts spacing.
-    Flow with_width(float width) const
-    {
-        float scale = width / m_width;
-        return m_bridge ? Flow(width, scale * m_height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
-                          Flow(width, m_height, rrect_spacing(width, m_height, overlap_factor()), m_nozzle_diameter, m_bridge);
-    }
+    Flow with_width(float width) const;
 
     // Create a modified flow with a different height while maintaining overlap_factors. For bridge lines this scales width and spacing. For
     // normal lines it preserves spacing and adjusts width.
-    Flow with_height(float height) const
-    {
-        float scale = height / m_height;
-        return m_bridge ? Flow(scale * m_width, height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
-                          Flow(rrect_width(m_spacing, height, overlap_factor()), height, m_spacing, m_nozzle_diameter, m_bridge);
-    }
+    Flow with_height(float height) const;
 
     // Create a modified flow with a different spacing while maintaining overlap_factors. For bridge lines this scales width and height. For
     // normal lines it preserves height and adjusts width.
-    Flow with_spacing(float spacing) const
-    {
-        float scale = spacing / m_spacing;
-        return m_bridge ? Flow(scale * m_width, scale * m_height, spacing, m_nozzle_diameter, m_bridge) :
-                          Flow(rrect_width(spacing, m_height, overlap_factor()), m_height, spacing, m_nozzle_diameter, m_bridge);
-    }
+    Flow with_spacing(float spacing) const;
 
     // Create a modified flow by scaling the flow area by a ratio while maintaining overlap_factors. This is the same as scaling width by
     // the appropriate amount.
-    Flow with_flow_ratio(double ratio) const
-    {
-        float width = m_bridge ? std::sqrt(ratio) * m_width : rrect_width(ratio * rrect_spacing(m_width, m_height), m_height);
-        return this->with_width(width);
-    }
+    Flow with_flow_ratio(double ratio) const;
 
+    // Create a flow for a FlowRole, width option, nozzle_diameter, and height.
     static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height);
 
     // TODO(dbaarda): remove these and just use the helper functions.
@@ -295,8 +277,8 @@ private:
         if (m_height < 0) {
             throw FlowErrorNegativeHeight();
         }
-        // nozzle_diameter=0 is used for "unknown" so we assume it's valid.
-        if (m_nozzle_diameter != 0 && m_height > m_nozzle_diameter + EPSILON) {
+        // nozzle_diameter<=0 is used for "don't care" so assume height is valid.
+        if (m_nozzle_diameter > 0 && m_height > m_nozzle_diameter + EPSILON) {
             throw FlowErrorHeightTooLarge();
         }
         if (m_spacing < 0) {

@@ -92,7 +92,7 @@ struct SupportParameters {
         this->gap_xy_first_layer = object_config.support_object_first_layer_gap.value;
         bridge_flow_ratio /= object.num_printing_regions();
 
-        this->support_material_bottom_interface_flow = this->zero_gap_interface_bottom || !object_config.thick_bridges ?
+        this->support_material_bottom_interface_flow = this->zero_gap_interface_bottom ?
             this->support_material_interface_flow.with_flow_ratio(bridge_flow_ratio) :
             Flow(bridge_flow_ratio * this->support_material_interface_flow.nozzle_diameter(), this->support_material_interface_flow.nozzle_diameter());
         

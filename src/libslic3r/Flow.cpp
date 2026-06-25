@@ -20,6 +20,42 @@ FlowErrorHeightTooLarge::FlowErrorHeightTooLarge()
     : FlowError("Flow::height() > Flow::nozzle_diameter(). Did you set layer height too large?")
 {}
 
+Flow Flow::with_width(float width) const
+{
+
+    float scale = width / m_width;
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
+      << boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_width(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %width;
+    return m_bridge ? Flow(width, scale * m_height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
+                      Flow(width, m_height, rrect_spacing(width, m_height, overlap_factor()), m_nozzle_diameter, m_bridge);
+}
+
+Flow Flow::with_height(float height) const
+{
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
+      << boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_height(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %height;
+    float scale = height / m_height;
+    return m_bridge ? Flow(scale * m_width, height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
+                      Flow(rrect_width(m_spacing, height, overlap_factor()), height, m_spacing, m_nozzle_diameter, m_bridge);
+}
+
+Flow Flow::with_spacing(float spacing) const
+{
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__ <<
+      boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_spacing(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %spacing;
+    float scale = spacing / m_spacing;
+    return m_bridge ? Flow(scale * m_width, scale * m_height, spacing, m_nozzle_diameter, m_bridge) :
+                      Flow(rrect_width(spacing, m_height, overlap_factor()), m_height, spacing, m_nozzle_diameter, m_bridge);
+}
+
+Flow Flow::with_flow_ratio(double ratio) const
+{
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__ <<
+      boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_ratio(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %ratio;
+    float width = m_bridge ? std::sqrt(ratio) * m_width : rrect_width(ratio * rrect_spacing(m_width, m_height), m_height);
+    return this->with_width(width);
+}
+
 // This static method returns a sane extrusion width default.
 float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter)
 {
