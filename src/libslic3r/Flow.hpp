@@ -263,10 +263,6 @@ public:
     // on layer index (1st layer vs. other layers vs. variable layer height), on active extruder etc. Therefore the value calculated by this
     // function shall be used as a hint only.
     static double extrusion_width(const std::string& opt_key,
-                                  const ConfigOptionFloatOrPercent* opt,
-                                  const ConfigOptionResolver& config,
-                                  const unsigned int first_printing_extruder = 0);
-    static double extrusion_width(const std::string& opt_key,
                                   const ConfigOptionResolver& config,
                                   const unsigned int first_printing_extruder = 0);
 

@@ -1053,33 +1053,33 @@ namespace client
                     output.set_d(opt.opt->getFloat());
                 } else {
                     // Resolve dependencies using the "ratio_over" link to a parent value.
-    			    const ConfigOptionDef  *opt_def = print_config_def.get(opt_key);
-    			    assert(opt_def != nullptr);
-    			    double v = opt.opt->getFloat() * 0.01; // percent to ratio
-    			    for (;;) {
-    			        const ConfigOption *opt_parent = opt_def->ratio_over.empty() ? nullptr : ctx->resolve_symbol(opt_def->ratio_over);
-    			        if (opt_parent == nullptr)
-    			            ctx->throw_exception("FloatOrPercent variable failed to resolve the \"ratio_over\" dependencies", opt.it_range);
-    			        if (boost::ends_with(opt_def->ratio_over, "line_width")) {
-                    		// Line width supports defaults and a complex graph of dependencies.
+                    const ConfigOptionDef  *opt_def = print_config_def.get(opt_key);
+                    assert(opt_def != nullptr);
+                    double v = opt.opt->getFloat() * 0.01; // percent to ratio
+                    for (;;) {
+                        const ConfigOption *opt_parent = opt_def->ratio_over.empty() ? nullptr : ctx->resolve_symbol(opt_def->ratio_over);
+                        if (opt_parent == nullptr)
+                            ctx->throw_exception("FloatOrPercent variable failed to resolve the \"ratio_over\" dependencies", opt.it_range);
+                        if (boost::ends_with(opt_def->ratio_over, "line_width")) {
+                            // Line width supports defaults and a complex graph of dependencies.
                             assert(opt_parent->type() == coFloatOrPercent);
-                        	v *= Flow::extrusion_width(opt_def->ratio_over, static_cast<const ConfigOptionFloatOrPercent*>(opt_parent), *ctx, static_cast<unsigned int>(ctx->current_extruder_id));
-                        	break;
+                            v *= Flow::extrusion_width(opt_def->ratio_over, *ctx, static_cast<unsigned int>(ctx->current_extruder_id));
+                            break;
                         }
                         if (opt_parent->type() == coFloat || opt_parent->type() == coFloatOrPercent) {
-    			        	v *= opt_parent->getFloat();
-    			        	if (opt_parent->type() == coFloat || ! static_cast<const ConfigOptionFloatOrPercent*>(opt_parent)->percent)
-    			        		break;
-    			        	v *= 0.01; // percent to ratio
-    			        }
-    		        	// Continue one level up in the "ratio_over" hierarchy.
-    				    opt_def = print_config_def.get(opt_def->ratio_over);
-    				    assert(opt_def != nullptr);
-    			    }
+                            v *= opt_parent->getFloat();
+                            if (opt_parent->type() == coFloat || ! static_cast<const ConfigOptionFloatOrPercent*>(opt_parent)->percent)
+                                break;
+                            v *= 0.01; // percent to ratio
+                        }
+                        // Continue one level up in the "ratio_over" hierarchy.
+                        opt_def = print_config_def.get(opt_def->ratio_over);
+                        assert(opt_def != nullptr);
+                    }
                     output.set_d(v);
     	        }
-    		    break;
-    		}
+                break;
+            }
             default:
                 ctx->throw_exception("Unsupported scalar variable type", opt.it_range);
             }

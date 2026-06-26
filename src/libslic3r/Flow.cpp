@@ -22,10 +22,11 @@ FlowErrorHeightTooLarge::FlowErrorHeightTooLarge()
 
 Flow Flow::with_width(float width) const
 {
-
     float scale = width / m_width;
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
-      << boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_width(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %width;
+                            << boost::format(
+                                   "Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_width(%6%)\n") %
+                                   m_width % m_height % m_spacing % m_nozzle_diameter % m_bridge % width;
     return m_bridge ? Flow(width, scale * m_height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
                       Flow(width, m_height, rrect_spacing(width, m_height, overlap_factor()), m_nozzle_diameter, m_bridge);
 }
@@ -33,7 +34,9 @@ Flow Flow::with_width(float width) const
 Flow Flow::with_height(float height) const
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
-      << boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_height(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %height;
+                            << boost::format(
+                                   "Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_height(%6%)\n") %
+                                   m_width % m_height % m_spacing % m_nozzle_diameter % m_bridge % height;
     float scale = height / m_height;
     return m_bridge ? Flow(scale * m_width, height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
                       Flow(rrect_width(m_spacing, height, overlap_factor()), height, m_spacing, m_nozzle_diameter, m_bridge);
@@ -41,8 +44,10 @@ Flow Flow::with_height(float height) const
 
 Flow Flow::with_spacing(float spacing) const
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__ <<
-      boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_spacing(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %spacing;
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
+                            << boost::format(
+                                   "Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_spacing(%6%)\n") %
+                                   m_width % m_height % m_spacing % m_nozzle_diameter % m_bridge % spacing;
     float scale = spacing / m_spacing;
     return m_bridge ? Flow(scale * m_width, scale * m_height, spacing, m_nozzle_diameter, m_bridge) :
                       Flow(rrect_width(spacing, m_height, overlap_factor()), m_height, spacing, m_nozzle_diameter, m_bridge);
@@ -50,8 +55,10 @@ Flow Flow::with_spacing(float spacing) const
 
 Flow Flow::with_flow_ratio(double ratio) const
 {
-    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__ <<
-      boost::format("Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_ratio(%6%)\n") %m_width %m_height %m_spacing %m_nozzle_diameter %m_bridge %ratio;
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ":" << __LINE__
+                            << boost::format(
+                                   "Flow(width=%1%, height=%2%, spacing=%3%, nozzle_diameter=%4%, bridge=%5%).with_ratio(%6%)\n") %
+                                   m_width % m_height % m_spacing % m_nozzle_diameter % m_bridge % ratio;
     float width = m_bridge ? std::sqrt(ratio) * m_width : rrect_width(ratio * rrect_spacing(m_width, m_height), m_height);
     return this->with_width(width);
 }
@@ -96,73 +103,26 @@ static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
         throw Slic3r::RuntimeError("opt_key_to_flow_role: invalid argument");
 };
 
-static inline void throw_on_missing_variable(const std::string& opt_key, const char* dependent_opt_key)
-{
-    throw FlowErrorMissingVariable(
-        (boost::format(L("Failed to calculate line width of %1%. Cannot get value of \u201c%2%\u201d ")) % opt_key % dependent_opt_key)
-            .str());
-}
-
-// Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.
-double Flow::extrusion_width(const std::string& opt_key,
-                             const ConfigOptionFloatOrPercent* opt,
-                             const ConfigOptionResolver& config,
-                             const unsigned int first_printing_extruder)
-{
-    assert(opt != nullptr);
-
-    auto opt_nozzle_diameters = config.option<ConfigOptionFloats>("nozzle_diameter");
-    if (opt_nozzle_diameters == nullptr)
-        throw_on_missing_variable(opt_key, "nozzle_diameter");
-    const float nozzle_diameter = float(opt_nozzle_diameters->get_at(first_printing_extruder));
-
-    if (opt_key == "bridge_line_width") {
-        if (opt->percent) {
-            const double bridge_width = opt->get_abs_value(nozzle_diameter);
-            if (bridge_width > 0.)
-                return bridge_width;
-        } else if (opt->value > 0.) {
-            return opt->value;
-        }
-
-        opt = config.option<ConfigOptionFloatOrPercent>("internal_solid_infill_line_width");
-        if (opt == nullptr)
-            throw_on_missing_variable(opt_key, "internal_solid_infill_line_width");
-        return extrusion_width("internal_solid_infill_line_width", opt, config, first_printing_extruder);
-    }
-
-#if 0
-// This is the logic used for skit / brim, but not for the rest of the 1st layer.
-        if (opt->value == 0. && first_layer) {
-                // The "initial_layer_line_width" was set to zero, try a substitute.
-                opt = config.option<ConfigOptionFloatOrPercent>("inner_wall_line_width");
-                if (opt == nullptr)
-                throw_on_missing_variable(opt_key, "inner_wall_line_width");
-        }
-#endif
-
-    if (opt->value == 0.) {
-        // The role specific extrusion width value was set to zero, try the role non-specific extrusion width.
-        opt = config.option<ConfigOptionFloatOrPercent>("line_width");
-        if (opt == nullptr)
-            throw_on_missing_variable(opt_key, "line_width");
-    }
-
-    if (opt->percent) {
-        return opt->get_abs_value(nozzle_diameter);
-    }
-
-    if (opt->value == 0.) {
-        // If user left option to 0, calculate a sane default width.
-        return auto_extrusion_width(opt_key_to_flow_role(opt_key), nozzle_diameter);
-    }
-
-    return opt->value;
-}
-
 // Used to provide hints to the user on default extrusion width values, and to provide reasonable values to the PlaceholderParser.
 double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResolver& config, const unsigned int first_printing_extruder)
-{ return extrusion_width(opt_key, config.option<ConfigOptionFloatOrPercent>(opt_key), config, first_printing_extruder); }
+{
+    auto opt_nozzle_diameters = config.option_throw<ConfigOptionFloats>("nozzle_diameter");
+    const float nozzle_diameter     = float(opt_nozzle_diameters->get_at(first_printing_extruder));
+
+    double value = config.option_throw<ConfigOptionFloatOrPercent>(opt_key)->get_abs_value(nozzle_diameter);
+    if (value == 0.) {
+        if (opt_key == "bridge_line_width") {
+            // For bridge_line_width, default to the nozzle_diameter.
+            value = nozzle_diameter;
+        } else {
+            // for other widths, default back to the "line_width" setting.
+            value = config.option_throw<ConfigOptionFloatOrPercent>("line_width")->get_abs_value(nozzle_diameter);
+        }
+    }
+
+    // If the value still is zero, calculate a sane default width.
+    return (value == 0.) ? auto_extrusion_width(opt_key_to_flow_role(opt_key), nozzle_diameter) : value;
+}
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
