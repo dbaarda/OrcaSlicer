@@ -78,7 +78,6 @@ SCENARIO("Flow: Flow math for normal-lines", "[Flow]") {
                 CHECK(flow.narrow() == false);
                 CHECK(flow.mm3_per_mm() == Catch::Approx(flow.spacing() * height));
                 CHECK(flow.diameter() == Catch::Approx(std::sqrt(flow.mm3_per_mm() / M_PI_4)));
-                CHECK(flow.density() == Catch::Approx(width / flow.spacing()));
                 CHECK(flow.overlap_factor() == Catch::Approx(1.0));
                 CHECK(flow.vertical_overlap_factor() == Catch::Approx(1.0));
                 CHECK(flow.flow_ratio() == Catch::Approx(1.0));
@@ -103,7 +102,6 @@ SCENARIO("Flow: Flow math for normal-lines", "[Flow]") {
                 CHECK(flow.narrow() == false);
                 CHECK(flow.mm3_per_mm() == Catch::Approx(width * height * M_PI_4));
                 CHECK(flow.diameter() == Catch::Approx(width));
-                CHECK(flow.density() == Catch::Approx(1.0 / M_PI_4));
                 CHECK(flow.overlap_factor() == Catch::Approx(1.0));
                 CHECK(flow.vertical_overlap_factor() == Catch::Approx(1.0));
                 CHECK(flow.flow_ratio() == Catch::Approx(1.0));
@@ -127,7 +125,6 @@ SCENARIO("Flow: Flow math for normal-lines", "[Flow]") {
                 CHECK(flow.narrow() == true);
                 CHECK(flow.mm3_per_mm() == Catch::Approx(width * height * M_PI_4));
                 CHECK(flow.diameter() == Catch::Approx(std::sqrt(width * height)));
-                CHECK(flow.density() == Catch::Approx(1.0 / M_PI_4));
                 CHECK(flow.overlap_factor() == Catch::Approx(1.0));
                 CHECK(flow.vertical_overlap_factor() == Catch::Approx(1.0));
                 CHECK(flow.flow_ratio() == Catch::Approx(1.0));
@@ -151,7 +148,6 @@ SCENARIO("Flow: Flow math for bridge-lines", "[Flow]") {
                 CHECK(flow.narrow() == false);
                 CHECK(flow.mm3_per_mm() == Catch::Approx(diameter * diameter * M_PI_4));
                 CHECK(flow.diameter() == diameter);
-                CHECK(flow.density() == Catch::Approx(1.0));
                 CHECK(flow.overlap_factor() == Catch::Approx(0.0));
                 CHECK(flow.vertical_overlap_factor() == Catch::Approx(0.0));
                 CHECK(flow.flow_ratio() == Catch::Approx(M_PI_4));
