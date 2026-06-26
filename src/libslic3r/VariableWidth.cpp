@@ -62,8 +62,8 @@ ExtrusionMultiPath thick_polyline_to_multi_path(const ThickPolyline& thick_polyl
             continue;
         }
 
-        const double w        = fmax(line.a_width, line.b_width);
-        const Flow   new_flow = (role == erOverhangPerimeter && flow.bridge()) ? flow : flow.with_width(unscale<float>(w) + flow.height() * float(1. - 0.25 * PI));
+        const double flow_spacing  = fmax(line.a_width, line.b_width);
+        const Flow   new_flow = (role == erOverhangPerimeter && flow.bridge()) ? flow : flow.with_spacing(unscale<float>(flow_spacing));
         if (path.polyline.points.empty()) {
             path.polyline.append(Point3(line.a));
             path.polyline.append(Point3(line.b));
@@ -132,8 +132,8 @@ static ExtrusionPaths thick_polyline_to_extrusion_paths_2(const ThickPolyline& t
                 }
                 path.polyline.append(Point3(lines[i].a));
                 if (length > SCALED_EPSILON) {
-                    double w = sum / length;
-                    Flow new_flow = flow.with_width(unscale<float>(w) + flow.height() * float(1. - 0.25 * PI));
+                    double flow_spacing = sum / length;
+                    Flow new_flow = flow.with_spacing(unscale<float>(flow_spacing));
                     path.mm3_per_mm = new_flow.mm3_per_mm();
                     path.width = new_flow.width();
                     path.height = new_flow.height();
@@ -201,8 +201,8 @@ static ExtrusionPaths thick_polyline_to_extrusion_paths_2(const ThickPolyline& t
         }
         path.polyline.append(Point3(lines[final_size - 1].b));
         if (length > SCALED_EPSILON) {
-            double w = sum / length;
-            Flow new_flow = flow.with_width(unscale<float>(w) + flow.height() * float(1. - 0.25 * PI));
+            double flow_spacing = sum / length;
+            Flow new_flow = flow.with_spacing(unscale<float>(flow_spacing));
             path.mm3_per_mm = new_flow.mm3_per_mm();
             path.width = new_flow.width();
             path.height = new_flow.height();
