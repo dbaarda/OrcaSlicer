@@ -72,18 +72,14 @@ public:
     // cross-section. Note this this means 100% flow ratio to completely fill the spacing*height area requires both horizontal and vertical
     // overlap_factor=1.
     //
-    // Area of a circle, area = diameter^2 * PI_4.
-    static constexpr double PI_4 = PI / 4;
-    // Length of a square's side with the same area as a circle, length = diameter * SQRTPI_2
-    static constexpr double SQRTPI_2 = std::sqrt(PI_4);
     // Overlap distance for overlap_factor=1 of a rounded-rectangle line, overlap = height * RRECT_OVERLAP
-    static constexpr float RRECT_OVERLAP = 1.0 - PI_4;
+    static constexpr float RRECT_OVERLAP = 1.0 - M_PI_4;
     // Overlap distance for overlap_factor=1 of a circular bridge line, overlap = diameter * BRIDGE_OVERLAP
-    static constexpr float BRIDGE_OVERLAP = 1.0 - SQRTPI_2;
+    static constexpr float BRIDGE_OVERLAP = 1.0 - std::sqrt(M_PI_4);
 
     // Simple helper functions for circle areas.
-    static constexpr float area2dmr(float a) { return std::sqrt(a / PI_4); }
-    static constexpr float dmr2area(float d) { return d * d * PI_4; }
+    static constexpr float area2dmr(float a) { return std::sqrt(a / M_PI_4); }
+    static constexpr float dmr2area(float d) { return d * d * M_PI_4; }
 
     // Get the rounded-rectangle normal-line spacing.
     static constexpr float rrect_spacing(float width, float height, float overlap_factor = 1.0)
@@ -186,8 +182,6 @@ public:
     double mm3_per_mm() const { return m_bridge ? bridge_area(m_width) : rrect_area(m_width, m_height); }
     // The diameter of an equivalent volume circular flow.
     float diameter() const { return m_bridge ? m_width : area2dmr(mm3_per_mm()); }
-    // The width/spacing ratio.
-    float density() const { return m_width / m_spacing; }
     // The horizontal overlap_factor.
     float overlap_factor() const
     { return m_bridge ? bridge_overlap_factor(m_width, m_spacing) : rrect_overlap_factor(m_width, m_spacing, m_height); }
@@ -195,29 +189,6 @@ public:
     float vertical_overlap_factor() const { return m_bridge ? bridge_vertical_overlap_factor(m_width, m_height) : 1.0; }
     // The flow_ratio of the line cross-section area to available height*spacing area.
     float flow_ratio() const { return mm3_per_mm() / (m_spacing * m_height); }
-
-    // TODO(dbaarda): Do we even need these? Or should we treat flows as immutable and just generate derived flows?
-    // Override and set spacing, width, or height without changing the other attributes.
-    void set_height(float height)
-    {
-        assert(height > 0);
-        m_height = height;
-    }
-    void set_width(float width)
-    {
-        assert(width > 0);
-        m_width = width;
-    }
-    void set_spacing(float spacing)
-    {
-        assert(spacing < 0);
-        m_spacing = spacing;
-    }
-    // Set spacing for desired density, overlap_factor, or flow_ratio.
-    void set_density(float density) { set_spacing(m_width / density); }
-    void set_overlap_factor(float overlap_factor)
-    { set_spacing(m_bridge ? bridge_spacing(m_width, overlap_factor) : rrect_spacing(m_width, m_height, overlap_factor)); }
-    void set_flow_ratio(float flow_ratio) { set_spacing(mm3_per_mm() / (flow_ratio * m_height)); }
 
     // Note flows with only spacing different are considered equal. Is this correct?
     inline bool operator==(const Flow& rhs) const
@@ -238,10 +209,6 @@ public:
     // Create a modified flow with a different spacing while maintaining overlap_factors. For bridge lines this scales width and height. For
     // normal lines it preserves height and adjusts width.
     Flow with_spacing(float spacing) const;
-
-    // Create a modified flow by scaling the flow area by a ratio while maintaining overlap_factors. This is the same as scaling width by
-    // the appropriate amount.
-    Flow with_flow_ratio(double ratio) const;
 
     // Create a flow for a FlowRole, width option, nozzle_diameter, and height.
     static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height);
