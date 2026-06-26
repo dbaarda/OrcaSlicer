@@ -246,15 +246,6 @@ public:
     // Create a flow for a FlowRole, width option, nozzle_diameter, and height.
     static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height);
 
-    // TODO(dbaarda): remove these and just use the helper functions.
-    // Spacing of normal-lines using the rounded-rectangle or narrow-elipse extrusion model.
-    static constexpr float rounded_rectangle_extrusion_spacing(float width, float height) { return rrect_spacing(width, height); }
-    // Width of normal-lines using the rounded-rectangle or narrow-elipse extrusion model.
-    static constexpr float rounded_rectangle_extrusion_width_from_spacing(float spacing, float height)
-    { return rrect_width(spacing, height); }
-    // Spacing of bridge-lines using the circular extrusion model.
-    static constexpr float bridge_extrusion_spacing(float dmr) { return dmr; }
-
     // Sane extrusion width default based on nozzle diameter.
     // The defaults were derived from manual Prusa MK3 profiles.
     static float auto_extrusion_width(FlowRole role, float nozzle_diameter);

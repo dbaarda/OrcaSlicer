@@ -513,8 +513,8 @@ const std::vector<VariableWidthLines> &WallToolPaths::generate()
         return toolpaths;
     }
 
-    const float external_perimeter_extrusion_width = Flow::rounded_rectangle_extrusion_width_from_spacing(unscale<float>(bead_width_0), float(this->layer_height));
-    const float perimeter_extrusion_width          = Flow::rounded_rectangle_extrusion_width_from_spacing(unscale<float>(bead_width_x), float(this->layer_height));
+    const float external_perimeter_extrusion_width = Flow::rrect_width(unscale<float>(bead_width_0), float(this->layer_height));
+    const float perimeter_extrusion_width          = Flow::rrect_width(unscale<float>(bead_width_x), float(this->layer_height));
 
     const coord_t wall_transition_length = scaled<coord_t>(this->m_params.wall_transition_length);
 	

@@ -1356,9 +1356,9 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
                                              // Gap fill enabled. Enable a single line of 1/2 extrusion width.
                                              0.5f * outer_wall_line_width :
                                              // Gap fill disabled. Enable two lines slightly overlapping.
-                                             outer_wall_line_width + 0.7f * Flow::rounded_rectangle_extrusion_spacing(outer_wall_line_width, float(layer.height));
+                                             outer_wall_line_width + 0.7f * Flow::rrect_spacing(outer_wall_line_width, float(layer.height));
                 out.small_region_threshold = scaled<float>(out.small_region_threshold * 0.5f);
-                out.extrusion_spacing = Flow::rounded_rectangle_extrusion_spacing(float(outer_wall_line_width), float(layer.height));
+                out.extrusion_spacing = Flow::rrect_spacing(float(outer_wall_line_width), float(layer.height));
                 ++ out.num_regions;
             }
         assert(out.num_regions > 0);
