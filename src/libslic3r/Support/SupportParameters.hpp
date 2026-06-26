@@ -79,22 +79,19 @@ struct SupportParameters {
             this->support_material_interface_flow = this->support_material_flow;
         }
         
-        // Evaluate the XY gap between the object outer perimeters and the support structures.
-        // Evaluate the XY gap between the object outer perimeters and the support structures.
-        coordf_t external_perimeter_width = 0.;
-        coordf_t bridge_flow_ratio = 0;
+        // Evaluate the Z gap between the object bottom surface perimeters and the support structures.
+        coordf_t external_bridge_height = 0;
         for (size_t region_id = 0; region_id < object.num_printing_regions(); ++ region_id) {
             const PrintRegion &region = object.printing_region(region_id);
-            external_perimeter_width = std::max(external_perimeter_width, coordf_t(region.flow(object, frExternalPerimeter, slicing_params.layer_height).width()));
-            bridge_flow_ratio += region.config().external_bridge_flow_ratio;
+            // Should we get the average bridge width like this, or the max bridge width?
+            external_bridge_height += region.bridging_height_avg(print_config);
         }
+        external_bridge_height /= object.num_printing_regions();
         this->gap_xy = object_config.support_object_xy_distance.value;
         this->gap_xy_first_layer = object_config.support_object_first_layer_gap.value;
-        bridge_flow_ratio /= object.num_printing_regions();
-
-        this->support_material_bottom_interface_flow = this->zero_gap_interface_bottom ?
-            this->support_material_interface_flow.with_flow_ratio(bridge_flow_ratio) :
-            Flow(bridge_flow_ratio * this->support_material_interface_flow.nozzle_diameter(), this->support_material_interface_flow.nozzle_diameter());
+        // Note support_material_bottom_interface_flow is not directly used to extrude supports, it's just used to capture the height of overhead bridges to
+        // calculate the required gap and the nozzle to use.
+        this->support_material_bottom_interface_flow = this->support_material_interface_flow.with_height(external_bridge_height);
         
         this->can_merge_support_regions = object_config.support_filament.value == object_config.support_interface_filament.value;
         if (!this->can_merge_support_regions && (object_config.support_filament.value == 0 || object_config.support_interface_filament.value == 0)) {

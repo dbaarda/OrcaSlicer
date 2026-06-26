@@ -65,7 +65,9 @@ coordf_t PrintRegion::nozzle_dmr_avg(const PrintConfig &print_config) const
 
 coordf_t PrintRegion::bridging_height_avg(const PrintConfig &print_config) const
 {
-    return this->nozzle_dmr_avg(print_config) * sqrt(m_config.external_bridge_flow_ratio.value);
+  // external bridges use frSolidInfill so that's the nozzle we need.
+  coordf_t nozzle_diameter = print_config.nozzle_diameter.get_at(extruder(frSolidInfill));
+  return m_config.get_abs_value("bridge_line_width", nozzle_diameter);
 }
 
 void PrintRegion::collect_object_printing_extruders(const PrintConfig &print_config, const PrintRegionConfig &region_config, const bool has_brim, std::vector<unsigned int> &object_extruders)
