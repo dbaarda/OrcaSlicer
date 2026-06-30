@@ -15,47 +15,125 @@
 using namespace Slic3r::Test;
 using namespace Slic3r;
 
-/// Test the expected behavior for auto-width, spacing, etc
-SCENARIO("Flow:new_from_config_width() for non-bridges", "[Flow]") {
-    GIVEN("Nozzle Diameter of 0.4, a desired width of 1mm and layer height of 0.5") {
-        ConfigOptionFloatOrPercent width(1.0, false);
+CATCH_REGISTER_ENUM(FlowRole,
+                    frExternalPerimeter,
+                    frPerimeter,
+                    frInfill,
+                    frSolidInfill,
+                    frTopSolidInfill,
+                    frBottomSolidInfill,
+                    frExternalBridge,
+                    frInternalBridge,
+                    frSupportMaterial,
+                    frSupportMaterialInterface,
+                    frSupportTransition);
+
+using Catch::Detail::stringify;
+
+/// Test the expected behavior for auto width.
+SCENARIO("Flow:new_from_config_width() for width=0 default widths", "[Flow]") {
+    auto width = ConfigOptionFloatOrPercent(0, false);
+    GIVEN("nozzle_diameter=0.4mm, layer_height=0.4mm") {
         float nozzle_diameter = 0.4f;
         float layer_height    = 0.4f;
-
-        // Spacing for non-bridges is has some overlap
-        THEN("External perimeter flow has spacing fixed to 1.125 * nozzle_diameter") {
-            auto flow = Flow::new_from_config_width(frExternalPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter,
-                                                    layer_height);
-            REQUIRE(flow.spacing() == Catch::Approx(1.125 * nozzle_diameter - layer_height * (1.0 - M_PI_4)));
-        }
-
-        THEN("Internal perimeter flow has spacing fixed to 1.125 * nozzle_diameter") {
-            auto flow = Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height);
-            REQUIRE(flow.spacing() == Catch::Approx(1.125 * nozzle_diameter - layer_height * (1.0 - M_PI_4)));
-        }
-        THEN("Spacing for supplied width is 0.8927f") {
-            auto flow = Flow::new_from_config_width(frExternalPerimeter, width, nozzle_diameter, layer_height);
-            REQUIRE(flow.spacing() == Catch::Approx(width.value - layer_height * (1.0 - M_PI_4)));
-            flow = Flow::new_from_config_width(frPerimeter, width, nozzle_diameter, layer_height);
-            REQUIRE(flow.spacing() == Catch::Approx(width.value - layer_height * (1.0 - M_PI_4)));
-        }
-    }
-    /// Check the min/max
-    GIVEN("Nozzle Diameter of 0.25") {
-        float nozzle_diameter = 0.25f;
-        float layer_height    = 0.5f;
-        WHEN("layer height is set to 0.2") {
-            layer_height = 0.15f;
-            THEN("Max width is set.") {
-                auto flow = Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height);
-                REQUIRE(flow.width() == Catch::Approx(1.125 * nozzle_diameter));
+        AND_GIVEN("FlowRole is a perimeter or fill role") {
+            FlowRole role = GENERATE(frExternalPerimeter, frPerimeter, frInfill, frSolidInfill, frTopSolidInfill, frBottomSolidInfill);
+            THEN(stringify(role) + " has rounded-rectangle flow for default width=1.125*nozzle_diameter") {
+                auto flow = Flow::new_from_config_width(role, width, nozzle_diameter, layer_height);
+                CHECK(flow.bridge() == false);
+                CHECK(flow.narrow() == false);
+                CHECK(flow.width() == Catch::Approx(1.125 * nozzle_diameter));
+                CHECK(flow.spacing() == Catch::Approx(1.125 * nozzle_diameter - layer_height * (1.0 - M_PI_4)));
+                CHECK(flow.height() == Catch::Approx(layer_height));
+                CHECK(flow.nozzle_diameter() == Catch::Approx(nozzle_diameter));
             }
         }
-        WHEN("Layer height is set to 0.25") {
-            layer_height = 0.25f;
-            THEN("Min width is set.") {
-                auto flow = Flow::new_from_config_width(frPerimeter, ConfigOptionFloatOrPercent(0, false), nozzle_diameter, layer_height);
-                REQUIRE(flow.width() == Catch::Approx(1.125 * nozzle_diameter));
+        AND_GIVEN("FlowRole is a support role") {
+            FlowRole role = GENERATE(frSupportMaterial, frSupportMaterialInterface, frSupportTransition);
+            THEN(stringify(role) + " has rounded-rectangle flow for default width=nozzle_diameter") {
+                CAPTURE(role);
+                auto flow = Flow::new_from_config_width(role, width, nozzle_diameter, layer_height);
+                CHECK(flow.bridge() == false);
+                CHECK(flow.narrow() == false);
+                CHECK(flow.width() == Catch::Approx(nozzle_diameter));
+                CHECK(flow.spacing() == Catch::Approx(nozzle_diameter - layer_height * (1.0 - M_PI_4)));
+                CHECK(flow.height() == Catch::Approx(layer_height));
+                CHECK(flow.nozzle_diameter() == Catch::Approx(nozzle_diameter));
+            }
+        }
+        AND_GIVEN("FlowRole is a bridging role") {
+            FlowRole role = GENERATE(frExternalBridge, frInternalBridge);
+            THEN(stringify(role) + " has circular bridge flow for default width=nozzle_diameter") {
+                CAPTURE(role);
+                auto flow = Flow::new_from_config_width(role, width, nozzle_diameter, layer_height);
+                CHECK(flow.bridge() == true);
+                CHECK(flow.narrow() == false);
+                CHECK(flow.width() == Catch::Approx(nozzle_diameter));
+                CHECK(flow.spacing() == Catch::Approx(nozzle_diameter));
+                CHECK(flow.height() == Catch::Approx(nozzle_diameter));
+                CHECK(flow.nozzle_diameter() == Catch::Approx(nozzle_diameter));
+            }
+        }
+    }
+}
+
+/// Test the expected behavior for wide width.
+SCENARIO("Flow:new_from_config_width() for width=1.0 wide widths", "[Flow]") {
+    auto width = ConfigOptionFloatOrPercent(1.0, false);
+    GIVEN("nozzle_diameter=0.4mm, layer_height=0.4mm") {
+        float nozzle_diameter = 0.4f;
+        float layer_height    = 0.4f;
+        AND_GIVEN("FlowRole is a non-bridging role") {
+            FlowRole role = GENERATE(frExternalPerimeter, frPerimeter, frInfill, frSolidInfill, frTopSolidInfill, frBottomSolidInfill,
+                                     frSupportMaterial, frSupportMaterialInterface, frSupportTransition);
+            THEN(stringify(role) + " has rounded-rectangle flow for wide width=1.0") {
+                auto flow = Flow::new_from_config_width(role, width, nozzle_diameter, layer_height);
+                CHECK(flow.bridge() == false);
+                CHECK(flow.narrow() == false);
+                CHECK(flow.width() == Catch::Approx(1.0));
+                CHECK(flow.spacing() == Catch::Approx(1.0 - layer_height * (1.0 - M_PI_4)));
+                CHECK(flow.height() == Catch::Approx(layer_height));
+                CHECK(flow.nozzle_diameter() == Catch::Approx(nozzle_diameter));
+            }
+        }
+        AND_GIVEN("FlowRole is a bridging role") {
+            FlowRole role = GENERATE(frExternalBridge, frInternalBridge);
+            THEN(stringify(role) + " initialization throws FlowErrorHeightTooLarge") {
+                CHECK_THROWS_AS(Flow::new_from_config_width(role, width, nozzle_diameter, layer_height), FlowErrorHeightTooLarge);
+            }
+        }
+    }
+}
+
+/// Test the expected behavior for narrow width.
+SCENARIO("Flow:new_from_config_width() for width=0.1 narrow widths", "[Flow]") {
+    auto width = ConfigOptionFloatOrPercent(0.1, false);
+    GIVEN("nozzle_diameter=0.4mm, layer_height=0.4mm") {
+        float nozzle_diameter = 0.4f;
+        float layer_height    = 0.4f;
+        AND_GIVEN("FlowRole is a non-bridging role") {
+            FlowRole role = GENERATE(frExternalPerimeter, frPerimeter, frInfill, frSolidInfill, frTopSolidInfill, frBottomSolidInfill,
+                                     frSupportMaterial, frSupportMaterialInterface, frSupportTransition);
+            THEN(stringify(role) + " has narrow-elipse flow for narrow width=0.1") {
+                auto flow = Flow::new_from_config_width(role, width, nozzle_diameter, layer_height);
+                CHECK(flow.bridge() == false);
+                CHECK(flow.narrow() == true);
+                CHECK(flow.width() == Catch::Approx(0.1));
+                CHECK(flow.spacing() == Catch::Approx(0.1 * M_PI_4));
+                CHECK(flow.height() == Catch::Approx(layer_height));
+                CHECK(flow.nozzle_diameter() == Catch::Approx(nozzle_diameter));
+            }
+        }
+        AND_GIVEN("FlowRole is a bridging role") {
+            FlowRole role = GENERATE(frExternalBridge, frInternalBridge);
+            THEN(stringify(role) + " has default circular bridge flow for narrow width=0.1") {
+                auto flow = Flow::new_from_config_width(role, width, nozzle_diameter, layer_height);
+                CHECK(flow.bridge() == true);
+                CHECK(flow.narrow() == false);
+                CHECK(flow.width() == Catch::Approx(0.1));
+                CHECK(flow.spacing() == Catch::Approx(0.1));
+                CHECK(flow.height() == Catch::Approx(0.1));
+                CHECK(flow.nozzle_diameter() == Catch::Approx(nozzle_diameter));
             }
         }
     }

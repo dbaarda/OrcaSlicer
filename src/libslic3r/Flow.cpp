@@ -48,12 +48,9 @@ float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter)
     case frSupportMaterial:
     case frSupportMaterialInterface:
     case frSupportTransition:
-    case frTopSolidInfill: return nozzle_diameter;
-    default:
-    case frExternalPerimeter:
-    case frPerimeter:
-    case frSolidInfill:
-    case frInfill: return 1.125f * nozzle_diameter;
+    case frExternalBridge:
+    case frInternalBridge: return nozzle_diameter;
+    default: return 1.125f * nozzle_diameter;
     }
 }
 
@@ -72,7 +69,7 @@ static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
     else if (opt_key == "internal_solid_infill_line_width")
         return frSolidInfill;
     else if (opt_key == "bridge_line_width")
-        return frSolidInfill;
+        return frExternalBridge;
     else if (opt_key == "top_surface_line_width")
         return frTopSolidInfill;
     else if (opt_key == "support_line_width")
@@ -88,37 +85,27 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResol
     const float nozzle_diameter = float(opt_nozzle_diameters->get_at(first_printing_extruder));
 
     double value = config.option_throw<ConfigOptionFloatOrPercent>(opt_key)->get_abs_value(nozzle_diameter);
-    if (value == 0.) {
-        if (opt_key == "bridge_line_width") {
-            // For bridge_line_width, default to the nozzle_diameter.
-            value = nozzle_diameter;
-        } else {
-            // for other widths, default back to the "line_width" setting.
-            value = config.option_throw<ConfigOptionFloatOrPercent>("line_width")->get_abs_value(nozzle_diameter);
-        }
+    // for non-bridge widths, default back to the "line_width" setting.
+    if (value <= 0. && opt_key != "bridge_line_width") {
+        value = config.option_throw<ConfigOptionFloatOrPercent>("line_width")->get_abs_value(nozzle_diameter);
     }
 
     // If the value still is zero, calculate a sane default width.
-    return (value == 0.) ? auto_extrusion_width(opt_key_to_flow_role(opt_key), nozzle_diameter) : value;
+    return (value <= 0.) ? auto_extrusion_width(opt_key_to_flow_role(opt_key), nozzle_diameter) : value;
 }
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
 Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height)
 {
+    if (nozzle_diameter <= 0)
+        throw Slic3r::InvalidArgument("Invalid nozzle_diameter supplied to new_from_config_width()");
     if (height <= 0)
         throw Slic3r::InvalidArgument("Invalid flow height supplied to new_from_config_width()");
 
-    float w;
-    if (!width.percent && width.value <= 0.) {
-        // If user left option to 0, calculate a sane default width.
-        w = auto_extrusion_width(role, nozzle_diameter);
-    } else {
-        // If user set a manual value, use it.
-        w = float(width.get_abs_value(nozzle_diameter));
-    }
-
-    return Flow(w, height, rrect_spacing(w, height), nozzle_diameter, false);
+    // If user left option to 0, use a sane default width.
+    float line_width = float(width.value <= 0. ? auto_extrusion_width(role, nozzle_diameter) : width.get_abs_value(nozzle_diameter));
+    return is_bridge(role) ? Flow(line_width, nozzle_diameter) : Flow(line_width, height, nozzle_diameter);
 }
 
 Flow support_material_flow(const PrintObject* object, float layer_height)

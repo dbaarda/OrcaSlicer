@@ -16,10 +16,16 @@ enum FlowRole {
     frInfill,
     frSolidInfill,
     frTopSolidInfill,
+    frBottomSolidInfill,
+    frExternalBridge,
+    frInternalBridge,
     frSupportMaterial,
     frSupportMaterialInterface,
     frSupportTransition, // BBS
 };
+
+// Is a flow role a bridging flow?
+constexpr bool is_bridge(FlowRole role) { return role == frExternalBridge || role == frInternalBridge; }
 
 class FlowError : public Slic3r::InvalidArgument
 {
