@@ -118,12 +118,17 @@ public:
     // Identifier of this PrintRegion in the list of Print::m_print_regions.
     int                         print_region_id() const throw() { return m_print_region_id; }
     int                         print_object_region_id() const throw() { return m_print_object_region_id; }
-	// 1-based extruder identifier for this region and role.
-	unsigned int 				extruder(FlowRole role) const;
+    // 1-based extruder identifier for an optional object and role in this region. An object is required for support roles.
+    unsigned int                extruder(FlowRole role) const;
+    unsigned int                extruder(const PrintObject &object, FlowRole role) const;
+    // Diameter of the nozzle used for a print-config or object and role in this region. An object is required for support roles.
+    float                       nozzle_diameter(const PrintConfig &print_config, FlowRole role) const;
+    float                       nozzle_diameter(const PrintObject &object, FlowRole role) const;
+    // Flow to use for an object, role, and height, taking into account if this is the first-layer, for this region.
     Flow                        flow(const PrintObject &object, FlowRole role, double layer_height, bool first_layer = false) const;
     // Average diameter of nozzles participating on extruding this region.
     coordf_t                    nozzle_dmr_avg(const PrintConfig &print_config) const;
-    // Average diameter of nozzles participating on extruding this region.
+    // Height of external bridges for a print-config in this region.
     coordf_t                    bridging_height_avg(const PrintConfig &print_config) const;
 
     // Collect 0-based extruder indices used to print this region's object.
