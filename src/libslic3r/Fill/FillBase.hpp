@@ -226,7 +226,7 @@ public:
     static void connect_base_support(Polylines &&infill_ordered, const std::vector<const Polygon*> &boundary_src, const BoundingBox &bbox, Polylines &polylines_out, const double spacing, const FillParams &params);
     static void connect_base_support(Polylines &&infill_ordered, const Polygons &boundary_src, const BoundingBox &bbox, Polylines &polylines_out, const double spacing, const FillParams &params);
 
-    static coord_t  _adjust_solid_spacing(const coord_t width, const coord_t distance);
+    static coord_t  _adjust_solid_spacing(const coord_t distance, const coord_t spacing, const float min_scale=1.0f, const float max_scale=1.2f);
 };
    //Fill  Multiline 
    void multiline_fill(Polylines& polylines, const FillParams& params, float spacing);

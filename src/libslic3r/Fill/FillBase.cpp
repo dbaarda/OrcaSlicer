@@ -247,27 +247,30 @@ void Fill::_create_gap_fill(const Surface* surface, const FillParams& params, Ex
     }
 }
 
-// Calculate a new spacing to fill width with possibly integer number of lines,
-// the first and last line being centered at the interval ends.
-// This function possibly increases the spacing, never decreases,
-// and for a narrow width the increase in spacing may become severe,
-// therefore the adjustment is limited to 20% increase.
-coord_t Fill::_adjust_solid_spacing(const coord_t width, const coord_t distance)
+// Calculate a new spacing to fill width with possibly integer number of lines, the first and last line being centered at the interval ends. This function
+// applies the smallest scaling change that fits the closest within the scaling limits of min_scale and max_scale.
+coord_t Fill::_adjust_solid_spacing(const coord_t distance, const coord_t spacing, const float min_scale, const float max_scale)
 {
-    assert(width >= 0);
-    assert(distance > 0);
-    // floor(width / distance)
-    const auto  number_of_intervals = coord_t((width - EPSILON) / distance);
-    coord_t     distance_new        = (number_of_intervals == 0) ?
-        distance :
-        coord_t((width - EPSILON) / number_of_intervals);
-    const coordf_t factor = coordf_t(distance_new) / coordf_t(distance);
-    assert(factor > 1. - 1e-5);
-    // How much could the extrusion width be increased? By 20%.
-    const coordf_t factor_max = 1.2;
-    if (factor > factor_max)
-        distance_new = coord_t(floor((coordf_t(distance) * factor_max + 0.5)));
-    return distance_new;
+    assert(distance >= 0);
+    assert(spacing > 0);
+    const coord_t spacing_min = coord_t(spacing*min_scale);
+    const coord_t spacing_max = coord_t(spacing*max_scale);
+    if (distance <= spacing) {
+        // if distance is too small for it to fit, just return spacing unmodified.
+        return distance < spacing_min ? spacing : distance;
+    }
+    // get the closest new spacing that fits distance exactly.
+    const double distancef = static_cast<double>(distance);
+    const int num = static_cast<int>(std::round(distancef / spacing));
+    assert(num > 0);
+    coord_t spacing_new = coord_t(distancef / num);
+    // If the new spacing is too small, get the next bigger spacing.
+    if (spacing_new < spacing_min) {
+        assert(num > 1);
+        spacing_new = coord_t(distancef / (num-1));
+    }
+    assert(spacing_new >= spacing_min);
+    return std::min(spacing_new, spacing_max);
 }
 
 // Returns orientation of the infill and the reference point of the infill pattern.
