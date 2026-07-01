@@ -375,6 +375,10 @@ public:
         return m_skirt;
     }
 
+    // These gets flows used for printing the object.
+    Flow support_material_flow(float layer_height=-1.0, bool first_layer=false) const;
+    Flow support_material_interface_flow(float layer_height=-1.0) const;
+
     // This is the *total* layer count (including support layers)
     // this value is not supposed to be compared with Layer::id
     // since they have different semantics.

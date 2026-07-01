@@ -1365,7 +1365,7 @@ void TreeSupport::generate_toolpaths()
         support_extrusion_width = Flow::auto_extrusion_width(FlowRole::frSupportMaterial, (float)nozzle_diameter);
 
     // coconut: use same intensity settings as SupportMaterial.cpp
-    auto m_support_material_interface_flow = support_material_interface_flow(m_object, float(m_slicing_params.layer_height));
+    auto m_support_material_interface_flow = m_object->support_material_interface_flow(float(m_slicing_params.layer_height));
     coordf_t interface_spacing = object_config.support_interface_spacing.value + m_support_material_interface_flow.spacing();
     coordf_t bottom_interface_spacing = object_config.support_bottom_interface_spacing.value + m_support_material_interface_flow.spacing();
     coordf_t interface_density = std::min(1., m_support_material_interface_flow.spacing() / interface_spacing);
@@ -1494,7 +1494,7 @@ void TreeSupport::generate_toolpaths()
 
                 SupportLayer* ts_layer = m_object->get_support_layer(layer_id);
                 Flow support_flow(support_extrusion_width, ts_layer->height, nozzle_diameter);
-                Flow interface_flow = support_material_interface_flow(m_object, ts_layer->height); // update flow using real support layer height
+                Flow interface_flow = m_object->support_material_interface_flow(ts_layer->height); // update flow using real support layer height
                 coordf_t support_spacing         = object_config.support_base_pattern_spacing.value + support_flow.spacing();
                 coordf_t support_density         = std::min(1., support_flow.spacing() / support_spacing);
                 ts_layer->support_fills.no_sort = false;
@@ -2499,7 +2499,7 @@ void TreeSupport::draw_circles()
             }
 
 
-            auto m_support_material_flow = support_material_flow(m_object, m_slicing_params.layer_height);
+            auto m_support_material_flow = m_object->support_material_flow(m_slicing_params.layer_height);
             coordf_t support_spacing = m_object_config->support_base_pattern_spacing.value + m_support_material_flow.spacing();
             coordf_t support_density = std::min(1., m_support_material_flow.spacing() / support_spacing * 2); // for lightning infill the density is defined differently, so need to double it
             generator = std::make_unique<FillLightning::Generator>(m_object, contours, overhangs, []() {}, support_density);

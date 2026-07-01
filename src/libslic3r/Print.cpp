@@ -1598,8 +1598,8 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                             warn(L("The Lightning base pattern is not supported by this support type; Rectilinear will be used instead."), "support_base_pattern");
 
                         float extrusion_width = std::min(
-                            support_material_flow(object).width(),
-                            support_material_interface_flow(object).width());
+                            object->support_material_flow().width(),
+                            object->support_material_interface_flow().width());
                         if (object->config().tree_support_tip_diameter < extrusion_width - EPSILON)
                             return { L("Organic support tree tip diameter must not be smaller than support material extrusion width."), object, "tree_support_tip_diameter" };
                         if (object->config().tree_support_branch_diameter_organic < 2. * extrusion_width - EPSILON)

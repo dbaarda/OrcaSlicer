@@ -57,9 +57,9 @@ struct SupportParameters {
                     (different_support_interface_filament && this->zero_gap_interface_bottom) ? 1 : 0;
             }
 	    }
-        this->first_layer_flow = Slic3r::support_material_1st_layer_flow(&object, float(slicing_params.first_print_layer_height));
-        this->support_material_flow = Slic3r::support_material_flow(&object, float(slicing_params.layer_height));
-        this->support_material_interface_flow = Slic3r::support_material_interface_flow(&object, float(slicing_params.layer_height));
+        this->first_layer_flow = object.support_material_flow(float(slicing_params.first_print_layer_height), true);
+        this->support_material_flow = object.support_material_flow(float(slicing_params.layer_height));
+        this->support_material_interface_flow = object.support_material_interface_flow(float(slicing_params.layer_height));
     	this->raft_interface_flow                = support_material_interface_flow;
 
         this->ironing = object_config.support_ironing;
