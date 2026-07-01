@@ -860,9 +860,9 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 	        	has_internal_voids = true;
 	        else {
 		        const PrintRegionConfig &region_config = layerm.region().config();
-		        FlowRole extrusion_role = surface.is_top() ? frTopSolidInfill : (surface.is_solid() ? frSolidInfill : frInfill);
-		        bool     is_bridge 	    = layer.id() > 0 && surface.is_bridge();
-		        params.extruder 	 = layerm.region().extruder(extrusion_role);
+                FlowRole flow_role   = surface.is_top() ? frTopSolidInfill : (surface.is_solid() ? frSolidInfill : frInfill);
+                bool     is_bridge   = layer.id() > 0 && surface.is_bridge();
+                params.extruder      = layerm.region().extruder(flow_role);
 		        params.pattern 		 = region_config.sparse_infill_pattern.value;
 		        params.density       = float(region_config.sparse_infill_density);
                 params.lateral_lattice_angle_1 = region_config.lateral_lattice_angle_1;
@@ -953,8 +953,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                 // Calculate the actual flow we'll be using for this infill.
 	        params.bridge = is_bridge || Fill::use_bridge_flow(params.pattern);
                 params.flow   = params.bridge ?
-                    layerm.bridging_flow(extrusion_role) :
-                    layerm.flow(extrusion_role, (surface.thickness == -1) ? layer.height : surface.thickness);
+                    layerm.bridging_flow(flow_role) :
+                    layerm.flow(flow_role, (surface.thickness == -1) ? layer.height : surface.thickness);
 
 				params.role_speed = 0;
                 if (params.extrusion_role == erBridgeInfill)
@@ -990,12 +990,12 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 				//get locked region param
 				if (params.pattern == ipLockedZag){
 					const PrintObject *object = layerm.layer()->object();
-					auto nozzle_diameter = float(object->print()->config().nozzle_diameter.get_at(layerm.region().extruder(extrusion_role) - 1));
-					Flow skin_flow = params.bridge ? params.flow : Flow::new_from_config_width(extrusion_role, region_config.skin_infill_line_width, nozzle_diameter, float((surface.thickness == -1) ? layer.height : surface.thickness));
+					auto nozzle_diameter = float(object->print()->config().nozzle_diameter.get_at(layerm.region().extruder(flow_role) - 1));
+					Flow skin_flow = params.bridge ? params.flow : Flow::new_from_config_width(flow_role, region_config.skin_infill_line_width, nozzle_diameter, float((surface.thickness == -1) ? layer.height : surface.thickness));
 					//add skin flow
 					append_flow_param(lock_param.skin_flow_params, skin_flow, surface.expolygon);
 
-					Flow skeleton_flow = params.bridge ? params.flow : Flow::new_from_config_width(extrusion_role, region_config.skeleton_infill_line_width, nozzle_diameter, float((surface.thickness == -1) ? layer.height : surface.thickness)) ;
+					Flow skeleton_flow = params.bridge ? params.flow : Flow::new_from_config_width(flow_role, region_config.skeleton_infill_line_width, nozzle_diameter, float((surface.thickness == -1) ? layer.height : surface.thickness)) ;
 					// add skeleton flow
 					append_flow_param(lock_param.skeleton_flow_params, skeleton_flow, surface.expolygon);
 
