@@ -1666,8 +1666,9 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
 
             for (const PrintRegion &region : object->all_regions()) {
                 const auto &bridge_width_opt = region.config().bridge_line_width;
-                for (FlowRole bridge_role : { frPerimeter, frInfill, frSolidInfill, frTopSolidInfill }) {
-                    const double nozzle_diameter = m_config.nozzle_diameter.get_at(region.extruder(bridge_role) - 1);
+                // These are all the line-type flow-roles that could potentially be used when bridging.
+                for (FlowRole bridge_role : { frExternalPerimeter, frPerimeter, frBottomSolidInfill, frInfill, frSolidInfill }) {
+                    const double nozzle_diameter = region.nozzle_diameter(*object, bridge_role);
                     const double bridge_width    = bridge_width_opt.get_abs_value(nozzle_diameter);
                     if (bridge_width <= 0.)
                         continue;

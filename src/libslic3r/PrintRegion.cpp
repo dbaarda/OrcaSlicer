@@ -12,9 +12,6 @@ unsigned int PrintRegion::extruder(FlowRole role) const
     case frSolidInfill: return m_config.internal_solid_filament_id;
     case frTopSolidInfill: return m_config.top_surface_filament_id;
     case frBottomSolidInfill: return m_config.bottom_surface_filament_id;
-    // Should external bridges use the same fillament as the bottom infill, or internal bridges?
-    case frExternalBridge: return m_config.bottom_surface_filament_id;
-    case frInternalBridge: return m_config.internal_solid_filament_id;
     case frSupportMaterial:
     case frSupportMaterialInterface:
     case frSupportTransition: throw Slic3r::InvalidArgument("Cannot get extruder for support roles without an object.");
@@ -48,13 +45,15 @@ float PrintRegion::nozzle_diameter(const PrintObject &object, FlowRole role) con
     return print_config.nozzle_diameter.get_at(this->extruder(object, role) - 1);
 }
 
-Flow PrintRegion::flow(const PrintObject& object, FlowRole role, double layer_height, bool first_layer) const
+Flow PrintRegion::flow(const PrintObject& object, FlowRole role, double layer_height, bool first_layer, bool bridge) const
 {
     const PrintConfig& print_config        = object.print()->config();
     const PrintObjectConfig& object_config = object.config();
     ConfigOptionFloatOrPercent config_width;
-    // On the first layer use initial_layer_line_width for all roles if set.
-    if (first_layer && print_config.initial_layer_line_width.value > 0) {
+    if (bridge) {
+        config_width = m_config.bridge_line_width;
+    } else if (first_layer && print_config.initial_layer_line_width.value > 0) {
+        // On the first layer use initial_layer_line_width for all roles if set.
         config_width = print_config.initial_layer_line_width;
     } else {
         switch (role) {
@@ -65,18 +64,16 @@ Flow PrintRegion::flow(const PrintObject& object, FlowRole role, double layer_he
         case frTopSolidInfill: config_width = m_config.top_surface_line_width; break;
         // Should bottom surfaces use top_surface_line_width? Or have its own line_width setting?
         case frBottomSolidInfill: config_width = m_config.internal_solid_infill_line_width; break;
-        case frExternalBridge:
-        case frInternalBridge: config_width = m_config.bridge_line_width; break;
         case frSupportMaterial:
         case frSupportMaterialInterface:
         case frSupportTransition: config_width = object_config.support_line_width; break;
         default: throw Slic3r::InvalidArgument("Unknown flow role");
         }
+        // Fallback to line_width if the role-specific width is zero.
+        if (config_width.value == 0)
+            config_width = object_config.line_width;
     }
-    // Fallback to line_width if the role-specific width is zero.
-    if (config_width.value == 0)
-        config_width = object_config.line_width;
-    return Flow::new_from_config_width(role, config_width, this->nozzle_diameter(object, role), float(layer_height));
+    return Flow::new_from_config_width(role, config_width, this->nozzle_diameter(object, role), float(layer_height), bridge);
 }
 
 coordf_t PrintRegion::nozzle_dmr_avg(const PrintConfig& print_config) const
@@ -94,9 +91,9 @@ coordf_t PrintRegion::nozzle_dmr_avg(const PrintConfig& print_config) const
 
 coordf_t PrintRegion::bridging_height_avg(const PrintConfig& print_config) const
 {
-    // Note this only uses the external bridge nozzle diameter because the only place this is used is for supports to calculate the correct support distance,
-    // and we never support internal bridges.
-    coordf_t nozzle_diameter = this->nozzle_diameter(print_config, frExternalBridge);
+    // Note this only uses the bottom surface nozzle diameter because that is the nozzle used for bottom surface bridges. The only place this is used is
+    // for supports to calculate the correct support distance, and we never support internal bridges.
+    coordf_t nozzle_diameter = this->nozzle_diameter(print_config, frBottomSolidInfill);
     return m_config.get_abs_value("bridge_line_width", nozzle_diameter);
 }
 

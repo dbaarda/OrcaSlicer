@@ -41,20 +41,22 @@ Flow Flow::with_spacing(float spacing) const
                       Flow(rrect_width(spacing, m_height, overlap_factor()), m_height, spacing, m_nozzle_diameter, m_bridge);
 }
 
+Flow Flow::as_bridge(float dmr) const { return Flow(dmr > 0.0 ? dmr : diameter(), m_nozzle_diameter); }
+
 // This static method returns a sane extrusion width default.
-float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter)
+float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter, bool bridge)
 {
+    if (bridge)
+        return nozzle_diameter;
     switch (role) {
     case frSupportMaterial:
     case frSupportMaterialInterface:
-    case frSupportTransition:
-    case frExternalBridge:
-    case frInternalBridge: return nozzle_diameter;
+    case frSupportTransition: return nozzle_diameter;
     default: return 1.125f * nozzle_diameter;
     }
 }
 
-// Used by the Flow::extrusion_width() funtion to provide hints to the user on default extrusion width values,
+// Used by the Flow::extrusion_width() function to provide hints to the user on default extrusion width values,
 // and to provide reasonable values to the PlaceholderParser.
 static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
 {
@@ -69,7 +71,7 @@ static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
     else if (opt_key == "internal_solid_infill_line_width")
         return frSolidInfill;
     else if (opt_key == "bridge_line_width")
-        return frExternalBridge;
+        return frSolidInfill;
     else if (opt_key == "top_surface_line_width")
         return frTopSolidInfill;
     else if (opt_key == "support_line_width")
@@ -86,7 +88,9 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResol
 
     double value = config.option_throw<ConfigOptionFloatOrPercent>(opt_key)->get_abs_value(nozzle_diameter);
     // for non-bridge widths, default back to the "line_width" setting.
-    if (value <= 0. && opt_key != "bridge_line_width") {
+    if (value <= 0.) {
+        if (opt_key == "bridge_line_width")
+            return nozzle_diameter;
         value = config.option_throw<ConfigOptionFloatOrPercent>("line_width")->get_abs_value(nozzle_diameter);
     }
 
@@ -96,7 +100,7 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResol
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
-Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height)
+Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height, bool bridge)
 {
     if (nozzle_diameter <= 0)
         throw Slic3r::InvalidArgument("Invalid nozzle_diameter supplied to new_from_config_width()");
@@ -104,8 +108,8 @@ Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent
         throw Slic3r::InvalidArgument("Invalid flow height supplied to new_from_config_width()");
 
     // If user left option to 0, use a sane default width.
-    float line_width = float(width.value <= 0. ? auto_extrusion_width(role, nozzle_diameter) : width.get_abs_value(nozzle_diameter));
-    return is_bridge(role) ? Flow(line_width, nozzle_diameter) : Flow(line_width, height, nozzle_diameter);
+    float line_width = float(width.value <= 0. ? auto_extrusion_width(role, nozzle_diameter, bridge) : width.get_abs_value(nozzle_diameter));
+    return bridge ? Flow(line_width, nozzle_diameter) : Flow(line_width, height, nozzle_diameter);
 }
 
 Flow support_material_flow(const PrintObject* object, float layer_height)

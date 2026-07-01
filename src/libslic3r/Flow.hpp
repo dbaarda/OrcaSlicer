@@ -4,12 +4,13 @@
 #include "libslic3r.h"
 #include "Config.hpp"
 #include "Exception.hpp"
-#include "ExtrusionEntity.hpp"
+// #include "ExtrusionEntity.hpp"
 
 namespace Slic3r {
 
 class PrintObject;
 
+// Each FlowRole value identifies a distinct extruder.
 enum FlowRole {
     frExternalPerimeter,
     frPerimeter,
@@ -17,15 +18,11 @@ enum FlowRole {
     frSolidInfill,
     frTopSolidInfill,
     frBottomSolidInfill,
-    frExternalBridge,
-    frInternalBridge,
     frSupportMaterial,
     frSupportMaterialInterface,
     frSupportTransition, // BBS
+    frNone,
 };
-
-// Is a flow role a bridging flow?
-constexpr bool is_bridge(FlowRole role) { return role == frExternalBridge || role == frInternalBridge; }
 
 class FlowError : public Slic3r::InvalidArgument
 {
@@ -216,12 +213,17 @@ public:
     // normal lines it preserves height and adjusts width.
     Flow with_spacing(float spacing) const;
 
+    // Create a modified flow that is a bridge version of a normal line flow. Without specifying diameter it returns a flow with the same
+    // cross-section area.
+    Flow as_bridge(float diameter = -1.0) const;
+
     // Create a flow for a FlowRole, width option, nozzle_diameter, and height.
-    static Flow new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height);
+    static Flow new_from_config_width(
+        FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height, bool bridge = false);
 
     // Sane extrusion width default based on nozzle diameter.
     // The defaults were derived from manual Prusa MK3 profiles.
-    static float auto_extrusion_width(FlowRole role, float nozzle_diameter);
+    static float auto_extrusion_width(FlowRole role, float nozzle_diameter, bool bridge = false);
 
     // Extrusion width from full config, taking into account the defaults (when set to zero) and ratios (percentages). Precise value depends
     // on layer index (1st layer vs. other layers vs. variable layer height), on active extruder etc. Therefore the value calculated by this

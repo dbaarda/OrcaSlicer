@@ -125,7 +125,7 @@ public:
     float                       nozzle_diameter(const PrintConfig &print_config, FlowRole role) const;
     float                       nozzle_diameter(const PrintObject &object, FlowRole role) const;
     // Flow to use for an object, role, and height, taking into account if this is the first-layer, for this region.
-    Flow                        flow(const PrintObject &object, FlowRole role, double layer_height, bool first_layer = false) const;
+    Flow                        flow(const PrintObject &object, FlowRole role, double layer_height, bool first_layer = false, bool bridge = false) const;
     // Average diameter of nozzles participating on extruding this region.
     coordf_t                    nozzle_dmr_avg(const PrintConfig &print_config) const;
     // Height of external bridges for a print-config in this region.
