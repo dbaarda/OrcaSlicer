@@ -4,6 +4,7 @@
 #include "libslic3r.h"
 #include "Config.hpp"
 #include "Exception.hpp"
+#include "PrintConfig.hpp"
 
 namespace Slic3r {
 
@@ -231,6 +232,35 @@ public:
                                   const ConfigOptionResolver& config,
                                   const unsigned int first_printing_extruder = 0);
 
+    // Get the extruder_id for a flow role from configs.
+    static size_t get_extruder(const PrintObjectConfig& object_config, const PrintRegionConfig& region_config, FlowRole role);
+
+    // Get the nozzle diameter for an extruder from configs.
+    static float get_nozzle_diameter(const PrintConfig& print_config, size_t extruder);
+
+    // Get the nozzle diameter for a flow role from configs.
+    static float get_nozzle_diameter(const PrintConfig& print_config,
+                                     const PrintObjectConfig& object_config,
+                                     const PrintRegionConfig& region_config,
+                                     FlowRole role);
+
+    // Get the line_width for a flow role from configs. If nozzle_diameter is not provided it will be fetched from configs.
+    static float get_line_width(const PrintConfig& print_config,
+                                const PrintObjectConfig& object_config,
+                                const PrintRegionConfig& region_config,
+                                FlowRole role,
+                                bool bridge           = false,
+                                bool first_layer      = false,
+                                float nozzle_diameter = 0.0);
+
+    static Flow new_from_role(const PrintConfig& print_config,
+                              const PrintObjectConfig& object_config,
+                              const PrintRegionConfig& region_config,
+                              FlowRole role,
+                              float height,
+                              bool bridge      = false,
+                              bool first_layer = false);
+
 private:
     Flow(float width, float height, float spacing, float nozzle_diameter, bool bridge)
         : m_width(width), m_height(height), m_spacing(spacing), m_nozzle_diameter(nozzle_diameter), m_bridge(bridge)
@@ -257,5 +287,4 @@ private:
 };
 
 } // namespace Slic3r
-
 #endif
