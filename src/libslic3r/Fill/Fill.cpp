@@ -1338,7 +1338,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree, FillAdaptive:
 				params.dont_adjust = true;
 			}
             if(surface_fill.surface.is_internal_bridge()){
-                params.density = f->print_object_config->internal_bridge_density.get_abs_value(1.0);
+                params.density = layerm->region().config().internal_bridge_density.get_abs_value(1.0);
                 params.dont_adjust = true;
             }
             // Orca: Elephant foot compensation for solid layers above bottommost by infill density manipulation.

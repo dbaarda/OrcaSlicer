@@ -996,7 +996,6 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<InternalBridgeFilter>,  dont_filter_internal_bridges))
     // Orca
     ((ConfigOptionEnum<EnableExtraBridgeLayer>,  enable_extra_bridge_layer))
-    ((ConfigOptionPercent,              internal_bridge_density))
     // Overhang angle threshold.
     ((ConfigOptionInt,                 support_threshold_angle))
     ((ConfigOptionFloatOrPercent,      support_threshold_overlap))
@@ -1086,15 +1085,17 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionStrings,  print_extruder_variant))
     ((ConfigOptionInt,                  bottom_shell_layers))
     ((ConfigOptionFloat,                bottom_shell_thickness))
+
+    // ORCA: Bridge related settings.
     ((ConfigOptionFloat,                bridge_angle))
     ((ConfigOptionFloat,                internal_bridge_angle)) // ORCA: Internal bridge angle override
     ((ConfigOptionBool,                 relative_bridge_angle)) // ORCA: Relative bridge angle flag
     ((ConfigOptionFloatOrPercent,       bridge_line_width))
     ((ConfigOptionFloatsNullable,       bridge_speed))
     ((ConfigOptionFloatsOrPercentsNullable, internal_bridge_speed))
-    // Orca: bridge-related flow ratios (available for overriding, if set_other_flow_ratios is enabled)
-    ((ConfigOptionFloat,                external_bridge_flow_ratio))
-    ((ConfigOptionFloat,                internal_bridge_flow_ratio))
+    ((ConfigOptionPercent,              bridge_density))
+    ((ConfigOptionPercent,              internal_bridge_density))
+
     ((ConfigOptionEnum<EnsureVerticalShellThickness>,   ensure_vertical_shell_thickness))
     ((ConfigOptionPercent,              top_surface_density))
     ((ConfigOptionPercent,               bottom_surface_density))
@@ -1203,7 +1204,6 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionBool,                 wipe_before_external_loop))
     ((ConfigOptionEnum<WallInfillOrder>, wall_infill_order))
     ((ConfigOptionBool,                 precise_outer_wall))
-    ((ConfigOptionPercent,              bridge_density))
     ((ConfigOptionFloat,                 filter_out_gap_fill))
     ((ConfigOptionFloatsOrPercentsNullable, small_perimeter_speed))
     ((ConfigOptionFloatsNullable,           small_perimeter_threshold))
@@ -1236,6 +1236,8 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,                sparse_infill_flow_ratio))
     ((ConfigOptionFloat,                internal_solid_infill_flow_ratio))
     ((ConfigOptionFloat,                gap_fill_flow_ratio))
+    ((ConfigOptionFloat,                external_bridge_flow_ratio))
+    ((ConfigOptionFloat,                internal_bridge_flow_ratio))
 
     // Orca: seam slopes
     ((ConfigOptionEnum<SeamScarfType>,  seam_slope_type))
