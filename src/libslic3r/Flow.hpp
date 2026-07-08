@@ -12,6 +12,7 @@ class PrintObject;
 
 // Each FlowRole value identifies a distinct extruder.
 enum FlowRole {
+    frNone,
     frExternalPerimeter,
     frPerimeter,
     frInfill,
@@ -21,7 +22,6 @@ enum FlowRole {
     frSupportMaterial,
     frSupportMaterialInterface,
     frSupportTransition, // BBS
-    frNone,
 };
 
 class FlowError : public Slic3r::InvalidArgument
