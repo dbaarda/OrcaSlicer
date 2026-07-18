@@ -219,7 +219,7 @@ public:
 
     // Create a flow for a FlowRole, width option, nozzle_diameter, and height.
     static Flow new_from_config_width(
-        FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height, bool bridge = false);
+        FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float layer_height, bool bridge = false);
 
     // Sane extrusion width default based on nozzle diameter.
     // The defaults were derived from manual Prusa MK3 profiles.
@@ -257,7 +257,7 @@ public:
                               const PrintObjectConfig& object_config,
                               const PrintRegionConfig& region_config,
                               FlowRole role,
-                              float height,
+                              float layer_height,
                               bool bridge      = false,
                               bool first_layer = false);
 

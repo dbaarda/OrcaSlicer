@@ -99,16 +99,16 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResol
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
-Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float height, bool bridge)
+Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float layer_height, bool bridge)
 {
     if (nozzle_diameter <= 0)
         throw Slic3r::InvalidArgument("Invalid nozzle_diameter supplied to new_from_config_width()");
-    if (height <= 0)
-        throw Slic3r::InvalidArgument("Invalid flow height supplied to new_from_config_width()");
+    if (layer_height <= 0)
+        throw Slic3r::InvalidArgument("Invalid flow layer_height supplied to new_from_config_width()");
 
     // If user left option to 0, use a sane default width.
     float line_width = float(width.value <= 0. ? auto_extrusion_width(role, nozzle_diameter, bridge) : width.get_abs_value(nozzle_diameter));
-    return bridge ? Flow(line_width, nozzle_diameter) : Flow(line_width, height, nozzle_diameter);
+    return bridge ? Flow(line_width, nozzle_diameter) : Flow(line_width, layer_height, nozzle_diameter);
 }
 
 size_t Flow::get_extruder(const PrintObjectConfig& object_config, const PrintRegionConfig& region_config, FlowRole role)
@@ -196,13 +196,13 @@ Flow Flow::new_from_role(const PrintConfig& print_config,
                          const PrintObjectConfig& object_config,
                          const PrintRegionConfig& region_config,
                          FlowRole role,
-                         float height,
+                         float layer_height,
                          bool bridge,
                          bool first_layer)
 {
     float nozzle_diameter = get_nozzle_diameter(print_config, object_config, region_config, role);
     float width           = get_line_width(print_config, object_config, region_config, role, bridge, first_layer, nozzle_diameter);
-    return bridge ? Flow(width, nozzle_diameter) : Flow(width, height, nozzle_diameter);
+    return bridge ? Flow(width, nozzle_diameter) : Flow(width, layer_height, nozzle_diameter);
 }
 
 } // namespace Slic3r
