@@ -2175,7 +2175,7 @@ std::map<ObjectID, unsigned int> getObjectExtruderMap(const Print& print) {
                 for (const LayerRegion* regionPtr : firstLayerRegions) {
                     if (regionPtr->has_extrusions())
                         objectFirstLayerFirstExtruder = std::min(objectFirstLayerFirstExtruder,
-                          regionPtr->region().extruder(frExternalPerimeter));
+                            static_cast<unsigned int>(regionPtr->extruder(frExternalPerimeter)));
                 }
             }
             objectExtruderMap.insert(std::make_pair(object->id(), objectFirstLayerFirstExtruder));

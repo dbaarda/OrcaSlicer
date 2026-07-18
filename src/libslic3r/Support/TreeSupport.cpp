@@ -1957,7 +1957,7 @@ Polygons TreeSupport::get_trim_support_regions(
             const Layer& object_layer = *object.layers()[i];
             bool some_region_overlaps = false;
             for (LayerRegion* region : object_layer.regions()) {
-                coordf_t bridging_height = region->region().bridging_height_avg(m_print_config);
+                coordf_t bridging_height = region->region().bridging_height_avg(object);
                 if (object_layer.print_z - bridging_height > support_layer.print_z + gap_extra_above - EPSILON)
                     break;
                 some_region_overlaps = true;
@@ -3438,7 +3438,7 @@ void TreeSupport::generate_contact_points()
   //  // BBS: add extra distance if thick bridge is enabled
   //  // Note: normal support uses print_z, but tree support uses integer layers, so we need to subtract layer_height
   //  if (!m_slicing_params.zero_gap_interface_top) {
-  //      z_distance_top += m_object->layers()[0]->regions()[0]->region().bridging_height_avg(m_object->print()->config()) - layer_height;
+  //      z_distance_top += m_object->layers()[0]->regions()[0]->region().bridging_height_avg(*m_object) - layer_height;
 		//}
   //  }
     const int z_distance_top_layers = round_up_divide(scale_(z_distance_top), scale_(layer_height)) + 1; //Support must always be 1 layer below overhang.

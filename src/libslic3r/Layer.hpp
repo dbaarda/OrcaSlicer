@@ -76,8 +76,15 @@ public:
     // (this collection contains only ExtrusionEntityCollection objects)
     ExtrusionEntityCollection   fills;
 
-    Flow    flow(FlowRole role) const;
-    Flow    flow(FlowRole role, double layer_height) const;
+    // The extruder_id used for a FlowRole in this LayerRegion.
+    size_t  extruder(FlowRole role) const;
+    // Diameter of the nozzle used for an extruder or FlowRole in this LayerRegion.
+    float   nozzle_diameter(size_t extruder) const;
+    float   nozzle_diameter(FlowRole role) const;
+
+    // Flows used for a FlowRole in this LayerRegion.
+    Flow    flow(FlowRole role, bool bridge=false) const;
+    Flow    flow(FlowRole role, double layer_height, bool bridge=false) const;
     Flow    bridging_flow(FlowRole role) const;
 
     void    slices_to_fill_surfaces_clipped();

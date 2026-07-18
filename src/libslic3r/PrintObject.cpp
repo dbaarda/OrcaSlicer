@@ -4723,34 +4723,42 @@ const Layer* PrintObject::get_layer_at_bottomz(coordf_t bottom_z, coordf_t epsil
 
 Layer* PrintObject::get_layer_at_bottomz(coordf_t bottom_z, coordf_t epsilon) { return const_cast<Layer*>(std::as_const(*this).get_layer_at_bottomz(bottom_z, epsilon)); }
 
+size_t PrintObject::extruder(const PrintRegionConfig& region_config, FlowRole role) const
+{
+    return Flow::get_extruder(m_config, region_config, role);
+}
+
+float PrintObject::nozzle_diameter(size_t extruder) const
+{
+    return Flow::get_nozzle_diameter(m_print->config(), extruder);
+}
+
+float PrintObject::nozzle_diameter(const PrintRegionConfig& region_config, FlowRole role) const
+{
+    return Flow::get_nozzle_diameter(m_print->config(), m_config, region_config, role);
+}
+
+Flow PrintObject::flow(const PrintRegionConfig& region_config, FlowRole role, double layer_height, bool bridge, bool first_layer) const
+{
+    const PrintConfig& print_config = m_print->config();
+    
+    if (layer_height <= 0.f) layer_height = float(first_layer ? print_config.initial_layer_print_height : m_config.layer_height);
+    return Flow::new_from_role(print_config, m_config, region_config, role, layer_height, bridge, first_layer);
+}
+
+Flow PrintObject::flow(FlowRole role, double layer_height, bool bridge, bool first_layer) const
+{
+    return flow(m_print->default_region_config(), role, layer_height, bridge, first_layer);
+}
 
 Flow PrintObject::support_material_flow(float layer_height, bool first_layer) const
 {
-    const PrintConfig& print_config = this->print()->config();
-    const PrintObjectConfig& object_config = this->config();
-    const auto& config_width = (first_layer && print_config.initial_layer_line_width.value > 0) ?
-            print_config.initial_layer_line_width : object_config.support_line_width;
-    return Flow::new_from_config_width(frSupportMaterial,
-                                       (config_width.value > 0) ? config_width : object_config.line_width,
-                                       // if object->config().support_interface_filament == 0 (which means to not trigger tool change, but
-                                       // use the current extruder instead), get_at will return the 0th component.
-                                       float(print_config.nozzle_diameter.get_at(object_config.support_filament - 1)),
-                                       (layer_height > 0.f) ? layer_height : float(object_config.layer_height.value));
+    return flow(m_print->default_region_config(), frSupportMaterial, layer_height, false, first_layer);
 }
-
+   
 Flow PrintObject::support_material_interface_flow(float layer_height) const
 {
-    const PrintConfig& print_config = this->print()->config();
-    const PrintObjectConfig& object_config = this->config();
-    const auto& config_width = object_config.support_line_width;
-    return Flow::new_from_config_width(frSupportMaterialInterface,
-                                       (config_width.value > 0) ? config_width : object_config.line_width,
-                                       // if object->config().support_interface_filament == 0 (which means to not trigger tool change, but
-                                       // use the current extruder instead), get_at will return the 0th component.
-                                       float(print_config.nozzle_diameter.get_at(object_config.support_interface_filament - 1)),
-                                       (layer_height > 0.f) ? layer_height : float(object_config.layer_height.value));
+    return flow(m_print->default_region_config(), frSupportMaterialInterface, layer_height);
 }
-
-
 
 } // namespace Slic3r

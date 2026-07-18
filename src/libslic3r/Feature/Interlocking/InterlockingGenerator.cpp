@@ -47,11 +47,11 @@ void InterlockingGenerator::generate_interlocking_structure(PrintObject* print_o
 
     for (size_t region_a_index = 0; region_a_index < print_object->num_printing_regions(); region_a_index++) {
         const PrintRegion& region_a      = print_object->printing_region(region_a_index);
-        const auto         extruder_nr_a = region_a.extruder(FlowRole::frExternalPerimeter);
+        const auto         extruder_nr_a = print_object->extruder(region_a, FlowRole::frExternalPerimeter);
 
         for (size_t region_b_index = region_a_index + 1; region_b_index < print_object->num_printing_regions(); region_b_index++) {
             const PrintRegion& region_b      = print_object->printing_region(region_b_index);
-            const auto         extruder_nr_b = region_b.extruder(FlowRole::frExternalPerimeter);
+            const auto         extruder_nr_b = print_object->extruder(region_b, FlowRole::frExternalPerimeter);
             if (extruder_nr_a == extruder_nr_b) {
                 continue;
             }

@@ -119,17 +119,17 @@ public:
     int                         print_region_id() const throw() { return m_print_region_id; }
     int                         print_object_region_id() const throw() { return m_print_object_region_id; }
     // 1-based extruder identifier for an optional object and role in this region. An object is required for support roles.
-    unsigned int                extruder(FlowRole role) const;
+    //unsigned int                extruder(FlowRole role) const;
     unsigned int                extruder(const PrintObject &object, FlowRole role) const;
     // Diameter of the nozzle used for a print-config or object and role in this region. An object is required for support roles.
-    float                       nozzle_diameter(const PrintConfig &print_config, FlowRole role) const;
+    //float                       nozzle_diameter(const PrintConfig &print_config, FlowRole role) const;
     float                       nozzle_diameter(const PrintObject &object, FlowRole role) const;
     // Flow to use for an object, role, and height, taking into account if this is the first-layer, for this region.
     Flow                        flow(const PrintObject &object, FlowRole role, double layer_height, bool first_layer = false, bool bridge = false) const;
     // Average diameter of nozzles participating on extruding this region.
-    coordf_t                    nozzle_dmr_avg(const PrintConfig &print_config) const;
+    coordf_t                    nozzle_dmr_avg(const PrintObject &object) const;
     // Height of external bridges for a print-config in this region.
-    coordf_t                    bridging_height_avg(const PrintConfig &print_config) const;
+    coordf_t                    bridging_height_avg(const PrintObject &object) const;
 
     // Collect 0-based extruder indices used to print this region's object.
 	void                        collect_object_printing_extruders(const Print &print, std::vector<unsigned int> &object_extruders) const;
@@ -375,7 +375,22 @@ public:
         return m_skirt;
     }
 
-    // These gets flows used for printing the object.
+    // 1-based extruder identifier for region and role.
+    size_t extruder(const PrintRegionConfig& region_config, FlowRole role) const;
+    size_t extruder(const PrintRegion& region, FlowRole role) const { return extruder(region.config(), role); }
+    // Diameter of the nozzle used for a flow role.
+    float nozzle_diameter(size_t extruder) const;
+    float nozzle_diameter(const PrintRegionConfig& region_config, FlowRole role) const;
+    float nozzle_diameter(const PrintRegion& region, FlowRole role) const { return nozzle_diameter(region.config(), role); }
+
+    // Flow to use for a region, role, and height, optionally for bridges or the first-layer, for this object.
+    Flow flow(const PrintRegionConfig& region_config, FlowRole role, double layer_height=-1.0, bool bridge = false, bool first_layer = false) const;
+    Flow flow(const PrintRegion &region, FlowRole role, double layer_height=-1.0, bool bridge = false, bool first_layer = false) const
+    { return flow(region.config(), role, layer_height, bridge, first_layer); }
+    // Without a region config it gets flows using the default region config.
+    Flow flow(FlowRole role, double layer_height=-1.0, bool bridge = false, bool first_layer = false) const;
+
+    // These gets flows used for printing the object. Note these are independent of the region config.
     Flow support_material_flow(float layer_height=-1.0, bool first_layer=false) const;
     Flow support_material_interface_flow(float layer_height=-1.0) const;
 

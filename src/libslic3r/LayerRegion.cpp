@@ -18,27 +18,34 @@
 
 namespace Slic3r {
 
-Flow LayerRegion::flow(FlowRole role) const
+size_t LayerRegion::extruder(FlowRole role) const
 {
-    return this->flow(role, m_layer->height);
+    return m_layer->object()->extruder(*m_region, role);
 }
 
-Flow LayerRegion::flow(FlowRole role, double layer_height) const
+float LayerRegion::nozzle_diameter(size_t extruder) const
 {
-    return m_region->flow(*m_layer->object(), role, layer_height, m_layer->id() == 0);
+    return m_layer->object()->nozzle_diameter(extruder);
+}
+
+float LayerRegion::nozzle_diameter(FlowRole role) const
+{
+    return m_layer->object()->nozzle_diameter(*m_region, role);;
+}
+
+Flow LayerRegion::flow(FlowRole role, bool bridge) const
+{
+    return flow(role, m_layer->height, bridge);
+}
+
+Flow LayerRegion::flow(FlowRole role, double layer_height, bool bridge) const
+{
+    return m_layer->object()->flow(*m_region, role, layer_height, bridge, m_layer->id() == 0);
 }
 
 Flow LayerRegion::bridging_flow(FlowRole role) const
 {
-    const PrintRegion       &region         = this->region();
-    const PrintRegionConfig &region_config  = region.config();
-    const PrintObject       &print_object   = *this->layer()->object();
-    // Here this->extruder(role) - 1 may underflow to MAX_INT, but then the get_at() will fall back to zero'th element, so everything is all right.
-    const float nozzle_diameter = float(print_object.print()->config().nozzle_diameter.get_at(region.extruder(role) - 1));
-    const float bridge_width    = float(region_config.bridge_line_width.get_abs_value(nozzle_diameter));
-
-    float diameter = bridge_width > 0 ? bridge_width : nozzle_diameter;
-    return Flow(diameter, nozzle_diameter);
+    return this->flow(role, true);
 }
 
 // Fill in layerm->fill_surfaces by trimming the layerm->slices by the cummulative layerm->fill_surfaces.
@@ -613,7 +620,7 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
 {
     const bool      has_infill = this->region().config().sparse_infill_density.value > 0.;
     //BBS
-    auto nozzle_diameter = this->region().nozzle_dmr_avg(this->layer()->object()->print()->config());
+    auto nozzle_diameter = this->region().nozzle_dmr_avg(*this->layer()->object());
     const float margin = float(scale_(EXTERNAL_INFILL_MARGIN));
     const float bridge_margin = std::min(float(scale_(BRIDGE_INFILL_MARGIN)), float(scale_(nozzle_diameter * BRIDGE_INFILL_MARGIN / 0.4)));
 

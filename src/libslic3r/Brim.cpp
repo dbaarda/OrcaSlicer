@@ -128,7 +128,7 @@ double getadhesionCoeff(const PrintObject* printObject)
     if (!firstLayerRegions.empty()) {
         for (const LayerRegion* regionPtr : firstLayerRegions) {
             if (regionPtr->has_extrusions())
-                extrudersFirstLayer.push_back(regionPtr->region().extruder(frExternalPerimeter));
+                extrudersFirstLayer.push_back(regionPtr->extruder(frExternalPerimeter));
         }
     }
     double adhesionCoeff = 1;

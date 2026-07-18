@@ -84,7 +84,7 @@ struct SupportParameters {
         for (size_t region_id = 0; region_id < object.num_printing_regions(); ++ region_id) {
             const PrintRegion &region = object.printing_region(region_id);
             // Should we get the average bridge width like this, or the max bridge width?
-            external_bridge_height += region.bridging_height_avg(print_config);
+            external_bridge_height += region.bridging_height_avg(object);
         }
         external_bridge_height /= object.num_printing_regions();
         this->gap_xy = object_config.support_object_xy_distance.value;
@@ -172,11 +172,7 @@ struct SupportParameters {
             assert(slicing_params.raft_layers() == 0);
         }
 
-	    const auto     nozzle_diameter = print_config.nozzle_diameter.get_at(object_config.support_interface_filament - 1);
-        const coordf_t extrusion_width = object_config.line_width.get_abs_value(nozzle_diameter);
-        support_extrusion_width        = object_config.support_line_width.get_abs_value(nozzle_diameter);
-        support_extrusion_width        = support_extrusion_width > 0 ? support_extrusion_width : extrusion_width;
-
+        support_extrusion_width        = support_material_interface_flow.width();
         independent_layer_height = print_config.independent_support_layer_height;
 
         // force double walls everywhere if wall count is larger than 1        
