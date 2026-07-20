@@ -94,8 +94,6 @@ struct FillParams
     Flow            flow;
     ExtrusionRole   extrusion_role{ ExtrusionRole(0) };
     bool            using_internal_flow{ false };
-    //BBS: only used for new top surface pattern
-    float           no_extrusion_overlap{ 0.0 };
     const           PrintRegionConfig* config{ nullptr };
     bool            dont_sort{ false }; // do not sort the lines, just simply connect them
     bool            can_reverse{true};

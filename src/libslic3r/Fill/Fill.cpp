@@ -1315,7 +1315,6 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree,
         params.flow                 = surface_fill.params.flow;
         params.extrusion_role       = surface_fill.params.extrusion_role;
         params.using_internal_flow  = using_internal_flow;
-        params.no_extrusion_overlap = surface_fill.params.overlap;
         auto& region_config         = layerm->region().config();
         params.config               = &region_config;
         params.pattern              = surface_fill.params.pattern;
