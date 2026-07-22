@@ -3,7 +3,7 @@
 #include <numeric>
 #include <sstream>
 
-#include "test_data.hpp" // get access to init_print, etc
+#include "test_helpers.hpp" // get access to init_print, etc
 
 #include "libslic3r/Config.hpp"
 #include "libslic3r/Model.hpp"
