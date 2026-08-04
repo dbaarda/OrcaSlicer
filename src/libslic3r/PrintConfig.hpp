@@ -122,7 +122,7 @@ enum InfillPattern : int {
 // "separated_infills" option can re-center them per connected body. Patterns evaluated in
 // absolute/global coordinates (Gyroid, TPMS, Honeycomb, CrossHatch, ...) or that are shape-relative
 // (Concentric) ignore that bounding box and are therefore excluded.
-inline bool is_separable_infill_pattern(InfillPattern pattern)
+inline bool is_separable(InfillPattern pattern)
 {
     switch (pattern) {
     case ipRectilinear:
@@ -138,6 +138,20 @@ inline bool is_separable_infill_pattern(InfillPattern pattern)
     case ipLateralHoneycomb:
     case ipLateralLattice:
     case ipHilbertCurve:
+    case ipArchimedeanChords:
+    case ipOctagramSpiral:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Is this a concentric pattern that can be filled with an inward or outward order?
+inline bool is_concentric(InfillPattern pattern)
+{
+    switch (pattern) {
+    case ipConcentric:
+    case ipConcentricInternal:
     case ipArchimedeanChords:
     case ipOctagramSpiral:
         return true;
@@ -193,7 +207,7 @@ enum class WallDirection
     Count,
 };
 
-// Orca: print order of surface fill loops/fragments for center-based fill patterns
+// Orca: print order of surface fill loops/fragments for concentric fill patterns
 // (Concentric, Archimedean Chords, Octagram Spiral).
 enum class SurfaceFillOrder {
     Default,
