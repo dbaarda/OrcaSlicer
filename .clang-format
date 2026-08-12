@@ -1,6 +1,8 @@
 #
 # http://clang.llvm.org/docs/ClangFormatStyleOptions.html
 #
+# Requires clang-format >= 13.0.0
+#
 Language:        Cpp
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
@@ -115,26 +117,28 @@ SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard:        Cpp11
-# Format Catch2 sections like if-statements.
+# Format these Catch2 nested sections like if-statements.
 IfMacros:
   - SECTION
-  - TEST_CASE
-  - SCENARIO
   - GIVEN
   - WHEN
   - THEN
   - AND_GIVEN
   - AND_WHEN
   - AND_THEN
-  - TEMPLATE_TEST_CASE
-  - TEMPLATE_PRODUCT_TEST_CASE
-  - TEMPLATE_LIST_TEST_CASE
-  - TEMPLATE_TEST_CASE_SIG
-  - TEMPLATE_PRODUCT_TEST_CASE_SIG
-  - TEMPLATE_LIST_TEST_CASE
   - CHECKED_IF
   - CHECKED_ELSE
   - DYNAMIC_SECTION
+# Format these Catch2 outer sections like function definitions by
+# not listing them in IfMacros.
+#  - TEST_CASE
+#  - SCENARIO
+#  - TEMPLATE_TEST_CASE
+#  - TEMPLATE_PRODUCT_TEST_CASE
+#  - TEMPLATE_LIST_TEST_CASE
+#  - TEMPLATE_TEST_CASE_SIG
+#  - TEMPLATE_PRODUCT_TEST_CASE_SIG
+#  - TEMPLATE_LIST_TEST_CASE_SIG
 # Format Catch2 assertions like statements.
 StatementMacros:
   - REQUIRE
