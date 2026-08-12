@@ -3246,7 +3246,8 @@ void Sidebar::update_all_preset_comboboxes()
 
     auto p_mainframe = wxGetApp().mainframe;
     auto cfg = preset_bundle.printers.get_edited_preset().config;
-    const bool use_native_device_tab = preset_bundle.use_bbl_device_tab() || NetworkAgentFactory::is_current_printer_agent_plugin();
+    const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
+    const bool use_native_device_tab = preset_bundle.use_bbl_device_tab() || use_printer_agents;
 
     if (preset_bundle.use_bbl_network()) {
         //only show connection button for not-BBL printer
@@ -3258,7 +3259,8 @@ void Sidebar::update_all_preset_comboboxes()
         p_mainframe->set_print_button_to_default(MainFrame::PrintSelectType::ePrintPlate);
     } else {
         //p->btn_connect_printer->Show();
-        p->m_printer_connect->Show();
+        // ORCA: hide the physical-printer connection button when printer agents are enabled
+        p->m_printer_connect->Show(!use_printer_agents);
 
         // ORCA: show/hide sync-ams button based on filament sync mode
         auto agent = wxGetApp().getAgent();
@@ -3280,10 +3282,12 @@ void Sidebar::update_all_preset_comboboxes()
             const auto host_type = cfg.option<ConfigOptionEnum<PrintHostType>>("host_type")->value;
             if (cfg.has("printhost_apikey") && (host_type != htSimplyPrint))
                 apikey = cfg.opt_string("printhost_apikey");
-            print_btn_type = preset_bundle.is_bbl_vendor() ? MainFrame::PrintSelectType::ePrintPlate : MainFrame::PrintSelectType::eSendGcode;
+            print_btn_type = (preset_bundle.is_bbl_vendor() || wxGetApp().app_config->get_bool("use_printer_agents"))
+                                 ? MainFrame::PrintSelectType::ePrintPlate
+                                 : MainFrame::PrintSelectType::eSendGcode;
         }
 
-        if (!use_native_device_tab)
+        if (!use_native_device_tab || use_printer_agents)
             p_mainframe->load_printer_url(url, apikey);
 
 
@@ -3439,7 +3443,10 @@ void Sidebar::update_presets(Preset::Type preset_type)
 
         bool isBBL = preset_bundle.is_bbl_vendor();
         bool is_dual_extruder = extruder_variants->size() == 2;
-        p->layout_printer(preset_bundle.use_bbl_network(), isBBL && is_dual_extruder);
+        // why: agent mode drives the native device tab, so the sidebar lays out like BBL
+        // (no physical-printer connect button).
+        p->layout_printer(preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents"),
+                          isBBL && is_dual_extruder);
 
         // Update nozzle titles from printer config (e.g. "Main Nozzle" / "Auxiliary Nozzle" for N6)
         // UI left = DEPUTY_EXTRUDER_ID(1), UI right = MAIN_EXTRUDER_ID(0)
@@ -5625,6 +5632,7 @@ struct Plater::priv
     void on_action_slice_all(SimpleEvent&);
     void on_action_publish(wxCommandEvent &evt);
     void on_action_print_plate(SimpleEvent&);
+    void open_machine_select_dialog(int plate_idx, PrintFromType print_type = PrintFromType::FROM_NORMAL);
     void on_action_print_all(SimpleEvent&);
     void on_action_export_gcode(SimpleEvent&);
     void on_action_send_gcode(SimpleEvent&);
@@ -9493,7 +9501,7 @@ void Plater::priv::replace_all_with_stl()
         return;
     }
 
-    std::string status = _L("Replaced with 3D files from directory:\n").ToStdString() + out_path.string() + "\n\n";
+    wxString status = _L("Replaced with 3D files from directory:\n") + from_u8(out_path.string()) + "\n\n";
 
     for (unsigned int idx : volume_idxs) {
         const GLVolume* v = selection.get_volume(idx);
@@ -9513,13 +9521,13 @@ void Plater::priv::replace_all_with_stl()
         std::string volume_name = volume->name;
 
         if (new_path == input_path) {
-            status += boost::str(boost::format(_L("✖ Skipped %1%: same file.\n").ToStdString()) % volume_name);
+            status += wxString::Format(_L("✖ Skipped %s: same file.\n"), from_u8(volume_name));
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " skipping replace volume : same filename " << new_path;
             continue;
         }
 
         if (!fs::exists(new_path)) {
-            status += boost::str(boost::format(_L("✖ Skipped %1%: file does not exist.\n").ToStdString()) % volume_name);
+            status += wxString::Format(_L("✖ Skipped %s: file does not exist.\n"), from_u8(volume_name));
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " cannot replace volume : filen does not exist " << new_path;
             continue;
         }
@@ -9527,12 +9535,12 @@ void Plater::priv::replace_all_with_stl()
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " replacing volume : " << input_path << " with " << new_path;
 
         if (!replace_volume_with_stl(object_idx, volume_idx, new_path, _u8L("Replace with 3D file"))) {
-            status += boost::str(boost::format(_L("✖ Skipped %1%: failed to replace.\n").ToStdString()) % volume_name);
+            status += wxString::Format(_L("✖ Skipped %s: failed to replace.\n"), from_u8(volume_name));
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " cannot replace volume : failed to replace with " << new_path;
             continue;
         }
 
-        status += boost::str(boost::format(_L("✔ Replaced %1%.\n").ToStdString()) % volume_name);
+        status += wxString::Format(_L("✔ Replaced %s.\n"), from_u8(volume_name));
     }
 
     // update 3D scene
@@ -11166,16 +11174,21 @@ void Plater::priv::on_action_print_plate(SimpleEvent&)
     }
 
     PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_network()) {
-        // BBS
-        if (!m_select_machine_dlg)
-            m_select_machine_dlg = new SelectMachineDialog(q);
-        m_select_machine_dlg->set_print_type(PrintFromType::FROM_NORMAL);
-        m_select_machine_dlg->prepare(partplate_list.get_curr_plate_index());
-        m_select_machine_dlg->ShowModal();
+    if (preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents")) {
+        open_machine_select_dialog(partplate_list.get_curr_plate_index());
     } else {
         q->send_gcode_legacy(PLATE_CURRENT_IDX, nullptr);
     }
+}
+
+void Plater::priv::open_machine_select_dialog(int plate_idx, PrintFromType print_type)
+{
+    // BBS
+    if (!m_select_machine_dlg)
+        m_select_machine_dlg = new SelectMachineDialog(q);
+    m_select_machine_dlg->set_print_type(print_type);
+    m_select_machine_dlg->prepare(plate_idx);
+    m_select_machine_dlg->ShowModal();
 }
 
 void Plater::priv::on_action_send_to_multi_machine(SimpleEvent&)
@@ -11193,10 +11206,7 @@ void Plater::priv::on_action_print_plate_from_sdcard(SimpleEvent&)
     }
 
     //BBS
-    if (!m_select_machine_dlg) m_select_machine_dlg = new SelectMachineDialog(q);
-    m_select_machine_dlg->set_print_type(PrintFromType::FROM_SDCARD_VIEW);
-    m_select_machine_dlg->prepare(0);
-    m_select_machine_dlg->ShowModal();
+    open_machine_select_dialog(0, PrintFromType::FROM_SDCARD_VIEW);
 }
 
 void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
@@ -11211,13 +11221,13 @@ void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
     sidebar_layout.show = new_sel == MainFrame::tp3DEditor || new_sel == MainFrame::tpPreview;
     update_sidebar();
     int old_sel = e.GetOldSelection();
-    const bool is_printer_agent_plugin = NetworkAgentFactory::is_current_printer_agent_plugin();
+    const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
     const bool use_native_device_tab = wxGetApp().preset_bundle &&
-        (wxGetApp().preset_bundle->use_bbl_device_tab() || is_printer_agent_plugin);
+        (wxGetApp().preset_bundle->use_bbl_device_tab() || use_printer_agents);
     if (use_native_device_tab && new_sel == MainFrame::tpMonitor) {
         // BBL network module is only required for BBL-vendor printers.
         // Non-BBL Python plugins (e.g. moonraker) drive the Device tab without it.
-        if (!is_printer_agent_plugin && wxGetApp().preset_bundle->is_bbl_vendor() && !Slic3r::NetworkAgent::is_network_module_loaded()) {
+        if (!use_printer_agents && wxGetApp().preset_bundle->is_bbl_vendor() && !Slic3r::NetworkAgent::is_network_module_loaded()) {
             e.Veto();
             BOOST_LOG_TRIVIAL(info) << boost::format("skipped tab switch from %1% to %2%, lack of network plugins") % old_sel % new_sel;
             if (q) {
@@ -11273,13 +11283,8 @@ void Plater::priv::on_action_print_all(SimpleEvent&)
     }
 
     PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_network()) {
-        // BBS
-        if (!m_select_machine_dlg)
-            m_select_machine_dlg = new SelectMachineDialog(q);
-        m_select_machine_dlg->set_print_type(PrintFromType::FROM_NORMAL);
-        m_select_machine_dlg->prepare(PLATE_ALL_IDX);
-        m_select_machine_dlg->ShowModal();
+    if (preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents")) {
+        open_machine_select_dialog(PLATE_ALL_IDX);
     } else {
         q->send_gcode_legacy(PLATE_ALL_IDX, nullptr);
     }
@@ -11988,12 +11993,53 @@ bool Plater::priv::check_ams_status_impl(bool is_slice_all)
         auto nozzle_volumes_values = preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type")->values;
         assert(obj->GetExtderSystem()->GetTotalExtderCount() == 2 && nozzle_volumes_values.size() == 2);
         if (obj->GetExtderSystem()->GetTotalExtderCount() == 2 && nozzle_volumes_values.size() == 2) {
-            // Map device flow->volume via the table, not `flowtype - 1` (which mis-maps U_FLOW to nvtHybrid).
-            NozzleVolumeType right_nozzle_type = DevNozzle::ToNozzleVolumeType(obj->GetExtderSystem()->GetNozzleFlowType(0));
-            NozzleVolumeType left_nozzle_type = DevNozzle::ToNozzleVolumeType(obj->GetExtderSystem()->GetNozzleFlowType(1));
-            NozzleVolumeType preset_left_type  = NozzleVolumeType(nozzle_volumes_values[0]);
-            NozzleVolumeType preset_right_type  = NozzleVolumeType(nozzle_volumes_values[1]);
-            is_same_as_printer = (left_nozzle_type == preset_left_type && right_nozzle_type == preset_right_type);
+            // [Vortek] H2C: Use BBS-style NozzleGroupInfo comparison instead of direct nozzle type match.
+            // This correctly handles Hybrid presets (which expand into per-type counts) and detects
+            // never-synced state (nozzle_count==0) so the first sync dialog appears.
+            // After device sync, extruder_nozzle_stats matches printer → dialog suppressed.
+            // Reference to BBS: BambuStudio/src/slic3r/GUI/Plater.cpp is_extruder_stat_synced()
+            using namespace MultiNozzleUtils;
+            auto nozzle_diameter_values = preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloatsNullable>("nozzle_diameter")->values;
+
+            // Build preset nozzle groups from extruder_nozzle_stats config
+            std::vector<std::vector<NozzleGroupInfo>> preset_nozzle_infos(nozzle_diameter_values.size());
+            for (size_t extruder_id = 0; extruder_id < nozzle_diameter_values.size(); ++extruder_id) {
+                NozzleVolumeType preset_volume_type = NozzleVolumeType(nozzle_volumes_values[extruder_id]);
+                std::string      preset_diameter    = format_diameter_to_str(nozzle_diameter_values[extruder_id]);
+
+                if (preset_volume_type == nvtHybrid) {
+                    // Hybrid: expand into separate groups for each nozzle type from stats
+                    int std_count = getExtruderNozzleCount(preset_bundle, extruder_id, nvtStandard);
+                    int hf_count  = getExtruderNozzleCount(preset_bundle, extruder_id, nvtHighFlow);
+                    if (std_count > 0)
+                        preset_nozzle_infos[extruder_id].emplace_back(preset_diameter, nvtStandard, extruder_id, std_count);
+                    if (hf_count > 0)
+                        preset_nozzle_infos[extruder_id].emplace_back(preset_diameter, nvtHighFlow, extruder_id, hf_count);
+                    // If both are 0 → never synced → empty group → will mismatch
+                } else {
+                    int count = getExtruderNozzleCount(preset_bundle, extruder_id, preset_volume_type);
+                    preset_nozzle_infos[extruder_id].emplace_back(preset_diameter, preset_volume_type, extruder_id, count);
+                }
+            }
+
+            // Compare with printer nozzle groups
+            auto printer_groups = obj->GetNozzleSystem()->GetNozzleGroups();
+            for (const auto& preset_groups : preset_nozzle_infos) {
+                for (const auto& preset_group : preset_groups) {
+                    if (preset_group.nozzle_count == 0) {
+                        // Never synced: if printer has nozzles of this type → needs sync
+                        if (std::find_if(printer_groups.begin(), printer_groups.end(),
+                                [&preset_group](const NozzleGroupInfo& elem) { return preset_group.is_same_type(elem); })
+                            != printer_groups.end()) {
+                            is_same_as_printer = false;
+                            break;
+                        }
+                    } else if (std::find(printer_groups.begin(), printer_groups.end(), preset_group) == printer_groups.end()) {
+                        is_same_as_printer = false;
+                        break;
+                    }
+                }
+            }
         }
 
         std::vector<std::map<int, int>> ams_count_info;
@@ -13513,7 +13559,7 @@ bool Plater::up_to_date(bool saved, bool backup)
                                         !Slic3r::has_other_changes(backup));
 }
 
-void Plater::add_model(bool imperial_units, std::string fname)
+bool Plater::add_model(bool imperial_units, std::string fname)
 {
     wxArrayString input_files;
 
@@ -13521,7 +13567,7 @@ void Plater::add_model(bool imperial_units, std::string fname)
     if (fname.empty()) {
         wxGetApp().import_model(this, input_files);
         if (input_files.empty())
-            return;
+            return false;
 
         for (const auto& file : input_files)
             paths.emplace_back(into_path(file));
@@ -13565,7 +13611,8 @@ void Plater::add_model(bool imperial_units, std::string fname)
 
     auto strategy = LoadStrategy::LoadModel;
     if (imperial_units) strategy = strategy | LoadStrategy::ImperialUnits;
-    if (!load_files(paths, strategy, ask_multi).empty()) {
+    const bool loaded = !load_files(paths, strategy, ask_multi).empty();
+    if (loaded) {
 
         if (get_project_name() == _L("Untitled") && paths.size() > 0) {
             boost::filesystem::path full_path(paths[0].string());
@@ -13574,6 +13621,7 @@ void Plater::add_model(bool imperial_units, std::string fname)
 
         wxGetApp().mainframe->update_title();
     }
+    return loaded;
 }
 
 void Plater::calib_pa(const Calib_Params& params)
@@ -13860,7 +13908,8 @@ void Plater::cut_horizontal(size_t obj_idx, size_t instance_idx, double z, Model
 }
 
 void Plater::_calib_pa_tower(const Calib_Params& params) {
-    add_model(false, Slic3r::resources_dir() + "/calib/pressure_advance/tower_with_seam.drc");
+    if (!add_model(false, Slic3r::resources_dir() + "/calib/pressure_advance/tower_with_seam.drc"))
+        return;
 
     auto& print_config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto printer_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
@@ -14100,7 +14149,8 @@ void Plater::calib_temp(const Calib_Params& params) {
     wxGetApp().mainframe->select_tab(size_t(MainFrame::tp3DEditor));
     if (params.mode != CalibMode::Calib_Temp_Tower) return;
     
-    add_model(false, Slic3r::resources_dir() + "/calib/temperature_tower/temperature_tower.drc");
+    if (!add_model(false, Slic3r::resources_dir() + "/calib/temperature_tower/temperature_tower.drc"))
+        return;
     auto printer_config = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto start_temp = lround(params.start);
@@ -14138,7 +14188,7 @@ void Plater::calib_temp(const Calib_Params& params) {
         }
     }
 
-    if (std::abs(nozzle_scale - 1.0) > EPSILON)
+    if (params.nozzle_based_resize && std::abs(nozzle_scale - 1.0) > EPSILON)
         model().objects[0]->scale(nozzle_scale, nozzle_scale, nozzle_scale);
 
     model().objects[0]->ensure_on_bed();
@@ -14146,7 +14196,9 @@ void Plater::calib_temp(const Calib_Params& params) {
     printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     set_config_values<int, ConfigOptionInts>(filament_config, "nozzle_temperature_initial_layer", (int) start_temp);
     set_config_values<int, ConfigOptionInts>(filament_config, "nozzle_temperature", (int) start_temp);
-    model().objects[0]->config.set_key_value("layer_height", new ConfigOptionFloat(nozzle_diameter/2));
+    // When resizing is disabled the 0.4 mm / 0.2 mm reference model is printed as-is (preset layer height kept).
+    if (params.nozzle_based_resize)
+        model().objects[0]->config.set_key_value("layer_height", new ConfigOptionFloat(nozzle_diameter/2));
     model().objects[0]->config.set_key_value("brim_type", new ConfigOptionEnum<BrimType>(btOuterOnly));
     model().objects[0]->config.set_key_value("brim_width", new ConfigOptionFloat(5.0));
     model().objects[0]->config.set_key_value("brim_object_gap", new ConfigOptionFloat(0.0));
@@ -14157,7 +14209,8 @@ void Plater::calib_temp(const Calib_Params& params) {
 
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     print_config->set_key_value("enable_wrapping_detection", new ConfigOptionBool(false));
-    print_config->set_key_value("initial_layer_print_height", new ConfigOptionFloat(nozzle_diameter/2));
+    if (params.nozzle_based_resize)
+        print_config->set_key_value("initial_layer_print_height", new ConfigOptionFloat(nozzle_diameter/2));
 
 
     changed_objects({ 0 });
@@ -14176,7 +14229,8 @@ void Plater::calib_max_vol_speed(const Calib_Params& params)
     wxGetApp().mainframe->select_tab(size_t(MainFrame::tp3DEditor));
     if (params.mode != CalibMode::Calib_Vol_speed_Tower)
         return;
-    add_model(false, Slic3r::resources_dir() + "/calib/volumetric_speed/SpeedTestStructure.drc");
+    if (!add_model(false, Slic3r::resources_dir() + "/calib/volumetric_speed/SpeedTestStructure.drc"))
+        return;
 
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
@@ -14255,7 +14309,8 @@ void Plater::calib_retraction(const Calib_Params& params)
     if (params.mode != CalibMode::Calib_Retraction_tower)
         return;
 
-    add_model(false, Slic3r::resources_dir() + "/calib/retraction/retraction_tower.drc");
+    if (!add_model(false, Slic3r::resources_dir() + "/calib/retraction/retraction_tower.drc"))
+        return;
 
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
@@ -14314,10 +14369,47 @@ void Plater::calib_VFA(const Calib_Params& params)
     if (params.mode != CalibMode::Calib_VFA_Tower)
         return;
 
-    add_model(false, Slic3r::resources_dir() + "/calib/vfa/vfa.drc");
+    if (!add_model(false, Slic3r::resources_dir() + "/calib/vfa/vfa.drc"))
+        return;
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
+
+    const ConfigOptionFloats* nozzle_diameter_config = printer_config->option<ConfigOptionFloats>("nozzle_diameter");
+    size_t nozzle_id = static_cast<size_t>(std::max(params.extruder_id, 0));
+    double nozzle_diameter = vfa_base_nozzle_diameter;
+    if (nozzle_diameter_config && !nozzle_diameter_config->values.empty()) {
+        nozzle_id = std::min(nozzle_id, nozzle_diameter_config->values.size() - 1);
+        nozzle_diameter = nozzle_diameter_config->values[nozzle_id];
+    }
+    if (nozzle_diameter <= 0.0)
+        nozzle_diameter = vfa_base_nozzle_diameter;
+
+    // Resolved layer height: use the (possibly auto-adjusted) value from the dialog, else default to nozzle/2.
+    double layer_height = params.vfa_layer_height > 0.0 ? params.vfa_layer_height : nozzle_diameter / 2.0;
+
+    // cut upper (on the unscaled model, using the base block height); the scaling below keeps the physical
+    // block height (vfa_layers_per_block * layer_height) in sync with the speed stepping in GCode::process_layer.
+    // Subtract EPSILON (as the temperature tower does) so the cut lands just below the flat block surface instead
+    // of exactly on it, which would otherwise add a degenerate extra layer.
+    auto obj_bb = model().objects[0]->bounding_box_exact();
+    auto height = vfa_base_block_height * ((params.end - params.start) / params.step + 1) - EPSILON;
+    if (height < obj_bb.size().z()) {
+        cut_horizontal(0, 0, height, ModelObjectCutAttribute::KeepLower);
+    }
+
+    // When resizing is enabled, XY scales with the nozzle (footprint / line width) and Z scales so each base
+    // block becomes vfa_layers_per_block layers of the resolved layer height. When disabled the 0.4 mm / 0.2 mm
+    // reference model is printed as-is (preset layer height kept).
+    if (params.nozzle_based_resize) {
+        const double xy_scale = nozzle_diameter / vfa_base_nozzle_diameter;
+        const double z_scale  = (vfa_layers_per_block * layer_height) / vfa_base_block_height;
+        if (std::abs(xy_scale - 1.0) > EPSILON || std::abs(z_scale - 1.0) > EPSILON)
+            model().objects[0]->scale(xy_scale, xy_scale, z_scale);
+    }
+
+    model().objects[0]->ensure_on_bed();
+
     printer_config->set_key_value("resonance_avoidance", new ConfigOptionBool{false});
     filament_config->set_key_value("slow_down_layer_time", new ConfigOptionFloats { 0.0 });
     set_config_values<bool, ConfigOptionBoolsNullable>(print_config, "enable_overhang_speed", false);
@@ -14331,6 +14423,10 @@ void Plater::calib_VFA(const Calib_Params& params)
     print_config->set_key_value("spiral_mode", new ConfigOptionBool(true));
     print_config->set_key_value("enable_wrapping_detection", new ConfigOptionBool(false));
     print_config->set_key_value("precise_z_height", new ConfigOptionBool(false));
+    if (params.nozzle_based_resize) {
+        print_config->set_key_value("initial_layer_print_height", new ConfigOptionFloat(layer_height));
+        model().objects[0]->config.set_key_value("layer_height", new ConfigOptionFloat(layer_height));
+    }
     model().objects[0]->config.set_key_value("brim_type", new ConfigOptionEnum<BrimType>(btOuterOnly));
     model().objects[0]->config.set_key_value("brim_width", new ConfigOptionFloat(3.0));
     model().objects[0]->config.set_key_value("brim_object_gap", new ConfigOptionFloat(0.0));
@@ -14341,14 +14437,11 @@ void Plater::calib_VFA(const Calib_Params& params)
     wxGetApp().get_tab(Preset::TYPE_PRINT)->update_ui_from_settings();
     wxGetApp().get_tab(Preset::TYPE_FILAMENT)->update_ui_from_settings();
 
-    // cut upper
-    auto obj_bb = model().objects[0]->bounding_box_exact();
-    auto height = 5 * ((params.end - params.start) / params.step + 1);
-    if (height < obj_bb.size().z()) {
-        cut_horizontal(0, 0, height, ModelObjectCutAttribute::KeepLower);
-    }
-
-    p->background_process.fff_print()->set_calib_params(params);
+    // Pass the resolved layer height on (only meaningful when resized). GCode's VFA stepping is layer-based, so
+    // it does not require it, but keep it consistent with the geometry.
+    Calib_Params calib_params = params;
+    calib_params.vfa_layer_height = params.nozzle_based_resize ? layer_height : 0.0;
+    p->background_process.fff_print()->set_calib_params(calib_params);
 }
 
 void Plater::calib_input_shaping_freq(const Calib_Params& params)
@@ -14359,7 +14452,8 @@ void Plater::calib_input_shaping_freq(const Calib_Params& params)
     if (params.mode != CalibMode::Calib_Input_shaping_freq)
         return;
 
-    add_model(false, Slic3r::resources_dir() + (params.test_model < 1 ? "/calib/input_shaping/ringing_tower.drc" : "/calib/input_shaping/fast_tower_test.drc"));
+    if (!add_model(false, Slic3r::resources_dir() + (params.test_model < 1 ? "/calib/input_shaping/ringing_tower.drc" : "/calib/input_shaping/fast_tower_test.drc")))
+        return;
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
@@ -14424,7 +14518,8 @@ void Plater::calib_input_shaping_damp(const Calib_Params& params)
     if (params.mode != CalibMode::Calib_Input_shaping_damp)
         return;
 
-    add_model(false, Slic3r::resources_dir() + (params.test_model < 1 ? "/calib/input_shaping/ringing_tower.drc" : "/calib/input_shaping/fast_tower_test.drc"));
+    if (!add_model(false, Slic3r::resources_dir() + (params.test_model < 1 ? "/calib/input_shaping/ringing_tower.drc" : "/calib/input_shaping/fast_tower_test.drc")))
+        return;
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
@@ -14491,7 +14586,8 @@ void Plater::Calib_Cornering(const Calib_Params& params)
     const std::string cornering_model_path = params.test_model == 0
         ? "/calib/input_shaping/ringing_tower.drc"
         : (params.test_model == 1 ? "/calib/input_shaping/fast_tower_test.drc" : "/calib/cornering/SCV-V2.drc");
-    add_model(false, Slic3r::resources_dir() + cornering_model_path);
+    if (!add_model(false, Slic3r::resources_dir() + cornering_model_path))
+        return;
     auto print_config = &wxGetApp().preset_bundle->prints.get_edited_preset().config;
     auto filament_config = &wxGetApp().preset_bundle->filaments.get_edited_preset().config;
     auto printer_config  = &wxGetApp().preset_bundle->printers.get_edited_preset().config;
@@ -15043,7 +15139,7 @@ ProjectDropDialog::ProjectDropDialog(const std::string &filename)
 
     m_sizer_main->Add(dlg_btns, 0, wxEXPAND);
 
-    SetSizer(m_sizer_main);
+    SetSizerAndFit(m_sizer_main);
     Layout();
     Fit();
     Centre(wxBOTH);
