@@ -67,9 +67,11 @@ void InterlockingGenerator::generate_interlocking_structure(PrintObject* print_o
 
 std::pair<ExPolygons, ExPolygons> InterlockingGenerator::growBorderAreasPerpendicular(const ExPolygons& a, const ExPolygons& b, const coord_t& detect) const
 {
+    const PrintRegion& region_a      = print_object.printing_region(region_a_index);
+    const PrintRegion& region_b      = print_object.printing_region(region_b_index);
     const coord_t min_line =
-        std::min(print_object.printing_region(region_a_index).flow(print_object, frExternalPerimeter, 0.1).scaled_width(),
-                 print_object.printing_region(region_b_index).flow(print_object, frExternalPerimeter, 0.1).scaled_width());
+        std::min(print_object.flow(region_a, frExternalPerimeter).scaled_width(),
+                 print_object.flow(region_b, frExternalPerimeter).scaled_width());
 
     const ExPolygons total_shrunk = offset_ex(union_ex(offset_ex(a, min_line), offset_ex(b, min_line)), 2 * -min_line);
 
@@ -89,6 +91,8 @@ std::pair<ExPolygons, ExPolygons> InterlockingGenerator::growBorderAreasPerpendi
 
 void InterlockingGenerator::handleThinAreas(const std::unordered_set<GridPoint3>& has_all_meshes) const
 {
+    const PrintRegion& region_a      = print_object.printing_region(region_a_index);
+    const PrintRegion& region_b      = print_object.printing_region(region_b_index);
     const coord_t     number_of_beams_detect = boundary_avoidance;
     const coord_t     number_of_beams_expand = boundary_avoidance - 1;
     constexpr coord_t rounding_errors        = 5;
@@ -97,8 +101,8 @@ void InterlockingGenerator::handleThinAreas(const std::unordered_set<GridPoint3>
     const coord_t detect         = (max_beam_width * number_of_beams_detect) + rounding_errors;
     const coord_t expand         = (max_beam_width * number_of_beams_expand) + rounding_errors;
     const coord_t close_gaps =
-        std::min(print_object.printing_region(region_a_index).flow(print_object, frExternalPerimeter, 0.1).scaled_width(),
-                 print_object.printing_region(region_b_index).flow(print_object, frExternalPerimeter, 0.1).scaled_width()) / 4;
+        std::min(print_object.flow(region_a, frExternalPerimeter).scaled_width(),
+                 print_object.flow(region_b, frExternalPerimeter).scaled_width()) / 4;
 
     // Make an inclusionary polygon, to only actually handle thin areas near actual microstructures (so not in skin for example).
     std::vector<Polygons> near_interlock_per_layer;
