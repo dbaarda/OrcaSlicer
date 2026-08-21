@@ -76,16 +76,16 @@ public:
     // overlap_factor=1.
     //
     // Overlap distance for overlap_factor=1 of a rounded-rectangle line, overlap = height * RRECT_OVERLAP
-    static constexpr float RRECT_OVERLAP = 1.0 - M_PI_4;
+    static constexpr double RRECT_OVERLAP = 1.0 - M_PI_4;
     // Overlap distance for overlap_factor=1 of a circular bridge line, overlap = diameter * BRIDGE_OVERLAP
-    static constexpr float BRIDGE_OVERLAP = 1.0 - std::sqrt(M_PI_4);
+    static constexpr double BRIDGE_OVERLAP = 1.0 - std::sqrt(M_PI_4);
 
     // Simple helper functions for circle areas.
-    static constexpr float area2dmr(float a) { return std::sqrt(a / M_PI_4); }
-    static constexpr float dmr2area(float d) { return d * d * M_PI_4; }
+    static constexpr coordf_t area2dmr(coordf_t a) { return std::sqrt(a / M_PI_4); }
+    static constexpr coordf_t dmr2area(coordf_t d) { return d * d * M_PI_4; }
 
     // Get the rounded-rectangle normal-line spacing.
-    static constexpr float rrect_spacing(float width, float height, float overlap_factor = 1.0)
+    static constexpr coordf_t rrect_spacing(coordf_t width, coordf_t height, double overlap_factor = 1.0)
     {
         // overlap_factor cannot be so high it gives negative spacing.
         assert((overlap_factor * RRECT_OVERLAP) < (width / std::min(width, height)));
@@ -93,22 +93,22 @@ public:
     }
 
     // Get the rounded-rectangle normal-line width.
-    static constexpr float rrect_width(float spacing, float height, float overlap_factor = 1.0)
+    static constexpr coordf_t rrect_width(coordf_t spacing, coordf_t height, double overlap_factor = 1.0)
     {
-        float width = spacing + overlap_factor * RRECT_OVERLAP * height;
+        coordf_t width = spacing + overlap_factor * RRECT_OVERLAP * height;
         // If the rounded-rectangle width < height, use the narrow-elipse model.
         return width < height ? spacing / (1 - overlap_factor * RRECT_OVERLAP) : width;
     }
 
     // Get the rounded-rectangle normal-line cross-section area.
-    static constexpr float rrect_area(float width, float height) { return rrect_spacing(width, height) * height; }
+    static constexpr coordf_t rrect_area(coordf_t width, coordf_t height) { return rrect_spacing(width, height) * height; }
 
     // Get the rounded-rectangle normal-line overlap_factor.
-    static constexpr float rrect_overlap_factor(float width, float spacing, float height)
+    static constexpr double rrect_overlap_factor(coordf_t width, coordf_t spacing, coordf_t height)
     { return (width - spacing) / (RRECT_OVERLAP * std::min(width, height)); }
 
     // Get the circular bridge-line spacing.
-    static constexpr float bridge_spacing(float diameter, float overlap_factor = 0.0)
+    static constexpr coordf_t bridge_spacing(coordf_t diameter, double overlap_factor = 0.0)
     {
         // Overlap cannot be so high it gives negative spacing.
         assert(overlap_factor * BRIDGE_OVERLAP < 1);
@@ -116,18 +116,18 @@ public:
     }
 
     // Get the circular bridge-line width.
-    static constexpr float bridge_width(float spacing, float overlap_factor = 0.0)
+    static constexpr coordf_t bridge_width(coordf_t spacing, double overlap_factor = 0.0)
     { return spacing / (1 - overlap_factor * BRIDGE_OVERLAP); }
 
     // Get the circular bridge-line cross-section area.
-    static constexpr float bridge_area(float diameter) { return dmr2area(diameter); }
+    static constexpr coordf_t bridge_area(coordf_t diameter) { return dmr2area(diameter); }
 
     // Get the circular bridge-line horizontal overlap_factor.
-    static constexpr float bridge_overlap_factor(float diameter, float spacing)
+    static constexpr double bridge_overlap_factor(coordf_t diameter, coordf_t spacing)
     { return (diameter - spacing) / (BRIDGE_OVERLAP * diameter); }
 
     // Get the circular bridge-line height.
-    static constexpr float bridge_height(float diameter, float vertical_overlap_factor = 0.0)
+    static constexpr coordf_t bridge_height(coordf_t diameter, double vertical_overlap_factor = 0.0)
     {
         // vertical_overlap_factor cannot be so high it gives negative height.
         assert(vertical_overlap_factor * BRIDGE_OVERLAP < 1);
@@ -135,7 +135,7 @@ public:
     }
 
     // Get the circular bridge-line vertical overlap_factor.
-    static constexpr float bridge_vertical_overlap_factor(float diameter, float height)
+    static constexpr double bridge_vertical_overlap_factor(coordf_t diameter, coordf_t height)
     { return (diameter - height) / (BRIDGE_OVERLAP * diameter); }
 
     // For normal-line flows with width >= height using a rounded-rectangle
@@ -162,20 +162,20 @@ public:
     // diameter() for the diameter incase support for vertical overlapping is added in the future.
     Flow() = default;
     // Initialize a standard normal-line rounded-rectangle or narrow-elipse flow.
-    Flow(float width, float height, float nozzle_diameter) : Flow(width, height, rrect_spacing(width, height), nozzle_diameter, false) {}
+    Flow(coordf_t width, coordf_t height, coordf_t nozzle_diameter) : Flow(width, height, rrect_spacing(width, height), nozzle_diameter, false) {}
     // Initialize a standard bridge-line circular flow.
-    Flow(float diameter, float nozzle_diameter) : Flow(diameter, diameter, diameter, nozzle_diameter, true) {}
+    Flow(coordf_t diameter, coordf_t nozzle_diameter) : Flow(diameter, diameter, diameter, nozzle_diameter, true) {}
 
     // Vertical spacing between extrusion layers.
-    float height() const { return m_height; }
+    coordf_t height() const { return m_height; }
     // Width of the flow's extrusion model cross-section.
-    float width() const { return m_width; }
-    coord_t scaled_width() const { return coord_t(scale_(m_width)); }
+    coordf_t width() const { return m_width; }
+    coord_t scaled_width() const { return scaled(m_width); }
     // Horizontal spacing between the extrusion centerlines.
-    float spacing() const { return m_spacing; }
-    coord_t scaled_spacing() const { return coord_t(scale_(m_spacing)); }
+    coordf_t spacing() const { return m_spacing; }
+    coord_t scaled_spacing() const { return scaled(m_spacing); }
     // Nozzle diameter.
-    float nozzle_diameter() const { return m_nozzle_diameter; }
+    coordf_t nozzle_diameter() const { return m_nozzle_diameter; }
     // Is it a circular bridge-line flow?
     bool bridge() const { return m_bridge; }
     // Is this a narrow-elipse gapfill-line flow?
@@ -184,14 +184,14 @@ public:
     // Cross section area of the extrusion.
     double mm3_per_mm() const { return m_bridge ? bridge_area(m_width) : rrect_area(m_width, m_height); }
     // The diameter of an equivalent volume circular flow.
-    float diameter() const { return m_bridge ? m_width : area2dmr(mm3_per_mm()); }
+    coordf_t diameter() const { return m_bridge ? m_width : area2dmr(mm3_per_mm()); }
     // The horizontal overlap_factor.
-    float overlap_factor() const
+    double overlap_factor() const
     { return m_bridge ? bridge_overlap_factor(m_width, m_spacing) : rrect_overlap_factor(m_width, m_spacing, m_height); }
     // The vertical overlap_factor. For normal lines we return 1 to match 100% flow ratio.
-    float vertical_overlap_factor() const { return m_bridge ? bridge_vertical_overlap_factor(m_width, m_height) : 1.0; }
+    double vertical_overlap_factor() const { return m_bridge ? bridge_vertical_overlap_factor(m_width, m_height) : 1.0; }
     // The flow_ratio of the line cross-section area to available height*spacing area.
-    float flow_ratio() const { return mm3_per_mm() / (m_spacing * m_height); }
+    double flow_ratio() const { return mm3_per_mm() / (m_spacing * m_height); }
 
     // Note flows with only spacing different are considered equal. Is this correct?
     inline bool operator==(const Flow& rhs) const
@@ -203,27 +203,27 @@ public:
 
     // Create a modified flow with a different width while maintaining the same overlap_factors. For bridge-lines this scales spacing and
     // height. For normal-lines it preserves height and adjusts spacing.
-    Flow with_width(float width) const;
+    Flow with_width(coordf_t width) const;
 
     // Create a modified flow with a different height while maintaining overlap_factors. For bridge lines this scales width and spacing. For
     // normal lines it preserves spacing and adjusts width.
-    Flow with_height(float height) const;
+    Flow with_height(coordf_t height) const;
 
     // Create a modified flow with a different spacing while maintaining overlap_factors. For bridge lines this scales width and height. For
     // normal lines it preserves height and adjusts width.
-    Flow with_spacing(float spacing) const;
+    Flow with_spacing(coordf_t spacing) const;
 
     // Create a modified flow that is a bridge version of a normal line flow. Without specifying diameter it returns a flow with the same
     // cross-section area.
-    Flow as_bridge(float diameter = -1.0) const;
+    Flow as_bridge(coordf_t diameter = -1.0) const;
 
     // Create a flow for a FlowRole, width option, nozzle_diameter, and height.
     static Flow new_from_config_width(
-        FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float layer_height, bool bridge = false);
+        FlowRole role, const ConfigOptionFloatOrPercent& width, coordf_t nozzle_diameter, coordf_t layer_height, bool bridge = false);
 
     // Sane extrusion width default based on nozzle diameter.
     // The defaults were derived from manual Prusa MK3 profiles.
-    static float auto_extrusion_width(FlowRole role, float nozzle_diameter, bool bridge = false);
+    static coordf_t auto_extrusion_width(FlowRole role, coordf_t nozzle_diameter, bool bridge = false);
 
     // Extrusion width from full config, taking into account the defaults (when set to zero) and ratios (percentages). Precise value depends
     // on layer index (1st layer vs. other layers vs. variable layer height), on active extruder etc. Therefore the value calculated by this
@@ -236,33 +236,37 @@ public:
     static size_t get_extruder(const PrintObjectConfig& object_config, const PrintRegionConfig& region_config, FlowRole role);
 
     // Get the nozzle diameter for an extruder from configs.
-    static float get_nozzle_diameter(const PrintConfig& print_config, size_t extruder);
+    static coordf_t get_nozzle_diameter(const PrintConfig& print_config, size_t extruder);
 
     // Get the nozzle diameter for a flow role from configs.
-    static float get_nozzle_diameter(const PrintConfig& print_config,
+    static coordf_t get_nozzle_diameter(const PrintConfig& print_config,
                                      const PrintObjectConfig& object_config,
                                      const PrintRegionConfig& region_config,
                                      FlowRole role);
 
     // Get the line_width for a flow role from configs. If nozzle_diameter is not provided it will be fetched from configs.
-    static float get_line_width(const PrintConfig& print_config,
+    static coordf_t get_line_width(const PrintConfig& print_config,
                                 const PrintObjectConfig& object_config,
                                 const PrintRegionConfig& region_config,
                                 FlowRole role,
                                 bool bridge           = false,
                                 bool first_layer      = false,
-                                float nozzle_diameter = 0.0);
+                                coordf_t nozzle_diameter = 0.0);
 
+    // Get the flow for a given flow role from configs. This correctly adjusts the width to ensure flows have the same spacing for different
+    // layer_height values. This ensure walls have the same thickness and infill is correctly aligned with consistent density and layer
+    // adhesion. The flow width will vary a small amount with the layer height and will match the configured line_width at the default
+    // object_`config.layer_height`.
     static Flow new_from_role(const PrintConfig& print_config,
                               const PrintObjectConfig& object_config,
                               const PrintRegionConfig& region_config,
                               FlowRole role,
-                              float layer_height,
+                              coordf_t layer_height,
                               bool bridge      = false,
                               bool first_layer = false);
 
 private:
-    Flow(float width, float height, float spacing, float nozzle_diameter, bool bridge)
+    Flow(coordf_t width, coordf_t height, coordf_t spacing, coordf_t nozzle_diameter, bool bridge)
         : m_width(width), m_height(height), m_spacing(spacing), m_nozzle_diameter(nozzle_diameter), m_bridge(bridge)
     {
         if (m_height < 0) {
@@ -277,12 +281,13 @@ private:
         }
         // Negative width should never happen, unlike negative spacing or negative height, which might happen for invalid settings values.
         assert(m_width > 0);
+        assert((!m_bridge || m_width <= m_nozzle_diameter) && "bridge flows cannot have width>nozzle_diameter.");
     }
 
-    float m_width{0};
-    float m_height{0};
-    float m_spacing{0};
-    float m_nozzle_diameter{0};
+    coordf_t m_width{0};
+    coordf_t m_height{0};
+    coordf_t m_spacing{0};
+    coordf_t m_nozzle_diameter{0};
     bool m_bridge{false};
 };
 

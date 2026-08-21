@@ -19,31 +19,31 @@ FlowErrorHeightTooLarge::FlowErrorHeightTooLarge()
     : FlowError("Flow::height() > Flow::nozzle_diameter(). Did you set layer height too large?")
 {}
 
-Flow Flow::with_width(float width) const
+Flow Flow::with_width(coordf_t width) const
 {
-    float scale = width / m_width;
+    double scale = width / m_width;
     return m_bridge ? Flow(width, scale * m_height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
                       Flow(width, m_height, rrect_spacing(width, m_height, overlap_factor()), m_nozzle_diameter, m_bridge);
 }
 
-Flow Flow::with_height(float height) const
+Flow Flow::with_height(coordf_t height) const
 {
-    float scale = height / m_height;
+    double scale = height / m_height;
     return m_bridge ? Flow(scale * m_width, height, scale * m_spacing, m_nozzle_diameter, m_bridge) :
                       Flow(rrect_width(m_spacing, height, overlap_factor()), height, m_spacing, m_nozzle_diameter, m_bridge);
 }
 
-Flow Flow::with_spacing(float spacing) const
+Flow Flow::with_spacing(coordf_t spacing) const
 {
-    float scale = spacing / m_spacing;
+    double scale = spacing / m_spacing;
     return m_bridge ? Flow(scale * m_width, scale * m_height, spacing, m_nozzle_diameter, m_bridge) :
                       Flow(rrect_width(spacing, m_height, overlap_factor()), m_height, spacing, m_nozzle_diameter, m_bridge);
 }
 
-Flow Flow::as_bridge(float dmr) const { return Flow(dmr > 0.0 ? dmr : diameter(), m_nozzle_diameter); }
+Flow Flow::as_bridge(coordf_t dmr) const { return Flow(dmr > 0.0 ? dmr : diameter(), m_nozzle_diameter); }
 
 // This static method returns a sane extrusion width default.
-float Flow::auto_extrusion_width(FlowRole role, float nozzle_diameter, bool bridge)
+coordf_t Flow::auto_extrusion_width(FlowRole role, coordf_t nozzle_diameter, bool bridge)
 {
     if (bridge)
         return nozzle_diameter;
@@ -83,7 +83,7 @@ static inline FlowRole opt_key_to_flow_role(const std::string& opt_key)
 double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResolver& config, const unsigned int first_printing_extruder)
 {
     auto opt_nozzle_diameters   = config.option_throw<ConfigOptionFloats>("nozzle_diameter");
-    const float nozzle_diameter = float(opt_nozzle_diameters->get_at(first_printing_extruder));
+    const coordf_t nozzle_diameter = coordf_t(opt_nozzle_diameters->get_at(first_printing_extruder));
 
     double value = config.option_throw<ConfigOptionFloatOrPercent>(opt_key)->get_abs_value(nozzle_diameter);
     // for non-bridge widths, default back to the "line_width" setting.
@@ -99,7 +99,8 @@ double Flow::extrusion_width(const std::string& opt_key, const ConfigOptionResol
 
 // This constructor builds a Flow object from an extrusion width config setting
 // and other context properties.
-Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent& width, float nozzle_diameter, float layer_height, bool bridge)
+Flow Flow::new_from_config_width(
+    FlowRole role, const ConfigOptionFloatOrPercent& width, coordf_t nozzle_diameter, coordf_t layer_height, bool bridge)
 {
     if (nozzle_diameter <= 0)
         throw Slic3r::InvalidArgument("Invalid nozzle_diameter supplied to new_from_config_width()");
@@ -107,7 +108,7 @@ Flow Flow::new_from_config_width(FlowRole role, const ConfigOptionFloatOrPercent
         throw Slic3r::InvalidArgument("Invalid flow layer_height supplied to new_from_config_width()");
 
     // If user left option to 0, use a sane default width.
-    float line_width = float(width.value <= 0. ? auto_extrusion_width(role, nozzle_diameter, bridge) : width.get_abs_value(nozzle_diameter));
+    coordf_t line_width = coordf_t(width.value <= 0. ? auto_extrusion_width(role, nozzle_diameter, bridge) : width.get_abs_value(nozzle_diameter));
     return bridge ? Flow(line_width, nozzle_diameter) : Flow(line_width, layer_height, nozzle_diameter);
 }
 
@@ -127,14 +128,14 @@ size_t Flow::get_extruder(const PrintObjectConfig& object_config, const PrintReg
     }
 }
 
-float Flow::get_nozzle_diameter(const PrintConfig& print_config, size_t extruder)
+coordf_t Flow::get_nozzle_diameter(const PrintConfig& print_config, size_t extruder)
 {
     // Get the configured nozzle_diameter for the extruder associated to the flow role requested.
     // Here this->extruder(role) - 1 may underflow to MAX_INT, but then the get_at() will follback to zero'th element, so everything is all right.
     return print_config.nozzle_diameter.get_at(extruder - 1);
 }
 
-float Flow::get_nozzle_diameter(const PrintConfig& print_config,
+coordf_t Flow::get_nozzle_diameter(const PrintConfig& print_config,
                                 const PrintObjectConfig& object_config,
                                 const PrintRegionConfig& region_config,
                                 FlowRole role)
@@ -168,8 +169,9 @@ const auto& get_config_width(const PrintConfig& print_config,
 {
     if (bridge) {
         return region_config.bridge_line_width;
-    } else if (first_layer && print_config.initial_layer_line_width.value > 0) {
-        // On the first layer use initial_layer_line_width for all roles if set.
+    } else if (first_layer && print_config.initial_layer_line_width.value > 0 && role != frInfill) {
+        // On the first layer use initial_layer_line_width if set for all roles except sparse infill.
+        // Sparse infill uses the same width for all layers so they are aligned correctly.
         return print_config.initial_layer_line_width;
     }
     const auto& config_width = get_base_config_width(object_config, region_config, role);
@@ -177,13 +179,13 @@ const auto& get_config_width(const PrintConfig& print_config,
 }
 
 // Get the line_width for a flow role from configs.
-float Flow::get_line_width(const PrintConfig& print_config,
+coordf_t Flow::get_line_width(const PrintConfig& print_config,
                            const PrintObjectConfig& object_config,
                            const PrintRegionConfig& region_config,
                            FlowRole role,
                            bool bridge,
                            bool first_layer,
-                           float nozzle_diameter)
+                           coordf_t nozzle_diameter)
 {
     if (nozzle_diameter <= 0.0)
         nozzle_diameter = get_nozzle_diameter(print_config, object_config, region_config, role);
@@ -196,13 +198,16 @@ Flow Flow::new_from_role(const PrintConfig& print_config,
                          const PrintObjectConfig& object_config,
                          const PrintRegionConfig& region_config,
                          FlowRole role,
-                         float layer_height,
+                         coordf_t layer_height,
                          bool bridge,
                          bool first_layer)
 {
-    float nozzle_diameter = get_nozzle_diameter(print_config, object_config, region_config, role);
-    float width           = get_line_width(print_config, object_config, region_config, role, bridge, first_layer, nozzle_diameter);
-    return bridge ? Flow(width, nozzle_diameter) : Flow(width, layer_height, nozzle_diameter);
+    coordf_t nozzle_diameter = get_nozzle_diameter(print_config, object_config, region_config, role);
+    coordf_t width           = get_line_width(print_config, object_config, region_config, role, bridge, first_layer, nozzle_diameter);
+    // For non-bridge flows, use the default `object_config.layer_height` to create the flow and then change the height to the requested
+    // `layer_height`. This ensures all flows for an object have the same spacing for all layer heights so that walls have the same
+    // thickness and sparse infill is correctly aligned with consistent layer contact for different layer heights.
+    return bridge ? Flow(width, nozzle_diameter) : Flow(width, object_config.layer_height, nozzle_diameter).with_height(layer_height);
 }
 
 } // namespace Slic3r
