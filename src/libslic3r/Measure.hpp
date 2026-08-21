@@ -81,7 +81,7 @@ public:
         }
         case SurfaceFeatureType::Plane:
         case SurfaceFeatureType::Circle: {
-            return (this->m_pt1.isApprox(other.m_pt1) && this->m_pt2.isApprox(other.m_pt2) && std::abs(this->m_value - other.m_value) < EPSILON);
+            return (this->m_pt1.isApprox(other.m_pt1) && this->m_pt2.isApprox(other.m_pt2) && is_approx(this->m_value, other.m_value));
         }
         }
 
@@ -211,8 +211,8 @@ inline Vec3d plane_normal(const SurfaceFeature& plane) {
     return std::get<1>(plane.get_plane());
 }
 
-inline bool are_parallel(const Vec3d& v1, const Vec3d& v2) { return std::abs(std::abs(v1.dot(v2)) - 1.0) < EPSILON; }
-inline bool are_perpendicular(const Vec3d& v1, const Vec3d& v2) { return std::abs(v1.dot(v2)) < EPSILON; }
+inline bool are_parallel(const Vec3d& v1, const Vec3d& v2) { return is_approx(std::abs(v1.dot(v2)), 1.0); }
+inline bool are_perpendicular(const Vec3d& v1, const Vec3d& v2) { return is_zero(v1.dot(v2)); }
 
 inline bool are_parallel(const std::pair<Vec3d, Vec3d>& e1, const std::pair<Vec3d, Vec3d>& e2) {
     return are_parallel(e1.second - e1.first, e2.second - e2.first);

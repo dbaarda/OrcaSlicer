@@ -72,7 +72,7 @@ namespace Slic3r {
         m_extruder_printable_area.resize(extruder_count);
 
         for (size_t idx = 0; idx < config.printable_area.values.size(); ++idx)
-            m_bed_polygon.points.emplace_back(coord_t(scale_(config.printable_area.values[idx].x())), coord_t(scale_(config.printable_area.values[idx].y())));
+            m_bed_polygon.points.emplace_back(scaled(config.printable_area.values[idx].x()), scaled(config.printable_area.values[idx].y()));
 
         auto bed_bbox = get_extents(m_bed_polygon);
         m_plate_height = unscale_(bed_bbox.max.y());
@@ -80,7 +80,7 @@ namespace Slic3r {
 
         Polygon bed_exclude_area;
         for (size_t idx = 0; idx < config.bed_exclude_area.values.size(); ++idx)
-            bed_exclude_area.points.emplace_back(coord_t(scale_(config.bed_exclude_area.values[idx].x())), coord_t(scale_(config.bed_exclude_area.values[idx].y())));
+            bed_exclude_area.points.emplace_back(scaled(config.bed_exclude_area.values[idx].x()), scaled(config.bed_exclude_area.values[idx].y()));
 
         Point base_wp_pt = print->get_fake_wipe_tower().pos.cast<coord_t>();
         base_wp_pt = Point{ scale_(base_wp_pt.x()),scale_(base_wp_pt.y()) };
@@ -104,7 +104,7 @@ namespace Slic3r {
             if (idx < config.extruder_printable_area.size()) {
                 Polygon extruder_printable_area;
                 for (size_t j = 0; j < config.extruder_printable_area.values[idx].size(); ++j)
-                    extruder_printable_area.points.emplace_back(coord_t(scale_(config.extruder_printable_area.values[idx][j].x())), coord_t(scale_(config.extruder_printable_area.values[idx][j].y())));
+                    extruder_printable_area.points.emplace_back(scaled(config.extruder_printable_area.values[idx][j].x()), scaled(config.extruder_printable_area.values[idx][j].y()));
                 printable_area = intersection_ex(printable_area, Polygons{ extruder_printable_area });
             }
             m_extruder_printable_area[idx] = printable_area;
@@ -558,7 +558,7 @@ namespace Slic3r {
                 total_instances += 1;
             }
         }
-        return Point{ coord_t(scale_(sum_x / total_instances)),coord_t(scale_(sum_y / total_instances)) };
+        return Point{ scaled(sum_x / total_instances),scaled(sum_y / total_instances) };
     }
 
     Point TimelapsePosPicker::pick_pos_for_all_layer(const PosPickCtx& ctx)

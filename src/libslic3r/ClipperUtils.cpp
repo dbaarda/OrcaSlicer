@@ -1282,7 +1282,7 @@ ClipperLib::Path mittered_offset_path_scaled(const Points &contour, const std::v
 #ifndef NDEBUG
 							Vec2d vedge = 0.5 * (newpt1 + newpt2) - pt;
 							double dist_norm = vedge.norm();
-							assert(std::abs(dist_norm - std::abs(delta)) < SCALED_EPSILON);
+							assert(is_approx(dist_norm, std::abs(delta), SCALED_EPSILON));
 #endif /* NDEBUG */
 							add_offset_point(newpt1);
 							add_offset_point(newpt2);

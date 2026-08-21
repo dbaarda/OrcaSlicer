@@ -822,7 +822,7 @@ std::vector<std::pair<size_t, bool>> chain_segments_greedy_constrained_reversals
 						dist += chains.chain_flip_penalty(end_point1_chain_id);
 					if (chain2_flip)
 						dist += chains.chain_flip_penalty(end_point2_chain_id);
-					if (std::abs(dist - end_point1->distance_out) > SCALED_EPSILON)
+					if (!is_approx(dist, end_point1->distance_out, SCALED_EPSILON))
 						// The distance changed due to flipping of one of the chains. Refresh this end point in the queue.
 						valid = false;
 				}
@@ -1183,7 +1183,7 @@ static inline void improve_ordering_by_segment_flipping(Polylines &polylines, bo
 		return sum;
 	};
 	double cost_prev = cost_flipped();
-	assert(std::abs(cost_initial - cost_prev) < SCALED_EPSILON);
+	assert(is_approx(cost_initial, cost_prev, SCALED_EPSILON));
 
 	auto print_statistics = [&polylines, &connections]() {
 #if 0
@@ -1357,7 +1357,7 @@ static inline std::pair<double, size_t> minimum_crossover_cost(
 #ifndef NDEBUG
 	{
 		double c = connection_cost(span1, cost1, false, false, span2, cost2, false, false, span3, cost3, false, false);
-		assert(std::abs(c - cost_current) < SCALED_EPSILON);
+		assert(is_approx(c, cost_current, SCALED_EPSILON));
 	}
 #endif /* NDEBUG */
 
@@ -1428,7 +1428,7 @@ static inline std::pair<double, size_t> minimum_crossover_cost(
 #ifndef NDEBUG
 	{
 		double c = connection_cost(span1, cost1, false, false, span2, cost2, false, false, span3, cost3, false, false, span4, cost4, false, false);
-		assert(std::abs(c - cost_current) < SCALED_EPSILON);
+		assert(is_approx(c, cost_current, SCALED_EPSILON));
 	}
 #endif /* NDEBUG */
 
@@ -1778,7 +1778,7 @@ static inline std::pair<double, size_t> minimum_crossover_cost(
 #ifndef NDEBUG
 	{
 		double c = connection_cost(0, false, false, 1, false, false, 2, false, false, 3, false, false);
-		assert(std::abs(c - cost_current) < SCALED_EPSILON);
+		assert(is_approx(c, cost_current, SCALED_EPSILON));
 	}
 #endif /* NDEBUG */
 

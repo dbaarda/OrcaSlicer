@@ -766,8 +766,8 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
     auto travel_speed =
         m_is_first_layer ? this->config.get_abs_value_at("initial_layer_travel_speed", m_cached_extruder_idx) : this->config.travel_speed.get_at(m_cached_extruder_idx);
     //BBS: a z_hop need to be handle when travel
-    if (std::abs(m_to_lift) > EPSILON) {
-        assert(std::abs(m_lifted) < EPSILON);
+    if (!is_zero(m_to_lift)) {
+        assert(is_zero(m_lifted));
         //BBS: don't need to do real lift if the current position is absolutely same with target.
         //This ususally happens when the last extrusion line is short and the end of wipe position
         //is same with the traget point by chance.
@@ -841,7 +841,7 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         m_lifted -= (point(2) - nominal_z);
         // In case that z_hop == layer_height we could end up with almost zero in_m_lifted
         // and a retract could be skipped
-        if (std::abs(m_lifted) < EPSILON)
+        if (is_zero(m_lifted))
             m_lifted = 0.;
         //BBS
         this->set_current_position_clear(true);
@@ -885,7 +885,7 @@ std::string GCodeWriter::travel_to_z(double z, const std::string &comment, bool 
     if (!force && !this->will_move_z(z)) {
         double nominal_z = m_pos(2) - m_lifted;
         m_lifted -= (z - nominal_z);
-        if (std::abs(m_lifted) < EPSILON)
+        if (is_zero(m_lifted))
             m_lifted = 0.;
         return "";
     }
@@ -992,7 +992,7 @@ bool GCodeWriter::will_move_z(double z) const
     }
     // BBS.
     // Dont move z if it is the same as target z
-    else if (std::abs(m_pos(2) - z) < EPSILON) {
+    else if (is_approx(m_pos(2), z)) {
         return false;
     }
     return true;

@@ -119,7 +119,7 @@ static bool contour_extrusion_path(LayerRegion *region, const sla::IndexedMesh &
                 d = 0;
             }
 
-            if (std::abs(d) > EPSILON) {
+            if (!is_zero(d)) {
 				was_contoured = true;
 			}
 

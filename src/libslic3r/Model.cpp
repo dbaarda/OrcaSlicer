@@ -708,7 +708,7 @@ bool Model::center_instances_around_point(const Vec2d &point)
             bb.merge(o->instance_bounding_box(i, false));
 
     Vec2d shift2 = point - to_2d(bb.center());
-	if (std::abs(shift2(0)) < EPSILON && std::abs(shift2(1)) < EPSILON)
+	if (is_zero(shift2(0)) && is_zero(shift2(1)))
 		// No significant shift, don't do anything.
 		return false;
 
@@ -760,7 +760,7 @@ bool Model::looks_like_multipart_object() const
         double zmin_this = obj->min_z();
         if (zmin == std::numeric_limits<double>::max())
             zmin = zmin_this;
-        else if (std::abs(zmin - zmin_this) > EPSILON)
+        else if (!is_approx(zmin, zmin_this))
             // The Object don't share zmin.
             return true;
     }
@@ -2254,8 +2254,8 @@ void ModelObject::bake_xy_rotation_into_meshes(size_t instance_idx)
 
     bool   left_handed        = reference_trafo.is_left_handed();
     bool   has_mirrorring     = ! reference_trafo.get_mirror().isApprox(Vec3d(1., 1., 1.));
-    bool   uniform_scaling    = std::abs(reference_trafo.get_scaling_factor().x() - reference_trafo.get_scaling_factor().y()) < EPSILON &&
-                                std::abs(reference_trafo.get_scaling_factor().x() - reference_trafo.get_scaling_factor().z()) < EPSILON;
+    bool   uniform_scaling    = is_approx(reference_trafo.get_scaling_factor().x(), reference_trafo.get_scaling_factor().y()) &&
+                                is_approx(reference_trafo.get_scaling_factor().x(), reference_trafo.get_scaling_factor().z());
     double new_scaling_factor = uniform_scaling ? reference_trafo.get_scaling_factor().x() : 1.;
 
     // Adjust the instances.
@@ -2280,8 +2280,8 @@ void ModelObject::bake_xy_rotation_into_meshes(size_t instance_idx)
         const Geometry::Transformation volume_trafo = model_volume->get_transformation();
         bool   volume_left_handed        = volume_trafo.is_left_handed();
         bool   volume_has_mirrorring     = ! volume_trafo.get_mirror().isApprox(Vec3d(1., 1., 1.));
-        bool   volume_uniform_scaling    = std::abs(volume_trafo.get_scaling_factor().x() - volume_trafo.get_scaling_factor().y()) < EPSILON &&
-                                           std::abs(volume_trafo.get_scaling_factor().x() - volume_trafo.get_scaling_factor().z()) < EPSILON;
+        bool   volume_uniform_scaling    = is_approx(volume_trafo.get_scaling_factor().x(), volume_trafo.get_scaling_factor().y()) &&
+                                           is_approx(volume_trafo.get_scaling_factor().x(), volume_trafo.get_scaling_factor().z());
         double volume_new_scaling_factor = volume_uniform_scaling ? volume_trafo.get_scaling_factor().x() : 1.;
         // Transform the mesh.
         Geometry::Transformation volume_trafo_mod = volume_trafo;
@@ -2630,7 +2630,7 @@ void  ModelVolume::calculate_convex_hull_2d(const Geometry::Transformation &tran
     // Using the shared vertices should be a bit quicker than using the STL faces.
     for (size_t i = 0; i < its.vertices.size(); ++ i) {
         Vec3d p = new_matrix * its.vertices[i].cast<double>();
-        pts.emplace_back(coord_t(scale_(p.x())), coord_t(scale_(p.y())));
+        pts.emplace_back(scaled(p.x()), scaled(p.y()));
     }
     //TODO, do we need to remove the duplicate points before convex_hull?
     m_cached_2d_polygon = Slic3r::Geometry::convex_hull(pts);

@@ -1490,8 +1490,8 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
             for (size_t i = 1; i < m_objects.size(); ++ i) {
                 const PrintObject       *object         = m_objects[i];
                 const SlicingParameters &slicing_params = object->slicing_parameters();
-                if (std::abs(slicing_params.first_print_layer_height - slicing_params0.first_print_layer_height) > EPSILON ||
-                    std::abs(slicing_params.layer_height             - slicing_params0.layer_height            ) > EPSILON)
+                if (!is_approx(slicing_params.first_print_layer_height, slicing_params0.first_print_layer_height) ||
+                    !is_approx(slicing_params.layer_height, slicing_params0.layer_height))
                     return {L("A prime tower requires that all objects have the same layer height."), object, "initial_layer_print_height"};
                 if (slicing_params.raft_layers() != slicing_params0.raft_layers())
                     return {L("A prime tower requires that all objects are printed over the same number of raft layers."), object, "raft_layers"};
@@ -1685,7 +1685,7 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 const auto &bridge_width_opt = region.config().bridge_line_width;
                 // These are all the line-type flow-roles that could potentially be used when bridging.
                 for (FlowRole bridge_role : { frExternalPerimeter, frPerimeter, frBottomSolidInfill, frInfill, frSolidInfill }) {
-                    const double nozzle_diameter = region.nozzle_diameter(*object, bridge_role);
+                    const double nozzle_diameter = object->nozzle_diameter(region, bridge_role);
                     const double bridge_width    = bridge_width_opt.get_abs_value(nozzle_diameter);
                     if (bridge_width <= 0.)
                         continue;

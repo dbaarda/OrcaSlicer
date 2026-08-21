@@ -81,7 +81,7 @@ static inline bool is_ccw(const Polygon &poly)
 inline bool ray_ray_intersection(const Vec2d &p1, const Vec2d &v1, const Vec2d &p2, const Vec2d &v2, Vec2d &res)
 {
     double denom = v1(0) * v2(1) - v2(0) * v1(1);
-    if (std::abs(denom) < EPSILON)
+    if (is_zero(denom))
         return false;
     double t = (v2(0) * (p1(1) - p2(1)) - v2(1) * (p1(0) - p2(0))) / denom;
     res(0) = p1(0) + t * v1(0);
@@ -92,7 +92,7 @@ inline bool ray_ray_intersection(const Vec2d &p1, const Vec2d &v1, const Vec2d &
 inline bool segment_segment_intersection(const Vec2d &p1, const Vec2d &v1, const Vec2d &p2, const Vec2d &v2, Vec2d &res)
 {
     double denom = v1(0) * v2(1) - v2(0) * v1(1);
-    if (std::abs(denom) < EPSILON)
+    if (is_zero(denom))
         // Lines are collinear.
         return false;
     double s12_x = p1(0) - p2(0);

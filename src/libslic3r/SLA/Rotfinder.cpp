@@ -216,12 +216,12 @@ std::vector<XYRotation> get_chull_rotations(const TriangleMesh &mesh, size_t max
 
     auto rotcmp = [](const RotArea &r1, const RotArea &r2) {
         double xdiff = r1.rot[X] - r2.rot[X], ydiff = r1.rot[Y] - r2.rot[Y];
-        return std::abs(xdiff) < EPSILON ? ydiff < 0. : xdiff < 0.;
+        return is_zero(xdiff) ? ydiff < 0. : xdiff < 0.;
     };
 
     auto eqcmp = [](const XYRotation &r1, const XYRotation &r2) {
         double xdiff = r1[X] - r2[X], ydiff = r1[Y] - r2[Y];
-        return std::abs(xdiff) < EPSILON  && std::abs(ydiff) < EPSILON;
+        return is_zero(xdiff)  && is_zero(ydiff);
     };
 
     for (size_t fi = 0; fi < facecount; ++fi) {
@@ -438,11 +438,11 @@ Vec2d find_min_z_height_rotation(const ModelObject &mo,
     auto inputs = reserve_vector<XYRotation>(chull.its.indices.size());
     auto rotcmp = [](const XYRotation &r1, const XYRotation &r2) {
         double xdiff = r1[X] - r2[X], ydiff = r1[Y] - r2[Y];
-        return std::abs(xdiff) < EPSILON ? ydiff < 0. : xdiff < 0.;
+        return is_zero(xdiff) ? ydiff < 0. : xdiff < 0.;
     };
     auto eqcmp = [](const XYRotation &r1, const XYRotation &r2) {
         double xdiff = r1[X] - r2[X], ydiff = r1[Y] - r2[Y];
-        return std::abs(xdiff) < EPSILON  && std::abs(ydiff) < EPSILON;
+        return is_zero(xdiff)  && is_zero(ydiff);
     };
 
     for (size_t fi = 0; fi < chull.its.indices.size(); ++fi) {

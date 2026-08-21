@@ -667,7 +667,7 @@ public:
             }
 
             // Resolution of the sparse support grid.
-            coord_t grid_resolution = coord_t(scale_(m_support_spacing));
+            coord_t grid_resolution = scaled(m_support_spacing);
             BoundingBox bbox = get_extents(*m_support_polygons);
             bbox.offset(20);
             // Align the bounding box with the sparse support grid.
@@ -833,7 +833,7 @@ public:
                 svg.draw_outline(union_ex(out), "green", "green", scale_(0.05));
                 svg.draw_outline(union_ex(*m_support_polygons), "blue", "blue", scale_(0.05));
                 for (const Point& pt : samples)
-                    svg.draw(pt, "black", coord_t(scale_(0.15)));
+                    svg.draw(pt, "black", scaled(0.15));
                 svg.Close();
             }
     #endif /* SLIC3R_DEBUG */
@@ -955,7 +955,7 @@ public:
         //m_support_polygons_deserialized = to_polygons(union_ex(m_support_polygons_deserialized, false));
 
         // Create an EdgeGrid, initialize it with projection, initialize signed distance field.
-        coord_t grid_resolution = coord_t(scale_(m_support_spacing));
+        coord_t grid_resolution = scaled(m_support_spacing);
         BoundingBox bbox = get_extents(*m_support_polygons);
         bbox.offset(20);
         bbox.align_to_grid(grid_resolution);
@@ -1226,7 +1226,7 @@ namespace SupportMaterialInternal {
             // Surface supporting this layer, expanded by 0.5 * nozzle_diameter, as we consider this kind of overhang to be sufficiently supported.
             Polygons lower_grown_slices = expand(lower_layer_polygons,
                 //FIXME to mimic the decision in the perimeter generator, we should use half the external perimeter width.
-                0.5f * float(scale_(layerm.layer()->object()->nozzle_diameter(layerm.region(), frExternalPerimeter))),
+                0.5f * float(scale_(layerm.nozzle_diameter(frExternalPerimeter))),
                 SUPPORT_SURFACES_OFFSET_PARAMETERS);
             // Collect perimeters of this layer.
             //FIXME split_at_first_point() could split a bridge mid-way
@@ -2812,7 +2812,7 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::raft_and_intermediate_supp
     // Intermediate layers are always printed with a normal extrusion flow (non-bridging).
     size_t idx_layer_object = 0;
     size_t idx_extreme_first = 0;
-    if (! extremes.empty() && std::abs(extremes.front()->extreme_z() - m_slicing_params.raft_interface_top_z) < EPSILON) {
+    if (! extremes.empty() && is_approx(extremes.front()->extreme_z(), m_slicing_params.raft_interface_top_z)) {
         // This is a raft contact layer, its height has been decided in this->top_contact_layers().
         // Ignore this layer when calculating the intermediate support layers.
         assert(extremes.front()->layer_type == SupporLayerType::TopContact);
@@ -2821,10 +2821,10 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::raft_and_intermediate_supp
     for (size_t idx_extreme = idx_extreme_first; idx_extreme < extremes.size(); ++ idx_extreme) {
         SupportGeneratorLayer      *extr2  = extremes[idx_extreme];
         coordf_t      extr2z = extr2->extreme_z();
-        if (std::abs(extr2z - m_slicing_params.first_print_layer_height) < EPSILON) {
+        if (is_approx(extr2z, m_slicing_params.first_print_layer_height)) {
             // This is a bottom of a synchronized (or soluble) top contact layer, its height has been decided in this->top_contact_layers().
             assert(extr2->layer_type == SupporLayerType::TopContact);
-            assert(std::abs(extr2->bottom_z - m_slicing_params.first_print_layer_height) < EPSILON);
+            assert(is_approx(extr2->bottom_z, m_slicing_params.first_print_layer_height));
             assert(extr2->print_z >= m_slicing_params.first_print_layer_height + m_support_params.support_layer_height_min - EPSILON);
             if (intermediate_layers.empty() || intermediate_layers.back()->print_z < m_slicing_params.first_print_layer_height) {
                 SupportGeneratorLayer &layer_new = layer_storage.allocate(SupporLayerType::Intermediate);
@@ -2842,7 +2842,7 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::raft_and_intermediate_supp
         coordf_t      extr1z = (extr1 == nullptr) ? m_slicing_params.raft_interface_top_z : extr1->extreme_z();
         assert(extr2z >= extr1z);
         assert(extr2z > extr1z || (extr1 != nullptr && extr2->layer_type == SupporLayerType::BottomContact));
-        if (std::abs(extr1z) < EPSILON) {
+        if (is_zero(extr1z)) {
             // This layer interval starts with the 1st layer. Print the 1st layer using the prescribed 1st layer thickness.
             // assert(! m_slicing_params.has_raft()); RaftingEdition: unclear where the issue is: assert fails with 1-layer raft & base supports
             assert(intermediate_layers.empty() || intermediate_layers.back()->print_z <= m_slicing_params.first_print_layer_height);
@@ -3132,7 +3132,7 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
             size_t idx_object_layer_overlapping = size_t(-1);
 
             auto is_layers_overlap = [](const SupportGeneratorLayer& support_layer, const Layer& object_layer, coordf_t bridging_height = 0.f) -> bool {
-                if (std::abs(support_layer.print_z - object_layer.print_z) < EPSILON)
+                if (is_approx(support_layer.print_z, object_layer.print_z))
                     return true;
 
                 coordf_t object_lh = bridging_height > EPSILON ? bridging_height : object_layer.height;

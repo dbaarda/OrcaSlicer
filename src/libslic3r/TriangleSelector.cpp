@@ -132,7 +132,7 @@ bool TriangleSelector::verify_triangle_midpoints(const Triangle &tr) const
             Vec3f c1 = 0.5f * (m_vertices[v1].v + m_vertices[v2].v);
             Vec3f c2 = m_vertices[vmid].v;
             float d  = (c2 - c1).norm();
-            assert(std::abs(d) < EPSILON);
+            assert(is_zero(d));
         }
     }
     return true;
@@ -779,7 +779,7 @@ int TriangleSelector::triangle_midpoint_or_allocate(int itriangle, int vertexi, 
         Vec3f c1 = 0.5f * (m_vertices[vertexi].v + m_vertices[vertexj].v);
         Vec3f c2 = m_vertices[midpoint].v;
         float d = (c2 - c1).norm();
-        assert(std::abs(d) < EPSILON);
+        assert(is_zero(d));
 #endif // NDEBUG
         assert(m_vertices[midpoint].ref_cnt > 0);
     }

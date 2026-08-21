@@ -93,10 +93,10 @@ static inline void layer_height_ranges_copy_configs(t_layer_config_ranges &lr_ds
     auto it_src = lr_src.cbegin();
     for (auto &kvp_dst : lr_dst) {
         const auto &kvp_src = *it_src ++;
-        assert(std::abs(kvp_dst.first.first  - kvp_src.first.first ) <= EPSILON);
-        assert(std::abs(kvp_dst.first.second - kvp_src.first.second) <= EPSILON);
+        assert(is_approx(kvp_dst.first.first, kvp_src.first.first));
+        assert(is_approx(kvp_dst.first.second, kvp_src.first.second));
         // Layer heights are allowed do differ in case the layer height table is being overriden by the smooth profile.
-        // assert(std::abs(kvp_dst.second.option("layer_height")->getFloat() - kvp_src.second.option("layer_height")->getFloat()) <= EPSILON);
+        // assert(is_approx(kvp_dst.second.option("layer_height")->getFloat(), kvp_src.second.option("layer_height")->getFloat()));
         kvp_dst.second = kvp_src.second;
     }
 }
@@ -178,9 +178,9 @@ static bool layer_height_ranges_equal(const t_layer_config_ranges &lr1, const t_
         const auto &kvp2 = *it2 ++;
         if (!kvp2.second.has("layer_height") || !kvp1.second.has("layer_height"))
             return false;
-        if (std::abs(kvp1.first.first  - kvp2.first.first ) > EPSILON ||
-            std::abs(kvp1.first.second - kvp2.first.second) > EPSILON ||
-            (check_layer_height && std::abs(kvp1.second.option("layer_height")->getFloat() - kvp2.second.option("layer_height")->getFloat()) > EPSILON))
+        if (!is_approx(kvp1.first.first, kvp2.first.first) ||
+            !is_approx(kvp1.first.second, kvp2.first.second) ||
+            (check_layer_height && !is_approx(kvp1.second.option("layer_height")->getFloat(), kvp2.second.option("layer_height")->getFloat())))
             return false;
     }
     return true;
@@ -398,11 +398,11 @@ public:
         auto it = std::lower_bound(m_ranges.begin(), m_ranges.end(), LayerRange{ { range.first - EPSILON, range.second - EPSILON } });
         // #ys_FIXME_COLOR
         // assert(it != m_ranges.end());
-        // assert(it == m_ranges.end() || std::abs(it->first.first  - range.first ) < EPSILON);
-        // assert(it == m_ranges.end() || std::abs(it->first.second - range.second) < EPSILON);
+        // assert(it == m_ranges.end() || is_approx(it->first.first, range.first));
+        // assert(it == m_ranges.end() || is_approx(it->first.second, range.second));
         if (it == m_ranges.end() ||
-            std::abs(it->layer_height_range.first - range.first) > EPSILON ||
-            std::abs(it->layer_height_range.second - range.second) > EPSILON )
+            !is_approx(it->layer_height_range.first, range.first) ||
+            !is_approx(it->layer_height_range.second, range.second) )
             return nullptr; // desired range doesn't found
         return it == m_ranges.end() ? nullptr : it->config;
     }
@@ -567,20 +567,20 @@ static inline Transform3f trafo_for_bbox(const Transform3d &object_trafo, const 
 
 static inline bool trafos_differ_in_rotation_by_z_and_mirroring_by_xy_only(const Transform3d &t1, const Transform3d &t2)
 {
-    if (std::abs(t1.translation().z() - t2.translation().z()) > EPSILON)
+    if (!is_approx(t1.translation().z(), t2.translation().z()))
         // One of the object is higher than the other above the build plate (or below the build plate).
         return false;
     Matrix3d m1 = t1.matrix().block<3, 3>(0, 0);
     Matrix3d m2 = t2.matrix().block<3, 3>(0, 0);
     Matrix3d m = m2.inverse() * m1;
     Vec3d    z = m.block<3, 1>(0, 2);
-    if (std::abs(z.x()) > EPSILON || std::abs(z.y()) > EPSILON || std::abs(z.z() - 1.) > EPSILON)
+    if (!is_zero(z.x()) || !is_zero(z.y()) || !is_approx(z.z(), 1.))
         // Z direction or length changed.
         return false;
     // Z still points in the same direction and it has the same length.
     Vec3d    x = m.block<3, 1>(0, 0);
     Vec3d    y = m.block<3, 1>(0, 1);
-    if (std::abs(x.z()) > EPSILON || std::abs(y.z()) > EPSILON)
+    if (!is_zero(x.z()) || !is_zero(y.z()))
         return false;
     double   lx2 = x.squaredNorm();
     double   ly2 = y.squaredNorm();

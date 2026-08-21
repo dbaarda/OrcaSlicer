@@ -812,9 +812,9 @@ TransformationSVD::TransformationSVD(const Transform3d& trafo)
         for (int i = 0; i < 3; ++i) {
             transformed_axes[i] = trafo_linear * axes[i];
         }
-        skew = std::abs(transformed_axes[0].dot(transformed_axes[1])) > EPSILON ||
-               std::abs(transformed_axes[1].dot(transformed_axes[2])) > EPSILON ||
-               std::abs(transformed_axes[2].dot(transformed_axes[0])) > EPSILON;
+        skew = !is_zero(transformed_axes[0].dot(transformed_axes[1])) ||
+               !is_zero(transformed_axes[1].dot(transformed_axes[2])) ||
+               !is_zero(transformed_axes[2].dot(transformed_axes[0]));
 
         // This following old code does not work under all conditions. The v matrix can become non diagonal (see SPE-1492) 
 //        skew = ! rotation_90_degrees;

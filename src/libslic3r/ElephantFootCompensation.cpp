@@ -92,7 +92,7 @@ std::vector<float> contour_distance(const EdgeGrid::Grid &grid, const size_t idx
 						Vec2d vptpt2 = pt - pt2;
 						double denom = dir(0) * dir2(1) - dir2(0) * dir(1);
 
-						if (std::abs(denom) >= EPSILON) {
+						if (!is_zero(denom)) {
 							double t = cross2(dir2, vptpt2) / denom;
 							assert(t > - EPSILON && t < 1. + EPSILON);
 							bool this_valid = true;
@@ -172,7 +172,7 @@ std::vector<float> contour_distance(const EdgeGrid::Grid &grid, const size_t idx
 			SVG svg(debug_out_path("contour_distance_raycasted-%d-%d.svg", iRun, &pt_next - contour.data()).c_str(), bbox);
 			svg.draw(expoly_grid);
 			svg.draw_outline(Polygon(contour), "blue", scale_(0.01));
-			svg.draw(*pt_this, "red", coord_t(scale_(0.1)));
+			svg.draw(*pt_this, "red", scaled(0.1));
 #endif /* CONTOUR_DISTANCE_DEBUG_SVG */
 
 			for (int i = - num_rays + 1; i < num_rays; ++ i) {
@@ -187,7 +187,7 @@ std::vector<float> contour_distance(const EdgeGrid::Grid &grid, const size_t idx
 				svg.draw(Line(visitor.pt_start, visitor.pt_end), "yellow", scale_(0.01));
 				if (visitor.t_min < 1.) {
 					Vec2d pt = visitor.pt + visitor.dir * visitor.t_min;
-					svg.draw(Point(pt), "red", coord_t(scale_(0.1)));
+					svg.draw(Point(pt), "red", scaled(0.1));
 				}
 #endif /* CONTOUR_DISTANCE_DEBUG_SVG */
 			}
@@ -395,8 +395,8 @@ std::vector<float> contour_distance2(const EdgeGrid::Grid &grid, const size_t id
 				SVG svg(debug_out_path("contour_distance_filtered-%d-%d.svg", iRun, int(&pt - contour.data())).c_str(), bbox);
 				svg.draw(expoly_grid);
 				svg.draw_outline(Polygon(contour), "blue", scale_(0.01));
-				svg.draw(pt, "green", coord_t(scale_(0.1)));
-				svg.draw(visitor.closest_point, "red", coord_t(scale_(0.1)));
+				svg.draw(pt, "green", scaled(0.1));
+				svg.draw(visitor.closest_point, "red", scaled(0.1));
 				printf("contour_distance_filtered-%d-%d.svg - distance %lf\n", iRun, int(&pt - contour.data()), unscale<double>(out.back()));
 			}
 #endif /* CONTOUR_DISTANCE_DEBUG_SVG */
@@ -407,7 +407,7 @@ std::vector<float> contour_distance2(const EdgeGrid::Grid &grid, const size_t id
 			svg.draw(expoly_grid);
 			svg.draw_outline(Polygon(contour), "blue", scale_(0.01));
 			for (size_t i = 0; i < contour.size(); ++ i)
-				svg.draw(contour[i], out[i] < float(search_radius - SCALED_EPSILON) ? "red" : "green", coord_t(scale_(0.1)));
+				svg.draw(contour[i], out[i] < float(search_radius - SCALED_EPSILON) ? "red" : "green", scaled(0.1));
 		}
 #endif /* CONTOUR_DISTANCE_DEBUG_SVG */
 	}
@@ -606,8 +606,8 @@ ExPolygon elephant_foot_compensation(const ExPolygon &input_expoly, double min_c
 			if (out_vec.size() > 1) {
 				static int iRun = 0;
 				SVG::export_expolygons(debug_out_path("elephant_foot_compensation-many_contours-%d.svg", iRun ++).c_str(),
-					{ { { input_expoly },   { "gray", "black", "blue", coord_t(scale_(0.02)), 0.5f, "black", coord_t(scale_(0.05)) } },
-					  { { out_vec },		{ "gray", "black", "blue", coord_t(scale_(0.02)), 0.5f, "black", coord_t(scale_(0.05)) } } });
+					{ { { input_expoly },   { "gray", "black", "blue", scaled(0.02), 0.5f, "black", scaled(0.05) } },
+					  { { out_vec },		{ "gray", "black", "blue", scaled(0.02), 0.5f, "black", scaled(0.05) } } });
 			}
 #endif /* TESTS_EXPORT_SVGS */
 			assert(out_vec.size() == 1);

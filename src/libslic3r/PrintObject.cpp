@@ -101,7 +101,7 @@ PrintObject::PrintObject(Print* print, ModelObject* model_object, const Transfor
 
 	// We may need to rotate the bbox / bbox_center from the original instance to the current instance.
 	double z_diff = Geometry::rotation_diff_z(model_object->instances.front()->get_rotation(), instances.front().model_instance->get_rotation());
-	if (std::abs(z_diff) > EPSILON) {
+	if (!is_zero(z_diff)) {
 		auto z_rot  = Eigen::AngleAxisd(z_diff, Vec3d::UnitZ());
 		bbox 		= bbox.transformed(Transform3d(z_rot));
 		bbox_center = (z_rot * bbox_center).eval();
@@ -229,7 +229,7 @@ void PrintObject::_transform_hole_to_polyholes()
 
 
                                 // SCALED_EPSILON was a bit too harsh. Now using a config, as some may want some harsh setting and some don't.
-                                coord_t max_variation = std::max(SCALED_EPSILON, scale_(this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_threshold.get_abs_value(unscaled(diameter_sum / hole.points.size()))));
+                                coord_t max_variation = std::max(SCALED_EPSILON, scaled(this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_threshold.get_abs_value(unscaled(diameter_sum / hole.points.size()))));
                                 bool twist = this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_twisted.value;
                                 int max_edges = this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_max_edges.value;
                                 if (diameter_max - diameter_min < max_variation * 2 && diameter_line_max - diameter_line_min < max_variation * 2) {
@@ -1396,7 +1396,6 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "top_surface_fill_order"
             || opt_key == "bottom_surface_fill_order"
             || opt_key == "internal_solid_infill_pattern"
-            || opt_key == "external_fill_link_max_length"
             || opt_key == "infill_anchor"
             || opt_key == "infill_anchor_max"
             || opt_key == "top_surface_line_width"

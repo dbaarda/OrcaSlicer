@@ -144,12 +144,12 @@ inline Eigen::Matrix<typename Derived::Scalar, 3, 1, Eigen::DontAlign> to_3d(con
     return { pt.x(), pt.y(), z };
 }
 
-inline Vec2d   unscale(coord_t x, coord_t y) { return Vec2d(unscale<double>(x), unscale<double>(y)); }
-inline Vec2d   unscale(const Vec2crd &pt) { return Vec2d(unscale<double>(pt.x()), unscale<double>(pt.y())); }
-inline Vec2d   unscale(const Vec2d   &pt) { return Vec2d(unscale<double>(pt.x()), unscale<double>(pt.y())); }
-inline Vec3d   unscale(coord_t x, coord_t y, coord_t z) { return Vec3d(unscale<double>(x), unscale<double>(y), unscale<double>(z)); }
-inline Vec3d   unscale(const Vec3crd &pt) { return Vec3d(unscale<double>(pt.x()), unscale<double>(pt.y()), unscale<double>(pt.z())); }
-inline Vec3d   unscale(const Vec3d   &pt) { return Vec3d(unscale<double>(pt.x()), unscale<double>(pt.y()), unscale<double>(pt.z())); }
+inline Vec2d   unscale(coord_t x, coord_t y) { return Vec2d(unscaled<double>(x), unscaled<double>(y)); }
+inline Vec2d   unscale(const Vec2crd &pt) { return Vec2d(unscaled<double>(pt.x()), unscaled<double>(pt.y())); }
+inline Vec2d   unscale(const Vec2d   &pt) { return Vec2d(unscaled<double>(pt.x()), unscaled<double>(pt.y())); }
+inline Vec3d   unscale(coord_t x, coord_t y, coord_t z) { return Vec3d(unscaled<double>(x), unscaled<double>(y), unscaled<double>(z)); }
+inline Vec3d   unscale(const Vec3crd &pt) { return Vec3d(unscaled<double>(pt.x()), unscaled<double>(pt.y()), unscaled<double>(pt.z())); }
+inline Vec3d   unscale(const Vec3d   &pt) { return Vec3d(unscaled<double>(pt.x()), unscaled<double>(pt.y()), unscaled<double>(pt.z())); }
 
 inline std::string to_string(const Vec2crd &pt) { return std::string("[") + float_to_string_decimal_point(pt.x()) + ", " + float_to_string_decimal_point(pt.y()) + "]"; }
 inline std::string to_string(const Vec2d   &pt) { return std::string("[") + float_to_string_decimal_point(pt.x()) + ", " + float_to_string_decimal_point(pt.y()) + "]"; }
@@ -201,9 +201,9 @@ public:
     // This constructor has to be implicit (non-explicit) to allow implicit conversion from Eigen expressions.
     template<typename OtherDerived>
     Point(const Eigen::MatrixBase<OtherDerived> &other) : Vec2crd(other) {}
-    static Point new_scale(coordf_t x, coordf_t y) { return Point(coord_t(scale_(x)), coord_t(scale_(y))); }
+    static Point new_scale(coordf_t x, coordf_t y) { return Point(scaled(x), scaled(y)); }
     template<typename OtherDerived>
-    static Point new_scale(const Eigen::MatrixBase<OtherDerived> &v) { return Point(coord_t(scale_(v.x())), coord_t(scale_(v.y()))); }
+    static Point new_scale(const Eigen::MatrixBase<OtherDerived> &v) { return Point(scaled(v.x()), scaled(v.y())); }
 
     // This method allows you to assign Eigen expressions to MyVectorType
     template<typename OtherDerived>
@@ -286,13 +286,13 @@ public:
     explicit Point3(const Eigen::MatrixBase<OtherDerived> &other) : Vec3crd(other) {}
 
     static Point3 new_scale(coordf_t x, coordf_t y, coordf_t z) {
-        return Point3(coord_t(scale_(x)), coord_t(scale_(y)), coord_t(scale_(z)));
+        return Point3(scaled(x), scaled(y), scaled(z));
     }
     static Point3 new_scale(const Vec3d &v) {
-        return Point3(coord_t(scale_(v.x())), coord_t(scale_(v.y())), coord_t(scale_(v.z())));
+        return Point3(scaled(v.x()), scaled(v.y()), scaled(v.z()));
     }
     static Point3 new_scale(const Vec3f &v) {
-        return Point3(coord_t(scale_(v.x())), coord_t(scale_(v.y())), coord_t(scale_(v.z())));
+        return Point3(scaled(v.x()), scaled(v.y()), scaled(v.z()));
     }
 
     // Assignment operator for Eigen expressions
@@ -648,26 +648,6 @@ std::ostream& operator<<(std::ostream &stm, const Vec2d &pointf);
 //                       floating point or integer 'scaled coord' coordinates.
 // Downscaling (unscaled()): from arithmetic (or Vec) to floating point only
 
-// Conversion definition from unscaled to floating point scaled
-template<class Tout,
-         class Tin,
-         class = FloatingOnly<Tin>>
-inline constexpr FloatingOnly<Tout> scaled(const Tin &v) noexcept
-{
-    return Tout(v / Tin(SCALING_FACTOR));
-}
-
-// Conversion definition from unscaled to integer 'scaled coord'.
-// TODO: is the rounding necessary? Here it is commented  out to show that
-// it can be different for integers but it does not have to be. Using
-// std::round means loosing noexcept and constexpr modifiers
-template<class Tout = coord_t, class Tin, class = FloatingOnly<Tin>>
-inline constexpr ScaledCoordOnly<Tout> scaled(const Tin &v) noexcept
-{
-    //return static_cast<Tout>(std::round(v / SCALING_FACTOR));
-    return Tout(v / Tin(SCALING_FACTOR));
-}
-
 // Conversion for Eigen vectors (N dimensional points)
 template<class Tout = coord_t,
          class Tin,
@@ -677,17 +657,7 @@ template<class Tout = coord_t,
 inline Eigen::Matrix<ArithmeticOnly<Tout>, N, EigenArgs...>
 scaled(const Eigen::Matrix<Tin, N, EigenArgs...> &v)
 {
-    return (v / SCALING_FACTOR).template cast<Tout>();
-}
-
-// Conversion from arithmetic scaled type to floating point unscaled
-template<class Tout = double,
-         class Tin,
-         class = ArithmeticOnly<Tin>,
-         class = FloatingOnly<Tout>>
-inline constexpr Tout unscaled(const Tin &v) noexcept
-{
-    return Tout(v) * Tout(SCALING_FACTOR);
+    return (v * INV_SCALING_FACTOR).template cast<Tout>();
 }
 
 // Unscaling for Eigen vectors. Input base type can be arithmetic, output base

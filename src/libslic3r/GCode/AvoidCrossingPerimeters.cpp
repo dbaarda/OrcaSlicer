@@ -1208,7 +1208,7 @@ void init_boundary(AvoidCrossingPerimeters::Boundary *boundary, Polygons &&bound
     boundary->bbox = BoundingBoxf(bbox.min.cast<double>(), bbox.max.cast<double>());
     boundary->grid.set_bbox(bbox);
     // FIXME 1mm grid?
-    boundary->grid.create(boundary->boundaries, coord_t(scale_(1.)));
+    boundary->grid.create(boundary->boundaries, scaled(1.));
     init_boundary_distances(boundary);
 }
 
@@ -1225,7 +1225,7 @@ static void init_boundary(AvoidCrossingPerimeters::Boundary *boundary, Polygons 
     boundary->bbox = BoundingBoxf(bbox.min.cast<double>(), bbox.max.cast<double>());
     boundary->grid.set_bbox(bbox);
     // FIXME 1mm grid?
-    boundary->grid.create(boundary->boundaries, coord_t(scale_(1.)));
+    boundary->grid.create(boundary->boundaries, scaled(1.));
     init_boundary_distances(boundary);
 }
 
@@ -1334,7 +1334,7 @@ void AvoidCrossingPerimeters::init_layer(const Layer &layer)
 
     m_grid_lslice.set_bbox(bbox_slice);
     //FIXME 1mm grid?
-    m_grid_lslice.create(m_lslices_offset, coord_t(scale_(1.)));
+    m_grid_lslice.create(m_lslices_offset, scaled(1.));
 }
 
 #if 0
@@ -1715,13 +1715,13 @@ void AvoidCrossingPerimeters::init_layer(const Layer &layer)
 
     m_internal.grid.set_bbox(bbox);
     //FIX1ME 1mm grid?
-    m_internal.grid.create(m_internal.boundaries, coord_t(scale_(1.)));
+    m_internal.grid.create(m_internal.boundaries, scaled(1.));
     m_external.grid.set_bbox(bbox_external);
     //FIX1ME 1mm grid?
-    m_external.grid.create(m_external.boundaries, coord_t(scale_(1.)));
+    m_external.grid.create(m_external.boundaries, scaled(1.));
     m_grid_lslice.set_bbox(bbox_slice);
     //FIX1ME 1mm grid?
-    m_grid_lslice.create(layer.lslices, coord_t(scale_(1.)));
+    m_grid_lslice.create(layer.lslices, scaled(1.));
 
     init_boundary_distances(&m_internal);
     init_boundary_distances(&m_external);

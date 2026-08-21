@@ -717,7 +717,7 @@ static Polylines connect_brim_lines(Polylines &&polylines, const Polygons &brim_
     bbox.merge(get_extents(brim_area));
 
     EdgeGrid::Grid grid(bbox.inflated(SCALED_EPSILON));
-    grid.create(brim_area, polylines, coord_t(scale_(10.)));
+    grid.create(brim_area, polylines, scaled(10.));
 
     struct Visitor
     {

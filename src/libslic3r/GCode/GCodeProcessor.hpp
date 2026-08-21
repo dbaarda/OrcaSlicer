@@ -581,7 +581,7 @@ class Print;
             float acceleration_distance() const { return accelerate_until; }
             float cruise_distance() const { return decelerate_after - accelerate_until; }
             float deceleration_distance(float distance) const { return distance - decelerate_after; }
-            bool is_cruise_only(float distance) const { return std::abs(cruise_distance() - distance) < EPSILON; }
+            bool is_cruise_only(float distance) const { return is_approx(cruise_distance(), distance); }
         };
 
         struct TimeBlock

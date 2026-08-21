@@ -279,7 +279,6 @@ set(lisbslic3r_sources
     Layer.cpp
     Layer.hpp
     LayerRegion.cpp
-    libslic3r.cpp
     libslic3r.h
     Line.cpp
     Line.hpp

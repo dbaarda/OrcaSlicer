@@ -1461,8 +1461,8 @@ Polygons offset(
                         dump_voronoi_to_svg(debug_out_path("voronoi-offset-incorrect_pt-%d.svg", irun).c_str(), vd, Points(), lines, Polygons(), to_lines(poly));
                     }
 #endif // VORONOI_DEBUG_OUT
-                    assert(std::abs(err) < SCALED_EPSILON);
-                    assert(std::abs(err2) < SCALED_EPSILON);
+                    assert(is_zero(err, SCALED_EPSILON));
+                    assert(is_zero(err2, SCALED_EPSILON));
                 }
 #endif /* NDEBUG */
 				if (cell->contains_point()) {

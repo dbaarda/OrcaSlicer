@@ -5661,7 +5661,7 @@ void GCodeProcessor::process_G2_G3(const GCodeReader::GCodeLine& line, bool cloc
         Vec3d relative_start() const { return start - center; }
         Vec3d relative_end() const { return end - center; }
 
-        bool is_full_circle() const { return std::abs(delta_x()) < EPSILON && std::abs(delta_y()) < EPSILON; }
+        bool is_full_circle() const { return is_zero(delta_x()) && is_zero(delta_y()); }
     };
 
     Arc arc;
@@ -5680,7 +5680,7 @@ void GCodeProcessor::process_G2_G3(const GCodeReader::GCodeLine& line, bool cloc
         // what to do ???
     }
 
-    assert(fitting != EFitting::R || std::abs(radius - arc.start_radius()) < EPSILON);
+    assert(fitting != EFitting::R || is_approx(radius, arc.start_radius()));
 
     // updates feedrate from line
     std::optional<float> feedrate;

@@ -227,8 +227,8 @@ struct MMU_Graph
         };
         typedef ClosestPointInRadiusLookup<CPoint, CPointAccessor> CPointLookupType;
 
-        CPointLookupType closest_voronoi_point(coord_t(SCALED_EPSILON));
-        CPointLookupType closest_contour_point(3 * coord_t(SCALED_EPSILON));
+        CPointLookupType closest_voronoi_point(SCALED_EPSILON);
+        CPointLookupType closest_contour_point(3 * SCALED_EPSILON);
         for (const Polygon &polygon : color_poly_tmp)
             for (const Point &pt : polygon.points) closest_contour_point.insert(CPoint(Vec2d(pt.x(), pt.y()), &polygon - &color_poly_tmp.front(), &pt - &polygon.points.front()));
 
@@ -2024,7 +2024,7 @@ std::vector<std::vector<ExPolygons>> segmentation_by_painting(const PrintObject 
         // Projected triangles may slightly exceed the input polygons.
         bbox.offset(20 * SCALED_EPSILON);
         edge_grids[layer_idx].set_bbox(bbox);
-        edge_grids[layer_idx].create(input_expolygons[layer_idx], coord_t(scale_(10.)));
+        edge_grids[layer_idx].create(input_expolygons[layer_idx], scaled(10.));
     }
 
     BOOST_LOG_TRIVIAL(debug) << "Print object segmentation - Projection of painted triangles - Begin";
@@ -2220,7 +2220,7 @@ std::vector<std::vector<ExPolygons>> fuzzy_skin_segmentation_by_painting(const P
     float max_external_perimeter_width = 0.;
     for (size_t region_idx = 0; region_idx < print_object.num_printing_regions(); ++region_idx) {
         const PrintRegion &region = print_object.printing_region(region_idx);
-        max_external_perimeter_width = std::max<float>(max_external_perimeter_width, region.flow(print_object, frExternalPerimeter, print_object.config().layer_height).width());
+        max_external_perimeter_width = std::max<float>(max_external_perimeter_width, print_object.flow(region, frExternalPerimeter).width());
     }
 
     return segmentation_by_painting(print_object, extract_facets_info, num_facets_states, max_external_perimeter_width, 0.f, false, IncludeTopAndBottomLayers::No, throw_on_cancel_callback);

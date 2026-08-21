@@ -198,7 +198,7 @@ void update_selected_items_axis_align(ArrangePolygons& selected, const DynamicPr
                 yi_12 = yi2;
             }
 
-            if (std::abs(a00) > EPSILON) {
+            if (!is_zero(a00)) {
                 double db1_2, db1_6, db1_12, db1_24, db1_20, db1_60;
                 double m00, m10, m01, m20, m11, m02, m30, m21, m12, m03;
                 if (a00 > 0) {

@@ -1471,7 +1471,7 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             size_t new_fi = gcodegen.get_filament_config_index(new_extruder_id);
             int base_temp = gcodegen.on_first_layer() ? gcodegen.config().nozzle_temperature_initial_layer.get_at(new_fi)
                                                       : gcodegen.config().nozzle_temperature.get_at(new_fi);
-            if (std::abs(tcr.print_z) < EPSILON)
+            if (is_zero(tcr.print_z))
                 base_temp = gcodegen.config().nozzle_temperature_initial_layer.get_at(new_fi);
             const std::string t_token = " T" + std::to_string(new_extruder_id);
             std::string out;
@@ -1846,7 +1846,7 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
     {
         std::string gcode;
         if (gcodegen.wipe_tower_type() == WipeTowerType::Type2 && !m_final_purge.gcode.empty()) {
-            if (std::abs(gcodegen.writer().get_position().z() - m_final_purge.print_z) > EPSILON)
+            if (!is_approx(gcodegen.writer().get_position().z(), m_final_purge.print_z))
                 gcode += gcodegen.change_layer(m_final_purge.print_z);
             gcode += append_tcr2(gcodegen, m_final_purge, -1);
         }
@@ -2968,15 +2968,15 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     const double       initial_layer_print_height   = print.config().initial_layer_print_height.value;
     for (size_t region_id = 0; region_id < print.num_print_regions(); ++ region_id) {
         const PrintRegion &region = print.get_print_region(region_id);
-        file.write_format("; external perimeters extrusion width = %.2fmm\n", region.flow(*first_object, frExternalPerimeter, layer_height).width());
-        file.write_format("; perimeters extrusion width = %.2fmm\n",          region.flow(*first_object, frPerimeter,         layer_height).width());
-        file.write_format("; infill extrusion width = %.2fmm\n",              region.flow(*first_object, frInfill,            layer_height).width());
-        file.write_format("; solid infill extrusion width = %.2fmm\n",        region.flow(*first_object, frSolidInfill,       layer_height).width());
-        file.write_format("; top infill extrusion width = %.2fmm\n",          region.flow(*first_object, frTopSolidInfill,    layer_height).width());
+        file.write_format("; external perimeters extrusion width = %.2fmm\n", first_object->flow(region, frExternalPerimeter, layer_height).width());
+        file.write_format("; perimeters extrusion width = %.2fmm\n",          first_object->flow(region, frPerimeter,         layer_height).width());
+        file.write_format("; infill extrusion width = %.2fmm\n",              first_object->flow(region, frInfill,            layer_height).width());
+        file.write_format("; solid infill extrusion width = %.2fmm\n",        first_object->flow(region, frSolidInfill,       layer_height).width());
+        file.write_format("; top infill extrusion width = %.2fmm\n",          first_object->flow(region, frTopSolidInfill,    layer_height).width());
         if (print.has_support_material())
             file.write_format("; support material extrusion width = %.2fmm\n", first_object->support_material_flow().width());
         if (print.config().initial_layer_line_width.value > 0)
-            file.write_format("; first layer extrusion width = %.2fmm\n",   region.flow(*first_object, frPerimeter, initial_layer_print_height, true).width());
+            file.write_format("; first layer extrusion width = %.2fmm\n",   first_object->flow(region, frPerimeter, initial_layer_print_height, false, true).width());
         file.write_format("\n");
     }
 
@@ -3278,8 +3278,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
             for (auto& obj : print.objects()) {
                 for (auto& instance : obj->instances()) {
                     const auto& bbox = instance.get_bounding_box();
-                    Point min_p{ coord_t(scale_(bbox.min.x())),coord_t(scale_(bbox.min.y())) };
-                    Point max_p{ coord_t(scale_(bbox.max.x())),coord_t(scale_(bbox.max.y())) };
+                    Point min_p{ scaled(bbox.min.x()),scaled(bbox.min.y()) };
+                    Point max_p{ scaled(bbox.max.x()),scaled(bbox.max.y()) };
                     Polygon instance_projection = {
                         {min_p.x(),min_p.y()},
                         {max_p.x(),min_p.y()},
@@ -7610,7 +7610,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
         gcode += buf;
     }
 
-    if (last_was_wipe_tower || std::abs(m_last_height - path.height) > EPSILON) {
+    if (last_was_wipe_tower || !is_approx(m_last_height, path.height)) {
         m_last_height = path.height;
         sprintf(buf, ";%s%g\n", GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Height).c_str(), m_last_height);
         gcode += buf;
@@ -7764,7 +7764,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
 
     if (!variable_speed) {
         // F is mm per minute.
-        if( (std::abs(writer().get_current_speed() - F) > EPSILON) || (std::abs(_mm3_per_mm - m_last_mm3_mm) > EPSILON) ){
+        if( (!is_approx(writer().get_current_speed(), F)) || (!is_approx(_mm3_per_mm, m_last_mm3_mm)) ){
             // ORCA: Adaptive PA code segment when adjusting PA within the same feature
             // There is a speed change coming out of an overhang region
             // or a flow change, so emit the flag to evaluate PA for the upcomming extrusion
@@ -7999,7 +7999,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, std::string description, 
             path_length += line_length;
             double new_speed = pre_processed_point.speed * 60.0;
             
-            if ((std::abs(last_set_speed - new_speed) > EPSILON) || (std::abs(_mm3_per_mm - m_last_mm3_mm) > EPSILON)) {
+            if ((!is_approx(last_set_speed, new_speed)) || (!is_approx(_mm3_per_mm, m_last_mm3_mm))) {
                 // ORCA: Adaptive PA code segment when adjusting PA within the same feature
                 // There is a speed change or flow change so emit the flag to evaluate PA for the upcomming extrusion
                 // Emit tag before new speed is set so the post processor reads the next speed immediately and uses it.

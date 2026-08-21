@@ -176,14 +176,14 @@ void AxisCtrlButton::render(wxDC& dc)
 	if (current_pos != CurrentPos::UNDEFINED) {
 		wxGraphicsPath path = gc->CreatePath();
 		if (current_pos < 4) {
-			path.AddArc(0, 0, r_outer, (5 - 2 * current_pos) * PI / 4, (7 - 2 * current_pos) * PI / 4, true);
-			path.AddArc(0, 0, r_inner, (7 - 2 * current_pos) * PI / 4, (5 - 2 * current_pos) * PI / 4, false);
+			path.AddArc(0, 0, r_outer, (5 - 2 * current_pos) * M_PI / 4, (7 - 2 * current_pos) * M_PI / 4, true);
+			path.AddArc(0, 0, r_inner, (7 - 2 * current_pos) * M_PI / 4, (5 - 2 * current_pos) * M_PI / 4, false);
 			path.CloseSubpath();
 			gc->SetBrush(wxBrush(background_color.colorForStates(states)));
 		}
 		else if (current_pos < 8) {
-			path.AddArc(0, 0, r_inner, (5 - 2 * current_pos) * PI / 4, (7 - 2 * current_pos) * PI / 4, true);
-			path.AddArc(0, 0, r_blank, (7 - 2 * current_pos) * PI / 4, (5 - 2 * current_pos) * PI / 4, false);
+			path.AddArc(0, 0, r_inner, (5 - 2 * current_pos) * M_PI / 4, (7 - 2 * current_pos) * M_PI / 4, true);
+			path.AddArc(0, 0, r_blank, (7 - 2 * current_pos) * M_PI / 4, (5 - 2 * current_pos) * M_PI / 4, false);
 			path.CloseSubpath();
 			gc->SetBrush(wxBrush(inner_background_color.colorForStates(states)));
         }
@@ -195,9 +195,9 @@ void AxisCtrlButton::render(wxDC& dc)
 	gc->SetPen(blank_bg.colorForStates(StateColor::Normal));
 	gc->SetBrush(blank_bg.colorForStates(StateColor::Normal));
 	gc->PushState();
-	gc->Rotate(-PI / 4);
+	gc->Rotate(-M_PI / 4);
 	gc->DrawRectangle(-sqrt2 * size.x / 2, -sqrt2 * gap / 2, sqrt2 * size.x, sqrt2 * gap);
-	gc->Rotate(-PI / 2);
+	gc->Rotate(-M_PI / 2);
 	gc->DrawRectangle(-sqrt2 * size.x / 2, -sqrt2 * gap / 2, sqrt2 * size.x, sqrt2 * gap);
 	gc->PopState();
 
@@ -243,9 +243,9 @@ void AxisCtrlButton::render(wxDC& dc)
                 line_path2.MoveToPoint(-r_blank, -sqrt2 * gap / 2);
                 line_path2.AddLineToPoint(-r_inner, -sqrt2 * gap / 2);
             }
-            gc->Rotate(-(1 + 2 * current_pos) * PI / 4);
+            gc->Rotate(-(1 + 2 * current_pos) * M_PI / 4);
             gc->StrokePath(line_path1);
-            gc->Rotate(PI / 2);
+            gc->Rotate(M_PI / 2);
             gc->StrokePath(line_path2);
         }
         gc->PopState();
@@ -269,7 +269,7 @@ void AxisCtrlButton::render(wxDC& dc)
 	gc->SetFont(Label::Body_12, text_num_color);
 
 	gc->PushState();
-	gc->Rotate(PI / 4);
+	gc->Rotate(M_PI / 4);
 	gc->GetTextExtent("+10", &w, &h);
 	gc->DrawText(wxT("+10"), sqrt2 * gap, -r_outer + (r_outer - r_inner) / 2 - h / 2);
 	gc->GetTextExtent("+1", &w, &h);

@@ -37,7 +37,7 @@ void EdgeGrid::Grid::create(const Polygons &polygons, coord_t resolution)
 	create_from_m_contours(resolution);
 }
 
-void EdgeGrid::Grid::create(const std::vector<const Polygon*> &polygons, coord_t resolution)
+void EdgeGrid::Grid::create(const ConstPolygonPtrs &polygons, coord_t resolution)
 {
 	// Collect the contours.
 	m_contours.clear();
@@ -1609,7 +1609,7 @@ void export_intersections_to_svg(const std::string &filename, const Polygons &po
     	intersecting_contours.insert(ie.second.first);
     }
     // Highlight the contours with intersections.
-    coord_t line_width = coord_t(scale_(0.01));
+    coord_t line_width = scaled(0.01);
     for (const EdgeGrid::Contour *ic : intersecting_contours) {
 		if (ic->open())
 			svg.draw(Polyline(Points(ic->begin(), ic->end())), "green");

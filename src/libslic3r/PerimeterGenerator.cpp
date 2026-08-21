@@ -905,7 +905,7 @@ std::tuple<std::vector<ExtrusionPaths>, Polygons> generate_extra_perimeters_over
                                                                                            const PrintObjectConfig &object_config,
                                                                                            const PrintConfig       &print_config)
 {
-    coord_t anchors_size = std::min(coord_t(scale_(EXTERNAL_INFILL_MARGIN)), overhang_flow.scaled_spacing() * (perimeter_count + 1));
+    coord_t anchors_size = std::min(scaled(EXTERNAL_INFILL_MARGIN), overhang_flow.scaled_spacing() * (perimeter_count + 1));
 
     BoundingBox infill_area_bb = get_extents(infill_area).inflated(SCALED_EPSILON);
     Polygons optimized_lower_slices = ClipperUtils::clip_clipper_polygons_with_subject_bbox(lower_slices_polygons, infill_area_bb);
@@ -1267,7 +1267,7 @@ void PerimeterGenerator::process_classic()
                             +float(ext_min_spacing / 2. - 1));
                         // the following offset2 ensures almost nothing in @thin_walls is narrower than $min_width
                         // (actually, something larger than that still may exist due to mitering or other causes)
-                        coord_t min_width = coord_t(scale_(this->ext_perimeter_flow.nozzle_diameter() / 3));
+                        coord_t min_width = scaled(this->ext_perimeter_flow.nozzle_diameter() / 3);
                         ExPolygons expp = opening_ex(
                             // medial axis requires non-overlapping geometry
                             diff_ex(last, offset(offsets, float(ext_perimeter_width / 2.) + ClipperSafetyOffset)),
