@@ -2595,9 +2595,9 @@ Polygon WipeTower2::generate_support_cone_wall(
                                            infill_areas[1];
             std::unique_ptr<Fill> filler(Fill::new_from_type(ipMonotonicLine));
             filler->angle   = Geometry::deg2rad(45.f);
-            filler->spacing = spacing;
             FillParams params;
-            params.density = 1.f;
+            //params.density = 1.f;
+            params.set_fill_spacing(spacing);
             Surface surface(stBottom, bottom_expoly);
             filler->bounding_box = get_extents(bottom_expoly);
             polylines            = filler->fill_surface(&surface, params);

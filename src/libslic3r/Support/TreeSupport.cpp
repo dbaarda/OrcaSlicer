@@ -241,7 +241,7 @@ static void draw_contours_and_nodes_to_svg
     if (!svg.is_opened())        return;
 
     // draw grid
-    svg.draw_grid(bbox, "gray", coord_t(scale_(0.05)));
+    svg.draw_grid(bbox, "gray", scaled(0.05));
 
     // draw overhang areas
     svg.draw_outline(overhangs, colors[0]);
@@ -255,7 +255,7 @@ static void draw_contours_and_nodes_to_svg
     svg.draw_text(bbox.min + Point(scale_(0), scale_(6)), legends[2].c_str(), colors[2].c_str(), 2);
 
     // draw layer nodes
-    svg.draw(layer_pts, "green", coord_t(scale_(0.1)));
+    svg.draw(layer_pts, "green", scaled(0.1));
     for (SupportNode *node : layer_nodes) { svg.draw({node->overhang}, "green", 0.5); }
 
     // lower layer points
@@ -263,7 +263,7 @@ static void draw_contours_and_nodes_to_svg
     for (SupportNode* node : lower_layer_nodes) {
         layer_pts.push_back(node->position);
     }
-    svg.draw(layer_pts, "black", coord_t(scale_(0.1)));
+    svg.draw(layer_pts, "black", scaled(0.1));
 
     //// higher layer points
     //layer_pts.clear();
@@ -271,7 +271,7 @@ static void draw_contours_and_nodes_to_svg
     //    if(node->parent)
     //        layer_pts.push_back(node->parent->position);
     //}
-    //svg.draw(layer_pts, "blue", coord_t(scale_(0.1)));
+    //svg.draw(layer_pts, "blue", scaled(0.1));
 }
 
 static void draw_layer_mst
@@ -291,10 +291,10 @@ static void draw_layer_mst
     SVG svg(fname, bbox);
     if (!svg.is_opened())        return;
 
-    svg.draw(lines, "blue", coord_t(scale_(0.05)));
+    svg.draw(lines, "blue", scaled(0.05));
     svg.draw_outline(outline, "yellow");
     for (auto &spanning_tree : spanning_trees)
-        svg.draw(spanning_tree.vertices(), "black", coord_t(scale_(0.1)));
+        svg.draw(spanning_tree.vertices(), "black", scaled(0.1));
 }
 
 #endif
@@ -1407,7 +1407,7 @@ void TreeSupport::generate_toolpaths()
         Flow support_flow = Flow(support_extrusion_width, ts_layer->height, nozzle_diameter);
         Fill* filler_raft = Fill::new_from_type(ipRectilinear);
         filler_raft->angle = layer_nr == 0 ? PI/2 : 0;
-        filler_raft->spacing = support_flow.spacing();
+        //filler_raft->spacing = support_flow.spacing();
 
         FillParams fill_params;
         coordf_t raft_density = std::min(1., support_flow.spacing() / (object_config.support_base_pattern_spacing.value + support_flow.spacing()));
@@ -1449,7 +1449,7 @@ void TreeSupport::generate_toolpaths()
         Flow support_flow(support_extrusion_width, ts_layer->height, nozzle_diameter);
         Fill* filler_interface = Fill::new_from_type(ipRectilinear);
         filler_interface->angle = M_PI_2;  // interface should be perpendicular to base
-        filler_interface->spacing = support_flow.spacing();
+        //filler_interface->spacing = support_flow.spacing();
 
         FillParams fill_params;
         fill_params.density = interface_density;
@@ -1469,7 +1469,7 @@ void TreeSupport::generate_toolpaths()
         Flow support_flow(support_extrusion_width, ts_layer->height, nozzle_diameter);
         Fill* filler_raft = Fill::new_from_type(ipRectilinear);
         filler_raft->angle = M_PI_2;
-        filler_raft->spacing = support_flow.spacing();
+        //filler_raft->spacing = support_flow.spacing();
         for (auto& poly : first_non_raft_base)
             make_perimeter_and_infill(ts_layer->support_fills.entities, poly, std::min(size_t(1), wall_count), support_flow, erSupportMaterial, filler_raft, interface_density, false);
     }
@@ -1536,7 +1536,7 @@ void TreeSupport::generate_toolpaths()
                         bool interface_as_base = area_group.interface_as_base;
                         fill_params.density = interface_density;
                         // Note: spacing means the separation between two lines as if they are tightly extruded
-                        filler_Roof1stLayer->spacing = interface_flow.spacing();
+                        //filler_Roof1stLayer->spacing = interface_flow.spacing();
                         filler_Roof1stLayer->angle = base_support_angle;
                         fill_params.dont_sort = true;
                         Flow interface_base_flow = interface_as_base ? support_flow : interface_flow;
@@ -1554,7 +1554,7 @@ void TreeSupport::generate_toolpaths()
                         // floor_areas
                         bool interface_as_base = area_group.interface_as_base;
                         fill_params.density = bottom_interface_density;
-                        filler_interface->spacing = interface_flow.spacing();
+                        //filler_interface->spacing = interface_flow.spacing();
 
                         if (m_object_config->support_interface_pattern == smipGrid) {
                             filler_interface->angle = base_support_angle;
@@ -1577,7 +1577,7 @@ void TreeSupport::generate_toolpaths()
                         // roof_areas
                         bool interface_as_base = area_group.interface_as_base;
                         fill_params.density       = interface_density;
-                        filler_interface->spacing = interface_flow.spacing();
+                        //filler_interface->spacing = interface_flow.spacing();
 
                         if (m_object_config->support_interface_pattern == smipGrid) {
                             filler_interface->angle = base_support_angle;
@@ -1608,10 +1608,10 @@ void TreeSupport::generate_toolpaths()
                         std::shared_ptr<Fill> filler_support = std::shared_ptr<Fill>(Fill::new_from_type(base_fill_pattern));
                         filler_support->set_bounding_box(bbox_object);
 
-                        filler_support->spacing =
-                            support_base_on_bed ?
-                            flow.spacing() : // Orca: On the bed-contacting support base layer, use first-layer flow spacing directly.
-                            support_spacing * support_density; // constant spacing to align support infill lines
+                        //filler_support->spacing =
+                        //    support_base_on_bed ?
+                        //    flow.spacing() : // Orca: On the bed-contacting support base layer, use first-layer flow spacing directly.
+                        //    support_spacing * support_density; // constant spacing to align support infill lines
                         filler_support->angle = Geometry::deg2rad(object_config.support_angle.value);
 
                         Polygons loops = to_polygons(poly);
@@ -1915,7 +1915,7 @@ Polygons TreeSupport::get_trim_support_regions(
     size_t idx_object_layer_overlapping = size_t(-1);
 
     auto is_layers_overlap = [](const SupportLayer& support_layer, const Layer& object_layer, coordf_t bridging_height = 0.f) -> bool {
-        if (std::abs(support_layer.print_z - object_layer.print_z) < EPSILON)
+        if (is_approx(support_layer.print_z, object_layer.print_z))
             return true;
 
         coordf_t object_lh = bridging_height > EPSILON ? bridging_height : object_layer.height;
@@ -3357,7 +3357,7 @@ std::vector<LayerHeightData> TreeSupport::plan_layer_heights()
         BOOST_LOG_TRIVIAL(debug) << format("plan_layer_heights node1->layer_nr,printz,height,distance_to_top: %d, %.2f,%.2f, %d", layer_nr, node1->print_z, node1->height, node1->distance_to_top)
                                  << ", object_layer_zs[" << layer_heights[layer_nr].obj_layer_nr << "]=" << m_object->get_layer(layer_heights[layer_nr].obj_layer_nr)->print_z;
         coordf_t new_height = layer_heights[layer_nr].height;
-        if (std::abs(node1->height - new_height) < EPSILON) continue;
+        if (is_approx(node1->height, new_height)) continue;
         if (top_z_distance < EPSILON && node1->height < EPSILON) continue; // top_z_distance==0, this is soluable interface
         coordf_t              accum_height = 0;
         int                   num_layers   = 0;

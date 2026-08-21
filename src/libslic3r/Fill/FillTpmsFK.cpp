@@ -121,22 +121,22 @@ void FillTpmsFK::_fill_surface_single(const FillParams&              params,
                                       Polylines&                     polylines_out)
 {
     auto infill_angle = float(this->angle + (CorrectionAngle * 2 * M_PI) / 360.);
-    if (std::abs(infill_angle) >= EPSILON)
+    if (!is_zero(infill_angle))
         expolygon.rotate(-infill_angle);
 
     float density_factor = std::min(0.9f, params.density);
     // Density (field period) adjusted to have a good %of weight.
-    const float vari_T = 4.18f * spacing * params.multiline / density_factor;
+    const float vari_T = 4.18f * this->fill_spacing();
 
     BoundingBox bbox = expolygon.contour.bounding_box();
     // Enlarge the bounding box by the multi-line width to avoid artifacts at the edges.
-    bbox.offset(scale_((params.multiline + 1) * spacing));
+    bbox.offset(scaled(this->line_spacing() + this->flow_spacing()));
     marchsq::ScalarField sf = marchsq::ScalarField(bbox, this->z, vari_T);
     // Get simplified lines using coarse tolerance of 0.1mm (this is infill).
     Polylines polylines = marchsq::get_polylines(sf, SCALED_SPARSE_INFILL_RESOLUTION);
 
     // Apply multiline offset if needed
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
     // Prune the lines within the expolygon.
     polylines = intersection_pl(std::move(polylines), expolygon);
@@ -144,7 +144,7 @@ void FillTpmsFK::_fill_surface_single(const FillParams&              params,
     if (!polylines.empty()) {
         // Remove very small bits, but be careful to not remove infill lines connecting thin walls!
         // The infill perimeter lines should be separated by around a single infill line width.
-        const double minlength = scale_(0.8 * this->spacing);
+        const double minlength = scale_(0.8 * this->flow_spacing());
         polylines.erase(std::remove_if(polylines.begin(), polylines.end(),
                                        [minlength](const Polyline& pl) { return pl.length() < minlength; }),
                         polylines.end());
@@ -154,12 +154,12 @@ void FillTpmsFK::_fill_surface_single(const FillParams&              params,
         // connect lines
         size_t polylines_out_first_idx = polylines_out.size();
 
-        // chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+        // chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, params);
         // chain_infill not situable for this pattern due to internal "islands", this also affect performance a lot.
-        connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+        connect_infill(std::move(polylines), expolygon, polylines_out, params);
 
         // new paths must be rotated back
-        if (std::abs(infill_angle) >= EPSILON) {
+        if (!is_zero(infill_angle)) {
             for (auto it = polylines_out.begin() + polylines_out_first_idx; it != polylines_out.end(); ++it)
                 it->rotate(infill_angle);
         }

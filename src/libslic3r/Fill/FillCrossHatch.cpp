@@ -180,41 +180,42 @@ void FillCrossHatch ::_fill_surface_single(
 {
     // rotate angle
     auto infill_angle = float(this->angle);
-    if (std::abs(infill_angle) >= EPSILON) expolygon.rotate(-infill_angle);
+    if (!is_zero(infill_angle)) expolygon.rotate(-infill_angle);
 
     // get the rotated bounding box
     BoundingBox bb = expolygon.contour.bounding_box();
 
-    // linespace modifier
-    double density_adjusted = params.density / params.multiline;
-    coord_t line_spacing = coord_t(scale_(this->spacing) / density_adjusted);
+    // Reduce density for non-solid fills.
+    if (!params.is_solid()) this->_set_fill_spacing(this->fill_spacing() * 1.08);
 
-    // reduce density
-    if (params.density < 0.999) line_spacing *= 1.08;
+    // Get the scaled fill_spacing and fill_density.
+    coord_t scaled_fill_spacing = this->scaled_fill_spacing();
+    double fill_density = this->_get_fill_density();
 
-    bb.merge(align_to_grid(bb.min, Point(line_spacing * 4, line_spacing * 4)));
+    // Align the bounding box to a 4*fill_spacing grid.
+    bb.align_to_grid(scaled_fill_spacing * 4);
 
     // generate pattern
     //Orca: optimize the cross-hatch infill pattern to improve strength when low infill density is used.
     double repeat_ratio = 1.0;
-    if (params.density < 0.3)
-        repeat_ratio = std::clamp(1.0 - std::exp(-5 * params.density), 0.2, 1.0);
+    if (fill_density < 0.3)
+        repeat_ratio = std::clamp(1.0 - std::exp(-5 * fill_density), 0.2, 1.0);
 
-    Polylines polylines = generate_infill_layers(scale_(this->z), repeat_ratio, line_spacing, bb.size()(0), bb.size()(1));
+    Polylines polylines = generate_infill_layers(scale_(this->z), repeat_ratio, scaled_fill_spacing, bb.size()(0), bb.size()(1));
 
     // shift the pattern to the actual space
     for (Polyline &pl : polylines) { pl.translate(bb.min); }
 
     // Apply multiline offset if needed
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
-    polylines = intersection_pl(std::move(polylines), to_polygons(expolygon));
+    polylines = intersection_pl(std::move(polylines), expolygon);
 
-    // --- remove small remains from gyroid infill
+    // --- remove small remains from infill
     if (!polylines.empty()) {
         // Remove very small bits, but be careful to not remove infill lines connecting thin walls!
         // The infill perimeter lines should be separated by around a single infill line width.
-        const double minlength = scale_(0.8 * this->spacing);
+        const double minlength = scale_(0.8 * this->flow_spacing());
         polylines.erase(std::remove_if(polylines.begin(), polylines.end(), [minlength](const Polyline &pl)
             { return pl.length() < minlength; }), polylines.end());
     }
@@ -222,10 +223,10 @@ void FillCrossHatch ::_fill_surface_single(
     if (!polylines.empty()) {
         int infill_start_idx = polylines_out.size(); // only rotate what belongs to us.
         // connect lines
-        chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+        chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, params);
 
         // rotate back
-        if (std::abs(infill_angle) >= EPSILON) {
+        if (!is_zero(infill_angle)) {
             for (auto it = polylines_out.begin() + infill_start_idx; it != polylines_out.end(); ++it) it->rotate(infill_angle);
         }
     }

@@ -14,33 +14,32 @@ void FillLine::_fill_surface_single(
     ExPolygon                        expolygon,
     Polylines                       &polylines_out)
 {
+    assert(params.density > 0.0001f && params.density <= 1.f);
     // rotate polygons so that we can work with vertical lines here
     expolygon.rotate(- direction.first);
 
-    this->_min_spacing = scale_(this->spacing);
-    assert(params.density > 0.0001f && params.density <= 1.f);
-    this->_line_spacing = coord_t(coordf_t(this->_min_spacing) / params.density);
-    this->_diagonal_distance = this->_line_spacing * 2;
-    this->_line_oscillation = this->_line_spacing - this->_min_spacing; // only for Line infill
+    // Adjust flow and spacing for the box size.
+    this->_set_flow_and_spacing(params, unscaled(bounding_box.size().x()));
+    coord_t scaled_line_spacing = this->scaled_line_spacing();
+    coord_t scaled_fill_spacing = this->scaled_fill_spacing();
+    this->_diagonal_distance = scaled_fill_spacing * 2;
+    this->_line_oscillation = scaled_fill_spacing - scaled_line_spacing; // only for Line infill
     BoundingBox bounding_box = expolygon.contour.bounding_box();
 
     // define flow spacing according to requested density
-    if (params.density > 0.9999f && !params.dont_adjust) {
-        this->_line_spacing = this->_adjust_solid_spacing(bounding_box.size()(0), this->_line_spacing);
-        this->spacing = unscale<double>(this->_line_spacing);
-    } else {
+    if (params.dont_adjust) {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
         bounding_box.merge(align_to_grid(
             bounding_box.min,
-            Point(this->_line_spacing, this->_line_spacing),
+            Point(scaled_fill_spacing, scaled_fill_spacing),
             direction.second.rotated(- direction.first)));
     }
 
     // generate the basic pattern
     coord_t x_max = bounding_box.max(0) + SCALED_EPSILON;
     Lines lines;
-    for (coord_t x = bounding_box.min(0); x <= x_max; x += this->_line_spacing)
+    for (coord_t x = bounding_box.min(0); x <= x_max; x += scaled_fill_spacing)
         lines.push_back(this->_line(lines.size(), x, bounding_box.min(1), bounding_box.max(1)));
 
     // clip paths against a slightly larger expolygon, so that the first and last paths
@@ -63,7 +62,7 @@ void FillLine::_fill_surface_single(
     // FIXME Vojtech: This is only performed for horizontal lines, not for the vertical lines!
     const float INFILL_OVERLAP_OVER_SPACING = 0.3f;
     // How much to extend an infill path from expolygon outside?
-    coord_t extra = coord_t(floor(this->_min_spacing * INFILL_OVERLAP_OVER_SPACING + 0.5f));
+    coord_t extra = coord_t(floor(scaled_line_spacing * INFILL_OVERLAP_OVER_SPACING + 0.5f));
     for (Polylines::iterator it_polyline = polylines.begin(); it_polyline != polylines.end(); ++ it_polyline) {
         Point *first_point = &it_polyline->points.front();
         Point *last_point  = &it_polyline->points.back();
@@ -80,7 +79,7 @@ void FillLine::_fill_surface_single(
         // offset the expolygon by max(min_spacing/2, extra)
         ExPolygon expolygon_off;
         {
-            ExPolygons expolygons_off = offset_ex(expolygon, this->_min_spacing/2);
+            ExPolygons expolygons_off = offset_ex(expolygon, scaled_line_spacing/2);
             if (! expolygons_off.empty()) {
                 // When expanding a polygon, the number of islands could only shrink. Therefore the offset_ex shall generate exactly one expanded island for one input island.
                 assert(expolygons_off.size() == 1);

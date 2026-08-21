@@ -106,23 +106,23 @@ void FillTpmsD::_fill_surface_single(
     Polylines                       &polylines_out)
 {
     auto infill_angle = float(this->angle + (CorrectionAngle * 2*M_PI) / 360.);
-    if(std::abs(infill_angle) >= EPSILON)
+    if(!is_zero(infill_angle))
         expolygon.rotate(-infill_angle);
 
     BoundingBox bb = expolygon.contour.bounding_box();
     // Density adjusted to have a good %of weight.
     double      density_adjusted = std::max(0., params.density * DensityAdjust / params.multiline);
     // Distance between the gyroid waves in scaled coordinates.
-    coord_t     distance = coord_t(scale_(this->spacing)  / density_adjusted);
+    coord_t     distance = coord_t(scale_(this->flow_spacing())  / density_adjusted);
 
     // align bounding box to a multiple of our grid module
-    bb.merge(align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
+    bb.align_to_grid(2*M_PI*distance);
 
     // generate pattern
     Polylines polylines = make_waves(
         scale_(this->z),
         density_adjusted,
-        this->spacing,
+        this->flow_spacing(),
         ceil(bb.size()(0) / distance) + 1.,
         ceil(bb.size()(1) / distance) + 1.);
 
@@ -131,14 +131,14 @@ void FillTpmsD::_fill_surface_single(
 		pl.translate(bb.min);
 	
 	    // Apply multiline offset if needed
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
 	polylines = intersection_pl(std::move(polylines), expolygon);
 
     if (! polylines.empty()) {
 		// Remove very small bits, but be careful to not remove infill lines connecting thin walls!
         // The infill perimeter lines should be separated by around a single infill line width.
-        const double minlength = scale_(0.8 * this->spacing);
+        const double minlength = scale_(0.8 * this->flow_spacing());
 		polylines.erase(
 			std::remove_if(polylines.begin(), polylines.end(), [minlength](const Polyline &pl) { return pl.length() < minlength; }),
 			polylines.end());
@@ -150,10 +150,10 @@ void FillTpmsD::_fill_surface_single(
 		if (params.dont_connect())
         	append(polylines_out, chain_polylines(polylines));
         else
-            this->connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+            this->connect_infill(std::move(polylines), expolygon, polylines_out, params);
 
 	    // new paths must be rotated back
-        if (std::abs(infill_angle) >= EPSILON) {
+        if (!is_zero(infill_angle)) {
 	        for (auto it = polylines_out.begin() + polylines_out_first_idx; it != polylines_out.end(); ++ it)
 	        	it->rotate(infill_angle);
 	    }

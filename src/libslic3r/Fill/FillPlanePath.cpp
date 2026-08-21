@@ -83,7 +83,7 @@ void FillPlanePath::_fill_surface_single(
     BoundingBox snug_bounding_box = get_extents(expolygon).inflated(SCALED_EPSILON);
 
     // Expand the bounding box to avoid artifacts at the edges
-    snug_bounding_box.offset(scale_(this->spacing)*params.multiline);
+    snug_bounding_box.offset(this->scaled_line_spacing());
 
     // Sparse infill (or Internal where align == true) needs to be aligned across layers. Align infill across layers using the object's bounding box.
     // Solid infill does not need to be aligned across layers, generate the infill pattern around the clipping expolygon only.
@@ -104,7 +104,7 @@ void FillPlanePath::_fill_surface_single(
 
     Polyline polyline;
     {
-        auto distance_between_lines = scaled<double>(this->spacing) * params.multiline / params.density;
+        auto distance_between_lines = scaled<double>(this->fill_spacing());
         auto min_x = coord_t(ceil(coordf_t(bounding_box.min.x()) / distance_between_lines));
         auto min_y = coord_t(ceil(coordf_t(bounding_box.min.y()) / distance_between_lines));
         auto max_x = coord_t(ceil(coordf_t(bounding_box.max.x()) / distance_between_lines));
@@ -127,7 +127,7 @@ void FillPlanePath::_fill_surface_single(
     Polylines polylines = {polyline};
 
     // Apply multiline offset if needed
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
     if (polyline.size() >= 2) {
         polylines = intersection_pl(std::move(polylines), expolygon);
@@ -179,7 +179,7 @@ void FillPlanePath::_fill_surface_single(
                     chained = chain_polylines(std::move(polylines), nullptr);
                 }
             } else
-                connect_infill(std::move(polylines), expolygon, chained, this->spacing, params);
+                connect_infill(std::move(polylines), expolygon, chained, params);
             // paths must be repositioned and rotated back
             for (Polyline& pl : chained) {
                 pl.translate(shift.x(), shift.y());

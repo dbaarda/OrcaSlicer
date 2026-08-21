@@ -223,11 +223,11 @@ struct SurfaceFillParams
     unsigned int filament_id = 0;
     // Infill pattern, adjusted for the density etc.
     InfillPattern pattern = InfillPattern(0);
+    // In unscaled coordinates.
+    coordf_t layer_height = 0.;
 
-    // in unscaled coordinates
-    coordf_t spacing = 0.;
     // infill / perimeter overlap, in unscaled coordinates
-    coordf_t overlap = 0.;
+    // coordf_t overlap = 0.;
     // Angle as provided by the region config, in radians.
     float angle = 0.f;
     // Orca: Angle is explicitly specified, do not alternate direction.
@@ -237,7 +237,7 @@ struct SurfaceFillParams
     // Non-negative for a bridge.
     float bridge_angle = 0.f;
 
-    // Fill density (flow-spacing/fill-spacing) in the range 0.0 -> 1.0.
+    // Fill density = flow-spacing*multiline/fill-spacing in the range 0.0 -> 1.0.
     float density = 0.f;
     // Infill line multiplier count.
     int multiline = 1;
@@ -344,6 +344,8 @@ struct SurfaceFillParams
             role_speed     = 0.0f;
         default: throw std::runtime_error("Invalid surface type for fill!");
         }
+        layer_height = layer.height;
+
         // If the density is zero, skip this surface.
         if (density <= 0.0f) {
             extrusion_role = erNone;
@@ -408,36 +410,27 @@ struct SurfaceFillParams
             }
         }
 
-        // Calculate the actual flow we'll be using for this infill.
-        float line_height = (surface.thickness == -1) ? layer.height : surface.thickness;
-        bool first_layer  = layer.id() == 0;
-        bridge            = surface.is_bridge() || Fill::use_bridge_flow(pattern);
-        flow              = object.flow(region, flow_role, line_height, bridge, first_layer);
+        // Calculate the actual flow we'll be using for this infill. Note `surface.thickness` *might* be different to `layer_height`, which
+        // can be different to the default `object_config.layer_height`, which can also be different to `flow.height()`. We calculate the
+        // flow using the actual target height, and `object.flow()` correctly compensates to ensure the correct consistent spacing.
+        float surface_height = (surface.thickness == -1) ? layer_height : surface.thickness;
+        bool first_layer     = layer.id() == 0;
+        bridge               = surface.is_bridge() || Fill::use_bridge_flow(pattern);
+        flow                 = object.flow(region, flow_role, surface_height, bridge, first_layer);
 
-        // Calculate flow spacing and anchor lengths.
+        // Set multiline and anchor lengths.
         if (extrusion_role == erInternalInfill) {
             // Orca: apply fill multiline only for sparse infill
             multiline = int(region_config.fill_multiline);
-            // Calculating sparse infill line spacing independent of the current layer height and 1st layer status, so that infill will be
-            // aligned over all layers of the current region.
-            spacing = object.flow(region, frInfill, object_config.layer_height, bridge, false).spacing();
             // Anchor a sparse infill to inner perimeters with the following anchor length:
-            anchor_length     = float(region_config.infill_anchor.get_abs_value(spacing));
-            anchor_length_max = float(region_config.infill_anchor_max.get_abs_value(spacing));
+            anchor_length     = float(region_config.infill_anchor.get_abs_value(flow.spacing()));
+            anchor_length_max = float(region_config.infill_anchor_max.get_abs_value(flow.spacing()));
             anchor_length     = std::min(anchor_length, anchor_length_max);
-            // Widen spacing to include multilines.
-            spacing *= multiline;
         } else {
             multiline = 1;
-            spacing   = flow.spacing();
             // Don't limit anchor length for solid or bridging infill.
             anchor_length     = 1000.f;
             anchor_length_max = 1000.f;
-        }
-
-        // Adjust spacing for density.
-        if (!is_approx(density, 1.0f)) {
-            spacing /= density;
         }
     }
 
@@ -460,11 +453,13 @@ struct SurfaceFillParams
         if (this->bridge_angle < rhs.bridge_angle)
             return false;
 
-        RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, extrusion_role);
+        // Next sort by fillament_id, then increasing layer_height.
         RETURN_COMPARE_NON_EQUAL(filament_id);
+        RETURN_COMPARE_NON_EQUAL(layer_height);
+
+        RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, extrusion_role);
         RETURN_COMPARE_NON_EQUAL_TYPED(unsigned, pattern);
-        RETURN_COMPARE_NON_EQUAL(spacing);
-        RETURN_COMPARE_NON_EQUAL(overlap);
+        // RETURN_COMPARE_NON_EQUAL(overlap);
         RETURN_COMPARE_NON_EQUAL(angle);
         RETURN_COMPARE_NON_EQUAL(fixed_angle);
         RETURN_COMPARE_NON_EQUAL(bridge);
@@ -495,9 +490,10 @@ struct SurfaceFillParams
     bool operator==(const SurfaceFillParams& rhs) const
     {
         return this->extrusion_role == rhs.extrusion_role && this->filament_id == rhs.filament_id && this->pattern == rhs.pattern &&
-               this->spacing == rhs.spacing && this->overlap == rhs.overlap && this->angle == rhs.angle &&
-               this->fixed_angle == rhs.fixed_angle && this->bridge == rhs.bridge && this->bridge_angle == rhs.bridge_angle &&
-               this->density == rhs.density && this->multiline == rhs.multiline && this->anchor_length == rhs.anchor_length &&
+               this->layer_height == rhs.layer_height &&
+               /*this->overlap == rhs.overlap && */ this->angle == rhs.angle && this->fixed_angle == rhs.fixed_angle &&
+               this->bridge == rhs.bridge && this->bridge_angle == rhs.bridge_angle && this->density == rhs.density &&
+               this->multiline == rhs.multiline && this->anchor_length == rhs.anchor_length &&
                this->anchor_length_max == rhs.anchor_length_max && this->flow == rhs.flow && this->role_speed == rhs.role_speed &&
                this->lateral_lattice_angle_1 == rhs.lateral_lattice_angle_1 &&
                this->lateral_lattice_angle_2 == rhs.lateral_lattice_angle_2 && this->infill_lock_depth == rhs.infill_lock_depth &&
@@ -505,6 +501,51 @@ struct SurfaceFillParams
                this->infill_overhang_angle == rhs.infill_overhang_angle && this->gyroid_optimized == rhs.gyroid_optimized &&
                this->center_of_surface_pattern == rhs.center_of_surface_pattern && this->separated_infills == rhs.separated_infills &&
                this->fill_order == rhs.fill_order;
+    }
+
+    FillParams get_fill_params(const LayerRegion& layerm)
+    {
+        const Layer& layer                     = *layerm.layer();
+        const PrintObject& object              = *layer.object();
+        const PrintRegion& region              = layerm.region();
+        const PrintConfig& print_config        = object.print()->config();
+        const PrintObjectConfig& object_config = object.config();
+        const PrintRegionConfig& region_config = region.config();
+        FillParams params;
+
+        params.extrusion_role = extrusion_role;
+        params.pattern        = pattern;
+        params.density        = density;
+        params.multiline      = multiline;
+        params.flow           = flow;
+        params.layer_height   = layer_height;
+        params.anchor_length     = anchor_length;
+        params.anchor_length_max = anchor_length_max;
+        params.resolution        = print_config.resolution;
+        params.monotonic         = pattern == ipMonotonic || pattern == ipMonotonicLine;
+        params.use_arachne       = pattern == ipConcentric || pattern == ipConcentricInternal;
+        // Don't adjust sparse infill to ensure different layers align correctly.
+        params.dont_adjust = extrusion_role == erInternalInfill;
+        params.dont_sort   = false;
+        params.can_reverse = pattern != ipGrid;
+        // TODO(dbaarda): remove if obsolete. It seems complete is unused.
+        // params.complete                = false;
+        params.lateral_lattice_angle_1 = lateral_lattice_angle_1;
+        params.lateral_lattice_angle_2 = lateral_lattice_angle_2;
+        params.infill_overhang_angle   = infill_overhang_angle;
+        params.gyroid_optimized        = gyroid_optimized;
+        params.config                  = &region_config;
+        params.fill_order              = fill_order;
+        // params.horiz_move is adjusted during the fill.
+        params.horiz_move              = 0.0;
+        params.symmetric_infill_y_axis = symmetric_infill_y_axis;
+        // params.symmetric_y_axis is adjusted during the fill.
+        params.symmetric_y_axis          = 0;
+        params.locked_zag                = pattern == ipLockedZag;
+        params.infill_lock_depth         = infill_lock_depth;
+        params.skin_infill_depth         = skin_infill_depth;
+        params.center_of_surface_pattern = center_of_surface_pattern;
+        return params;
     }
 };
 
@@ -783,11 +824,10 @@ void split_solid_surface(size_t layer_id, const SurfaceFill& fill, ExPolygons& n
 
     const bool line_based_pattern = fill.params.pattern == ipRectilinear || fill.params.pattern == ipMonotonic ||
                                     fill.params.pattern == ipMonotonicLine || fill.params.pattern == ipAlignedRectilinear;
+    const coord_t scaled_spacing  = fill.params.flow.scaled_spacing();
 
     // ORCA: For non-line patterns, split by a geometric "core" so only thin areas get rerouted.
     if (!line_based_pattern) {
-        const coord_t scaled_spacing = scaled<coord_t>(fill.params.spacing);
-
         for (const ExPolygon& expolygon : fill.expolygons) {
             Polygons filled_area = to_polygons(expolygon);
 
@@ -812,11 +852,8 @@ void split_solid_surface(size_t layer_id, const SurfaceFill& fill, ExPolygons& n
     }
 
     Polygons normal_fill_areas; // Areas that filled with normal infill
-
-    constexpr double connect_extrusions = true;
-
-    const coord_t scaled_spacing               = scaled<coord_t>(fill.params.spacing);
-    double distance_limit_reconnection         = 2.0 * double(scaled_spacing);
+    constexpr bool connect_extrusions          = true;
+    double distance_limit_reconnection         = double(2 * scaled_spacing);
     double squared_distance_limit_reconnection = distance_limit_reconnection * distance_limit_reconnection;
     // Calculate infill direction, see Fill::_infill_direction
     double base_angle = fill.params.angle + float(M_PI / 2.);
@@ -834,29 +871,29 @@ void split_solid_surface(size_t layer_id, const SurfaceFill& fill, ExPolygons& n
 
         Polygons inner_area = intersection(filled_area, opening(filled_area, 2 * scaled_spacing, 3 * scaled_spacing));
 
-        inner_area = shrink(inner_area, scaled_spacing * 0.5 - scaled<double>(fill.params.overlap));
+        inner_area = shrink(inner_area, scaled_spacing/2); // - scaled<double>(fill.params.overlap));
 
         AABBTreeLines::LinesDistancer<Line> area_walls{to_lines(inner_area)};
 
-        const size_t n_vlines = (bb.max.x() - bb.min.x() + scaled_spacing - 1) / scaled_spacing;
-        const coord_t y_min   = bb.min.y();
-        const coord_t y_max   = bb.max.y();
+        const int n_vlines = (bb.max.x() - bb.min.x() + scaled_spacing - 1) / scaled_spacing;
+        const coord_t y_min    = bb.min.y();
+        const coord_t y_max    = bb.max.y();
         Lines vertical_lines(n_vlines);
-        for (size_t i = 0; i < n_vlines; i++) {
-            coord_t x           = bb.min.x() + i * double(scaled_spacing);
+        for (int i = 0; i < n_vlines; i++) {
+            coord_t x           = bb.min.x() + i * scaled_spacing;
             vertical_lines[i].a = Point{x, y_min};
             vertical_lines[i].b = Point{x, y_max};
         }
 
         if (!vertical_lines.empty()) {
             vertical_lines.push_back(vertical_lines.back());
-            vertical_lines.back().a = Point{coord_t(bb.min.x() + n_vlines * double(scaled_spacing) + scaled_spacing * 0.5), y_min};
+            vertical_lines.back().a = Point{bb.min.x() + n_vlines * scaled_spacing + scaled_spacing/2, y_min};
             vertical_lines.back().b = Point{vertical_lines.back().a.x(), y_max};
         }
 
         std::vector<Lines> polygon_sections(n_vlines);
 
-        for (size_t i = 0; i < n_vlines; i++) {
+        for (int i = 0; i < n_vlines; i++) {
             const auto intersections = area_walls.intersections_with_line<true>(vertical_lines[i]);
 
             for (int intersection_idx = 0; intersection_idx < int(intersections.size()) - 1; intersection_idx++) {
@@ -884,8 +921,8 @@ void split_solid_surface(size_t layer_id, const SurfaceFill& fill, ExPolygons& n
             std::vector<std::vector<Line>> polygon_sections_w_width = polygon_sections;
             for (auto& slice : polygon_sections_w_width) {
                 for (Line& l : slice) {
-                    l.a -= Point{0.0, 0.5 * scaled_spacing};
-                    l.b += Point{0.0, 0.5 * scaled_spacing};
+                    l.a -= Point{0, scaled_spacing/2};
+                    l.b += Point{0, scaled_spacing/2};
                 }
             }
 
@@ -969,7 +1006,7 @@ void split_solid_surface(size_t layer_id, const SurfaceFill& fill, ExPolygons& n
 
     // Merge very small areas that is smaller than a single line width to the normal infill if they touches
     for (auto iter = narrow_fill_areas.begin(); iter != narrow_fill_areas.end();) {
-        auto shrinked_expoly = offset_ex(*iter, -scaled_spacing * 0.5);
+        auto shrinked_expoly = offset_ex(*iter, -scaled_spacing / 2);
         if (shrinked_expoly.empty()) {
             // Too small! Check if it touches any normal infills
             auto expanede_exploy              = offset_ex(*iter, scaled_spacing * 0.3);
@@ -993,7 +1030,7 @@ void split_solid_surface(size_t layer_id, const SurfaceFill& fill, ExPolygons& n
     // Expand the normal infills to avoid gaps between normal and narrow infills.
     // The inner_area was shrunk by scaled_spacing * 0.5, so we need to expand
     // by at least that amount to ensure proper coverage and avoid gaps.
-    normal_infill = intersection_ex(offset_ex(normal_fill_areas_ex, scaled_spacing * 0.5), fill.expolygons);
+    normal_infill = intersection_ex(offset_ex(normal_fill_areas_ex, scaled_spacing / 2), fill.expolygons);
     narrow_infill = narrow_fill_areas;
 
 #ifdef DEBUG_SURFACE_SPLIT
@@ -1173,7 +1210,7 @@ std::vector<SurfaceFill> group_fills(const Layer& layer, LockRegionParam& lock_p
             const LayerRegion& layerm = *layer.regions()[region_id];
             for (SurfaceFill& surface_fill : surface_fills)
                 if (surface_fill.surface.surface_type == stInternalSolid &&
-                    std::abs(layer.height - surface_fill.params.flow.height()) < EPSILON) {
+                    is_approx(layer.height, surface_fill.params.flow.height())) {
                     internal_solid_fill = &surface_fill;
                     break;
                 }
@@ -1301,51 +1338,15 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree,
             fill_concentric->print_object_config = &this->object()->config();
         } else if (surface_fill.params.pattern == ipLightning)
             dynamic_cast<FillLightning::Filler*>(f.get())->generator = lightning_generator;
-        // calculate flow spacing for infill pattern generation
-        bool using_internal_flow = !surface_fill.surface.is_solid() && !surface_fill.params.bridge;
-        double link_max_length   = 0.;
-        if (!surface_fill.params.bridge) {
-#if 0
-            link_max_length = layerm.region()->config().get_abs_value(surface.is_external() ? "external_fill_link_max_length" : "fill_link_max_length", flow.spacing());
-//            printf("flow spacing: %f,  is_external: %d, link_max_length: %lf\n", flow.spacing(), int(surface.is_external()), link_max_length);
-#else
-            if (surface_fill.params.density > 0.8) // 80%
-                link_max_length = 3. * f->spacing;
-#endif
-        }
 
-        LayerRegion* layerm = this->m_regions[surface_fill.region_id];
+        LayerRegion& layerm = *m_regions[surface_fill.region_id];
+        auto& region_config = layerm.region().config();
 
-        // Maximum length of the perimeter segment linking two infill lines.
-        f->link_max_length = (coord_t) scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
-        f->loop_clipping = coord_t(scale_(layerm->region().config().seam_gap.get_abs_value(surface_fill.params.flow.nozzle_diameter())));
+        f->loop_clipping = coord_t(scale_(layerm.region().config().seam_gap.get_abs_value(surface_fill.params.flow.nozzle_diameter())));
 
         // apply half spacing using this flow's own spacing and generate infill
-        FillParams params;
-        params.density                 = surface_fill.params.density;
-        params.multiline               = surface_fill.params.multiline;
-        params.dont_adjust             = false; //  surface_fill.params.dont_adjust;
-        params.anchor_length           = surface_fill.params.anchor_length;
-        params.anchor_length_max       = surface_fill.params.anchor_length_max;
-        params.resolution              = resolution;
-        params.use_arachne             = surface_fill.params.pattern == ipConcentric || surface_fill.params.pattern == ipConcentricInternal;
-        params.layer_height            = layerm->layer()->height;
-        params.lateral_lattice_angle_1 = surface_fill.params.lateral_lattice_angle_1;
-        params.lateral_lattice_angle_2 = surface_fill.params.lateral_lattice_angle_2;
-        params.infill_overhang_angle   = surface_fill.params.infill_overhang_angle;
-        params.gyroid_optimized        = surface_fill.params.gyroid_optimized;
-
-        // BBS
-        params.flow                = surface_fill.params.flow;
-        params.extrusion_role      = surface_fill.params.extrusion_role;
-        params.using_internal_flow = using_internal_flow;
-        auto& region_config        = layerm->region().config();
-        params.config              = &region_config;
-        params.pattern             = surface_fill.params.pattern;
-        params.fill_order          = surface_fill.params.fill_order;
-        // Orca: center of surface pattern
-        params.center_of_surface_pattern = surface_fill.params.center_of_surface_pattern;
+        FillParams params = surface_fill.params.get_fill_params(layerm);
 
         // Orca: Each_Model centers the pattern on each model part's bbox; Each_Surface / Each_Assembly
         // fall through to the default (whole-object) bounding box below.
@@ -1353,9 +1354,6 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree,
         bool is_separate_infill  = surface_fill.params.separated_infills;
 
         if (surface_fill.params.pattern == ipLockedZag) {
-            params.locked_zag        = true;
-            params.infill_lock_depth = surface_fill.params.infill_lock_depth;
-            params.skin_infill_depth = surface_fill.params.skin_infill_depth;
             f->set_lock_region_param(lock_param);
         }
         if (surface_fill.params.pattern == ipCrossZag || surface_fill.params.pattern == ipLockedZag) {
@@ -1364,14 +1362,7 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree,
             } else {
                 params.horiz_move += scale_(region_config.infill_shift_step) * (f->layer_id / 2);
             }
-
-            params.symmetric_infill_y_axis = surface_fill.params.symmetric_infill_y_axis;
-
-        } else if (surface_fill.params.pattern == ipZigZag) {
-            params.symmetric_infill_y_axis = surface_fill.params.symmetric_infill_y_axis;
         }
-        if (surface_fill.params.pattern == ipGrid)
-            params.can_reverse = false;
 
         for (ExPolygon& expoly : surface_fill.expolygons) {
             // Orca: separate infill / per-model pattern centering.
@@ -1408,9 +1399,6 @@ void Layer::make_fills(FillAdaptive::Octree* adaptive_fill_octree,
                 params.symmetric_y_axis = f->extended_object_bounding_box().center().x();
                 expoly.symmetric_y(params.symmetric_y_axis);
             }
-
-            // Spacing is modified by the filler to indicate adjustments. Reset it for each expolygon.
-            f->spacing                     = surface_fill.params.spacing;
             surface_fill.surface.expolygon = std::move(expoly);
 
             // Orca: Elephant foot compensation for solid layers above bottommost by infill density manipulation.
@@ -1527,43 +1515,15 @@ Polylines Layer::generate_sparse_infill_polylines_for_anchoring(FillAdaptive::Oc
         if (surface_fill.params.pattern == ipLightning)
             dynamic_cast<FillLightning::Filler*>(f.get())->generator = lightning_generator;
 
-        // calculate flow spacing for infill pattern generation
-        double link_max_length = 0.;
-        if (!surface_fill.params.bridge) {
-#if 0
-            link_max_length = layerm.region()->config().get_abs_value(surface.is_external() ? "external_fill_link_max_length" : "fill_link_max_length", flow.spacing());
-//            printf("flow spacing: %f,  is_external: %d, link_max_length: %lf\n", flow.spacing(), int(surface.is_external()), link_max_length);
-#else
-            if (surface_fill.params.density > 0.8) // 80%
-                link_max_length = 3. * f->spacing;
-#endif
-        }
-
         LayerRegion& layerm = *m_regions[surface_fill.region_id];
 
-        // Maximum length of the perimeter segment linking two infill lines.
-        f->link_max_length = (coord_t) scale_(link_max_length);
         // Used by the concentric infill pattern to clip the loops to create extrusion paths.
         f->loop_clipping = coord_t(scale_(layerm.region().config().seam_gap.get_abs_value(surface_fill.params.flow.nozzle_diameter())));
 
         // apply half spacing using this flow's own spacing and generate infill
-        FillParams params;
-        params.density                 = surface_fill.params.density;
-        params.dont_adjust             = false; //  surface_fill.params.dont_adjust;
-        params.anchor_length           = surface_fill.params.anchor_length;
-        params.anchor_length_max       = surface_fill.params.anchor_length_max;
-        params.resolution              = resolution;
-        params.use_arachne             = false;
-        params.layer_height            = layerm.layer()->height;
-        params.lateral_lattice_angle_1 = surface_fill.params.lateral_lattice_angle_1;
-        params.lateral_lattice_angle_2 = surface_fill.params.lateral_lattice_angle_2;
-        params.infill_overhang_angle   = surface_fill.params.infill_overhang_angle;
-        params.multiline               = surface_fill.params.multiline;
-        params.gyroid_optimized        = surface_fill.params.gyroid_optimized;
+        FillParams params = surface_fill.params.get_fill_params(layerm);
 
         for (ExPolygon& expoly : surface_fill.expolygons) {
-            // Spacing is modified by the filler to indicate adjustments. Reset it for each expolygon.
-            f->spacing                     = surface_fill.params.spacing;
             surface_fill.surface.expolygon = std::move(expoly);
             try {
                 Polylines polylines = f->fill_surface(&surface_fill.surface, params);
@@ -1676,7 +1636,7 @@ void Layer::make_ironing()
                                             0 :
                                             calculate_infill_rotation_angle(*this->object(), this->id(), config.solid_infill_direction.value,
                                                                             config.solid_infill_rotate_template.value)) +
-                                       config.ironing_angle * M_PI / 180.;
+                                       Geometry::deg2rad(double(config.ironing_angle));
                 if (config.align_infill_direction_to_model) {
                     auto m = this->object()->trafo().matrix();
                     ironing_angle += atan2((double) m(1, 0), (double) m(0, 0));
@@ -1691,7 +1651,6 @@ void Layer::make_ironing()
     std::sort(by_filament_id.begin(), by_filament_id.end());
 
     FillParams fill_params;
-    fill_params.density     = 1.;
     fill_params.monotonic   = true;
     InfillPattern f_pattern = ipRectilinear;
     std::unique_ptr<Fill> f = std::unique_ptr<Fill>(Fill::new_from_type(f_pattern));
@@ -1781,12 +1740,13 @@ void Layer::make_ironing()
         }
 
         // Create the filler object.
-        f->spacing              = ironing_params.line_spacing;
+        //f->spacing              = ironing_params.line_spacing;
         f->angle                = float(ironing_params.angle);
         f->fixed_angle          = ironing_params.fixed_angle;
-        f->link_max_length      = (coord_t) scale_(3. * f->spacing);
-        double extrusion_height = ironing_params.height * f->spacing / nozzle_dmr;
+        double extrusion_height = ironing_params.height * ironing_params.line_spacing / nozzle_dmr;
         float extrusion_width   = Flow::rrect_width(float(nozzle_dmr), float(extrusion_height));
+        fill_params.flow = Flow(extrusion_width, extrusion_height, nozzle_dmr);
+        fill_params.set_fill_spacing(ironing_params.line_spacing);
         double flow_mm3_per_mm  = nozzle_dmr * extrusion_height;
         Surface surface_fill(stTop, ExPolygon());
         for (ExPolygon& expoly : ironing_areas) {

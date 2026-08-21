@@ -703,14 +703,15 @@ static std::optional<std::pair<Point, size_t>> polyline_sample_next_point_at_dis
     FillParams             fill_params;
 
     filler->layer_id = layer_idx;
-    filler->spacing  = flow.spacing();
+    //filler->spacing  = flow.spacing();
     filler->angle = roof ?
         //fixme support_layer.interface_id() instead of layer_idx
         (support_params.interface_angle + (layer_idx & 1) ? float(- M_PI / 4.) : float(+ M_PI / 4.)) :
         support_params.base_angle;
 
+    fill_params.flow = flow;
     // ORCA: use top-specific interface density after separating top/bottom settings.
-    fill_params.density     = float(roof ? support_params.top_interface_density : scaled<float>(filler->spacing) / (scaled<float>(filler->spacing) + float(support_infill_distance)));
+    fill_params.density     = float(roof ? support_params.top_interface_density : scaled<float>(flow.spacing()) / (scaled<float>(flow.spacing()) + float(support_infill_distance)));
     fill_params.dont_adjust = true;
 
     Polylines out;
@@ -1053,7 +1054,7 @@ void finalize_raft_contact(
             // If any tips at first_tree_layer now are completely inside the expanded raft layer, remove them as well before they are propagated to the ground.
             Polygons &raft_polygons = top_contacts[raft_contact_layer_idx]->polygons;
             EdgeGrid::Grid grid(get_extents(raft_polygons).inflated(SCALED_EPSILON));
-            grid.create(raft_polygons, Polylines{}, coord_t(scale_(10.)));
+            grid.create(raft_polygons, Polylines{}, scaled(10.));
             SupportElements &first_layer_move_bounds = move_bounds[first_tree_layer];
             double threshold = scaled<double>(print_object.config().raft_expansion.value) * 2.;
             first_layer_move_bounds.erase(std::remove_if(first_layer_move_bounds.begin(), first_layer_move_bounds.end(),
@@ -2896,7 +2897,7 @@ static std::pair<int, int> discretize_circle(const Vec3f &center, const Vec3f &n
     // Prepare coordinate system for the circle plane.
     Vec3f x = normal.cross(Vec3f(0.f, -1.f, 0.f)).normalized();
     Vec3f y = normal.cross(x).normalized();
-    assert(std::abs(x.cross(y).dot(normal) - 1.f) < EPSILON);
+    assert(is_approx(x.cross(y).dot(normal), 1.f));
 
     // Discretize the circle.
     int begin = int(pts.size());
@@ -3332,7 +3333,7 @@ static void organic_smooth_branches_avoid_collisions(
                 // Nudge the circle center away from the collision.
                 Vec3d v{ projections[i].x() - pts[i].x(), projections[i].y() - pts[i].y(), projections[i].z() - pts[i].z() };
                 double depth = v.norm();
-                assert(std::abs(distances[i] - depth) < EPSILON);
+                assert(is_approx(distances[i], depth));
                 double radius = unscaled<double>(support_element_radius(config, element)) * scale;
                 if (depth < radius) {
                     // Collision detected to be removed.

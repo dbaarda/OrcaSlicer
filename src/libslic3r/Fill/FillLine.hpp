@@ -24,8 +24,6 @@ protected:
 	    ExPolygon    		             expolygon,
 	    Polylines                       &polylines_out) override;
 
-	coord_t _min_spacing;
-	coord_t _line_spacing;
 	// distance threshold for allowing the horizontal infill lines to be connected into a continuous path
 	coord_t _diagonal_distance;
 	// only for line infill
@@ -39,8 +37,8 @@ protected:
 	bool _can_connect(coord_t dist_X, coord_t dist_Y)
 	{
 	    const auto TOLERANCE = coord_t(10 * SCALED_EPSILON);
-    	return (dist_X >= (this->_line_spacing - this->_line_oscillation) - TOLERANCE)
-        	&& (dist_X <= (this->_line_spacing + this->_line_oscillation) + TOLERANCE)
+    	return (dist_X >= (this->scaled_fill_spacing() - this->_line_oscillation) - TOLERANCE)
+        	&& (dist_X <= (this->scaled_fill_spacing() + this->_line_oscillation) + TOLERANCE)
         	&& (dist_Y <= this->_diagonal_distance);
     }
 };

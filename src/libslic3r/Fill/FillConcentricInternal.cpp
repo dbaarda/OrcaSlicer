@@ -15,12 +15,15 @@ void FillConcentricInternal::fill_surface_extrusion(const Surface* surface, cons
 
     ThickPolylines thick_polylines_out;
 
+    // Set the flow and spacing from params.
+    this->_set_flow_and_spacing(params);
+    
     for (size_t i = 0; i < this->no_overlap_expolygons.size(); ++i) {
         ExPolygon &expolygon = this->no_overlap_expolygons[i];
 
         // no rotation is supported for this infill pattern
         Point   bbox_size = expolygon.contour.bounding_box().size();
-        coord_t min_spacing = params.flow.scaled_spacing();
+        coord_t min_spacing = this->scaled_flow_spacing();
 
         coord_t                loops_count = std::max(bbox_size.x(), bbox_size.y()) / min_spacing + 1;
         Polygons               polygons = to_polygons(expolygon);
@@ -85,9 +88,8 @@ void FillConcentricInternal::fill_surface_extrusion(const Surface* surface, cons
     coll_nosort->no_sort = this->no_sort(); //can be sorted inside the pass
 
     if (!thick_polylines_out.empty()) {
-        Flow new_flow = params.flow.with_spacing(float(this->spacing));
         ExtrusionEntityCollection gap_fill;
-        variable_width(thick_polylines_out, params.extrusion_role, new_flow, gap_fill.entities);
+        variable_width(thick_polylines_out, params.extrusion_role, this->flow(), gap_fill.entities);
         coll_nosort->append(std::move(gap_fill.entities));
     }
 

@@ -1049,7 +1049,7 @@ bool validate_segment_intersection_connectivity(const std::vector<SegmentedInter
 // These contour points are either on the same vertical line, or on the vertical line left / right to the current one.
 static void connect_segment_intersections_by_contours(
 	const ExPolygonWithOffset &poly_with_offset, std::vector<SegmentedIntersectionLine> &segs,
-	const FillParams &params, const coord_t link_max_length)
+	const FillParams &params)
 {
     for (size_t i_vline = 0; i_vline < segs.size(); ++ i_vline) {
 	    SegmentedIntersectionLine       &il      = segs[i_vline];
@@ -1179,17 +1179,17 @@ static void connect_segment_intersections_by_contours(
 					itsct.prev_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
 				if (itsct.next_on_contour_quality == SegmentIntersection::LinkQuality::Valid)
 					itsct.next_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
-			} else if (link_max_length > 0) {
+			} else {
             	// Measure length of the links.
 				if (itsct.prev_on_contour_quality == SegmentIntersection::LinkQuality::Valid &&
             	    (same_prev ? 
             		 	measure_perimeter_segment_on_vertical_line_length(poly_with_offset, segs, i_vline, iprev, i_intersection, forward) :
-            			measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline - 1, iprev, i_intersection)) > link_max_length)
+            			measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline - 1, iprev, i_intersection)) > params.anchor_length_max)
 	    			itsct.prev_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
 				if (itsct.next_on_contour_quality == SegmentIntersection::LinkQuality::Valid &&
             		(same_next ?
             			measure_perimeter_segment_on_vertical_line_length(poly_with_offset, segs, i_vline, i_intersection, inext, forward) :
-            			measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline, i_intersection, inext)) > link_max_length)
+            			measure_perimeter_horizontal_segment_length(poly_with_offset, segs, i_vline, i_intersection, inext)) > params.anchor_length_max)
 	    			itsct.next_on_contour_quality = SegmentIntersection::LinkQuality::TooLong;
             }
 	    }
@@ -1365,7 +1365,7 @@ static void traverse_graph_generate_polylines(const ExPolygonWithOffset         
             if (vline.intersections[i_intersection].type == SegmentIntersection::OUTER_LOW &&
                 vline.intersections[i_intersection + 1].type == SegmentIntersection::OUTER_HIGH) {
                 bool consumed = false;
-                //                if (params.full_infill()) {
+                //                if (params.is_solid()) {
                 //                        measure_outer_contour_slab(poly_with_offset, segs, i_vline, i_ntersection);
                 //                } else
                 consumed = true;
@@ -1578,8 +1578,7 @@ static void traverse_graph_generate_polylines(const ExPolygonWithOffset         
         // Handle nearly zero length edges.
         if (polyline_current->points.size() <= 1 ||
             (polyline_current->points.size() == 2 &&
-                std::abs(polyline_current->points.front()(0) - polyline_current->points.back()(0)) < SCALED_EPSILON &&
-                std::abs(polyline_current->points.front()(1) - polyline_current->points.back()(1)) < SCALED_EPSILON))
+             is_approx(polyline_current->points.front(), polyline_current->points.back())))
             polylines_out.pop_back();
         it 				 = nullptr;
         i_intersection   = -1;
@@ -2591,17 +2590,14 @@ static void polylines_from_paths(const std::vector<MonotonicRegionLink> &path, c
         assert(!polyline->has_duplicate_points());
         // Handle nearly zero length edges.
         if (polyline->points.size() <= 1 ||
-            (polyline->points.size() == 2 &&
-                std::abs(polyline->points.front().x() - polyline->points.back().x()) < SCALED_EPSILON &&
-                std::abs(polyline->points.front().y() - polyline->points.back().y()) < SCALED_EPSILON))
+            (polyline->points.size() == 2 && is_approx(polyline->points.front(), polyline->points.back())))
             polylines_out.pop_back();
         else if (polylines_out.size() >= 2) {
             assert(polyline->points.size() >= 2);
             // Merge the two last polylines. An extrusion may have been split by an introduction of phony outer points on intersection lines
             // to cope with pinching of inner offset contours.
             Polyline &pl_prev = polylines_out[polylines_out.size() - 2];
-            if (std::abs(polyline->points.front().x() - pl_prev.points.back().x()) < SCALED_EPSILON &&
-                std::abs(polyline->points.front().y() - pl_prev.points.back().y()) < SCALED_EPSILON) {
+            if (is_approx(polyline->points.front(), pl_prev.points.back())) {
                 pl_prev.points.back() = (pl_prev.points.back() + polyline->points.front()) / 2;
                 pl_prev.points.insert(pl_prev.points.end(), polyline->points.begin() + 1, polyline->points.end());
                 polylines_out.pop_back();
@@ -2756,6 +2752,7 @@ BoundingBox FillRectilinear::extended_object_bounding_box() const {
 
 bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillParams &params, float angleBase, float pattern_shift, Polylines &polylines_out)
 {
+    assert(params.density > 0.0001f && params.density <= 1.f);
     // At the end, only the new polylines will be rotated back.
     size_t n_polylines_out_initial = polylines_out.size();
 
@@ -2770,15 +2767,12 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
         rotate_vector.first += float(M_PI/2.);
     rotate_vector.first += angleBase;
 
-    assert(params.density > 0.0001f && params.density <= 1.f);
-    coord_t line_spacing = coord_t(scale_(this->spacing) / params.density);
-
     // On the polygons of poly_with_offset, the infill lines will be connected.
     ExPolygonWithOffset poly_with_offset(
         surface->expolygon, 
         - rotate_vector.first, 
-        float(scale_(this->overlap - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->spacing)),
-        float(scale_(this->overlap - 0.5f * this->spacing)));
+        float(scale_(this->overlap - (0.5 - INFILL_OVERLAP_OVER_SPACING) * this->flow_spacing())),
+        float(scale_(this->overlap - 0.5f * this->flow_spacing())));
     if (poly_with_offset.n_contours_inner == 0) {
         // Not a single infill line fits.
         //FIXME maybe one shall trigger the gap fill here?
@@ -2790,16 +2784,17 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
     BoundingBox bounding_box_src = poly_with_offset.bounding_box_src();
     BoundingBox bounding_box     = this->has_consistent_pattern() ? this->extended_object_bounding_box() : bounding_box_src;
 
+    // Adjust flow and spacing for the box size.
+    this->_set_flow_and_spacing(params, unscaled(bounding_box_src.size().x()));
+    coord_t line_spacing = this->scaled_flow_spacing();  // scaled adjusted fill spacing.
+
     // define flow spacing according to requested density
-    if (params.full_infill() && !params.dont_adjust) {
-        line_spacing = this->_adjust_solid_spacing(bounding_box_src.size().x(), line_spacing);
-        this->spacing = unscale<double>(line_spacing);
-    } else {
+    if (params.dont_adjust) {
         // extend bounding box so that our pattern will be aligned with other layers
         // Transform the reference point to the rotated coordinate system.
         Point refpt = rotate_vector.second.rotated(- rotate_vector.first);
         // align_to_grid will not work correctly with positive pattern_shift.
-        coord_t pattern_shift_scaled = coord_t(scale_(pattern_shift)) % line_spacing;
+        coord_t pattern_shift_scaled = scaled(pattern_shift) % line_spacing;
         refpt.x() -= (pattern_shift_scaled >= 0) ? pattern_shift_scaled : (line_spacing + pattern_shift_scaled);
         bounding_box.merge(align_to_grid(
             bounding_box.min, 
@@ -2807,11 +2802,11 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
             refpt));
     }
 
-    // Intersect a set of euqally spaced vertical lines wiht expolygon.
+    // Intersect a set of equally spaced vertical lines with expolygon.
     // n_vlines = ceil(bbox_width / line_spacing)
     size_t  n_vlines = (bounding_box.max(0) - bounding_box.min(0) + line_spacing - 1) / line_spacing;
 	coord_t x0 = bounding_box.min(0);
-	if (params.full_infill())
+	if (params.is_solid())
 		x0 += (line_spacing + coord_t(SCALED_EPSILON)) / 2;
 
     int gap_line = params.horiz_move / line_spacing;
@@ -2833,8 +2828,8 @@ bool FillRectilinear::fill_surface_by_lines(const Surface *surface, const FillPa
     iRun ++;
 #endif /* SLIC3R_DEBUG */
     std::vector<SegmentedIntersectionLine> segs = slice_region_by_vertical_lines(poly_with_offset, n_vlines, x0, line_spacing);
-    // Connect by horizontal / vertical links, classify the links based on link_max_length as too long.
-	connect_segment_intersections_by_contours(poly_with_offset, segs, params, link_max_length);
+    // Connect by horizontal / vertical links, classify the links based on params.anchor_length_max as too long.
+	connect_segment_intersections_by_contours(poly_with_offset, segs, params);
 
 #ifdef SLIC3R_DEBUG
     // Paint the segments and finalize the SVG file.
@@ -3002,32 +2997,33 @@ static inline void remove_overlapped(Polylines& polylines, coord_t line_width){
 bool FillRectilinear::fill_surface_by_multilines(const Surface *surface, FillParams params, const std::initializer_list<SweepParams> &sweep_params, Polylines &polylines_out)
 {
     assert(sweep_params.size() >= 1);
-    assert(!params.full_infill());
+    assert(!params.is_solid());
     params.density /= double(sweep_params.size());
     assert(params.density > 0.0001f && params.density <= 1.f);
 
-    ExPolygonWithOffset poly_with_offset_base(surface->expolygon, 0, float(scale_(this->overlap + 0.5 * params.multiline * this->spacing)));//increase offset to crop infill lines when using multiline infill
+    ExPolygonWithOffset poly_with_offset_base(surface->expolygon, 0, scaled<float>(this->overlap + 0.5 * this->line_spacing()));//increase offset to crop infill lines when using multiline infill
     if (poly_with_offset_base.n_contours == 0)
         // Not a single infill line fits.
         return true;
 
     Polylines fill_lines;
-    coord_t line_width   = coord_t(scale_(this->spacing));
-    coord_t line_spacing = coord_t(scale_(this->spacing) * params.multiline / params.density);
+    this->_set_flow_and_spacing(params);
+    coord_t line_width   = this->scaled_flow_spacing(); // scaled flow spacing.
+    coord_t line_spacing = this->scaled_fill_spacing();  // scaled fill spacing.
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
     for (const SweepParams &sweep : sweep_params) {
         // Rotate polygons so that we can work with vertical lines here
         float angle = rotate_vector.first + sweep.angle_base;
 
         make_fill_lines(ExPolygonWithOffset(poly_with_offset_base, -angle), rotate_vector.second.rotated(-angle), angle,
-                        line_width + coord_t(SCALED_EPSILON), line_spacing, coord_t(scale_(sweep.pattern_shift)), fill_lines);
+                        line_width + coord_t(SCALED_EPSILON), line_spacing, scaled(sweep.pattern_shift), fill_lines);
     }
         
     // Apply multiline offset if needed
-    multiline_fill(fill_lines, params, spacing);
+    multiline_fill(fill_lines, params.multiline, this->scaled_flow_spacing());
  
     // Contract surface polygon by half line width to avoid excesive overlap with perimeter
-    const ExPolygons contracted = offset_ex(surface->expolygon, -float(scale_(0.5 * this->spacing)));
+    const ExPolygons contracted = offset_ex(surface->expolygon, -float(scale_(0.5 * this->flow_spacing())));
 
     // if contraction results in empty ExPolygons, use original surface
     const ExPolygons& intersection_surface = contracted.empty() ? ExPolygons{surface->expolygon} : contracted;
@@ -3044,8 +3040,7 @@ bool FillRectilinear::fill_surface_by_multilines(const Surface *surface, FillPar
                 fill_lines = chain_polylines(std::move(fill_lines));
             append(polylines_out, std::move(fill_lines));
         } else
-            connect_infill(std::move(fill_lines), to_polygons(intersection_surface), get_extents(surface->expolygon.contour), polylines_out,
-                           this->spacing, params);
+            connect_infill(std::move(fill_lines), to_polygons(intersection_surface), get_extents(surface->expolygon.contour), polylines_out, params);
     }
 
     return true;
@@ -3063,7 +3058,7 @@ bool FillRectilinear::fill_surface_trapezoidal(
     Polylines polylines;
 
     // Common parameters
-    const coord_t d1 = coord_t(scale_(this->spacing)) * params.multiline; // Infill total wall thickness
+    const coord_t d1 = this->scaled_line_spacing(); // Infill total wall thickness
 
     // Pattern-specific parameters
     coord_t                  period;
@@ -3082,7 +3077,7 @@ bool FillRectilinear::fill_surface_trapezoidal(
 
     // Obtain the expolygon and rotate to align with pattern base angle
     ExPolygon expolygon = surface->expolygon;
-    if (std::abs(base_angle) >= EPSILON) {
+    if (!is_zero(base_angle)) {
         expolygon.rotate(-base_angle, rotate_vector.second);
     }
 
@@ -3365,10 +3360,10 @@ bool FillRectilinear::fill_surface_trapezoidal(
             pl.translate(rotate_vector.second);
 
     // Apply multiline fill
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
     // Contract surface polygon by half line width to avoid excesive overlap with perimeter
-    ExPolygons contracted = offset_ex(expolygon, -float(scale_(0.5 * this->spacing)));
+    ExPolygons contracted = offset_ex(expolygon, -float(scale_(0.5 * this->flow_spacing())));
 
     // if contraction results in empty polygon, use original surface
     const ExPolygons& intersection_surface = contracted.empty() ? ExPolygons{expolygon} : contracted;
@@ -3377,7 +3372,7 @@ bool FillRectilinear::fill_surface_trapezoidal(
     polylines = intersection_pl(std::move(polylines), intersection_surface);
 
     // Remove very short segments that may cause connection issues
-    const double minlength = scale_(0.8 * this->spacing);
+    const double minlength = scale_(0.8 * this->flow_spacing());
     if (minlength > 0 && !polylines.empty()) {
         polylines.erase(std::remove_if(polylines.begin(), polylines.end(),
                                        [minlength](const Polyline& pl) { return pl.length() < minlength; }),
@@ -3392,12 +3387,11 @@ bool FillRectilinear::fill_surface_trapezoidal(
                 polylines = chain_polylines(std::move(polylines));
             append(polylines_out, std::move(polylines));
         } else {
-            connect_infill(std::move(polylines), to_polygons(intersection_surface), get_extents(intersection_surface), polylines_out,
-                           this->spacing, params);
+            connect_infill(std::move(polylines), to_polygons(intersection_surface), get_extents(intersection_surface), polylines_out, params);
         }
 
         // Rotate back the infill lines to original orientation
-        if (std::abs(base_angle) >= EPSILON) {
+        if (!is_zero(base_angle)) {
             for (auto it = polylines_out.begin() + infill_start_idx; it != polylines_out.end(); ++it) {
                 it->rotate(base_angle, rotate_vector.second);
             }
@@ -3411,7 +3405,7 @@ Polylines FillRectilinear::fill_surface(const Surface *surface, const FillParams
 {
     Polylines polylines_out;
     // Orca Todo: fow now don't use fill_surface_by_multilines for zipzag infill
-    if (params.full_infill() || params.multiline == 1 || params.pattern == ipCrossZag || params.pattern == ipZigZag || params.pattern == ipLockedZag) {
+    if (params.is_solid() || params.multiline == 1 || params.pattern == ipCrossZag || params.pattern == ipZigZag || params.pattern == ipLockedZag) {
         if (!fill_surface_by_lines(surface, params, 0.f, 0.f, polylines_out))
             BOOST_LOG_TRIVIAL(error) << "FillRectilinear::fill_surface() fill_surface_by_lines() failed to fill a region.";
     } else {
@@ -3513,13 +3507,13 @@ Polylines FillStars::fill_surface(const Surface *surface, const FillParams &para
     if (params.multiline > 1) {
         if (!this->fill_surface_trapezoidal(
                  surface, params,
-                 {{0.f, 0.f}, {float(M_PI / 3.), 0.f}, {float(2. * M_PI / 3.), float((3. / 2.) * this->spacing * params.multiline / params.density)}},
+                 {{0.f, 0.f}, {float(M_PI / 3.), 0.f}, {float(2. * M_PI / 3.), float((3. / 2.) * this->fill_spacing())}},
                  polylines_out, 2))
             BOOST_LOG_TRIVIAL(error) << "FillStars::fill_surface_trapezoidal() failed.";
     } else {
         if (! this->fill_surface_by_multilines(
                 surface, params,
-                { { 0.f, 0.f }, { float(M_PI / 3.), 0.f }, { float(2. * M_PI / 3.), float((3./2.) * this->spacing * params.multiline / params.density) } },
+                { { 0.f, 0.f }, { float(M_PI / 3.), 0.f }, { float(2. * M_PI / 3.), float((3./2.) * this->fill_spacing()) } },
                 polylines_out))
             BOOST_LOG_TRIVIAL(error) << "FillStars::fill_surface() failed to fill a region.";
     }
@@ -3543,8 +3537,8 @@ Polylines FillQuarterCubic::fill_surface(const Surface* surface, const FillParam
     using namespace boost::math::float_constants;
     Polylines polylines_out;
 
-    coord_t line_width = coord_t(scale_(this->spacing)) * params.multiline;
-    coord_t period = coord_t(scale_(this->spacing) *params.multiline / params.density) * 4;
+    coord_t line_width = this->scaled_line_spacing();
+    coord_t period = this->scaled_fill_spacing() * 4;
 
     // First half tetrahedral fill
     double  pattern_z_shift = 0.0;
@@ -3585,7 +3579,7 @@ Polylines FillLateralHoneycomb::fill_surface(const Surface *surface, const FillP
     using namespace boost::math::float_constants;
 
     // lets begin calculating some base properties of the honeycomb pattern
-    const float half_horizontal_period = .5f * (1*(2/3.f) + 2*(1/3.f)) * float(spacing) * params.multiline / params.density;
+    const float half_horizontal_period = .5f * (1*(2/3.f) + 2*(1/3.f)) * this->fill_spacing();
     const float vertical_period = 3 * half_horizontal_period / tanf(degree * float(params.infill_overhang_angle));
 
     // we want to align the base pattern with its knot on height 0
@@ -3632,18 +3626,18 @@ Polylines FillLateralHoneycomb::fill_surface(const Surface *surface, const FillP
 
 Polylines FillSupportBase::fill_surface(const Surface *surface, const FillParams &params)
 {
-    assert(! params.full_infill());
+    assert(! params.is_solid());
 
     Polylines polylines_out;
     std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
-    ExPolygonWithOffset poly_with_offset(surface->expolygon, - rotate_vector.first, float(scale_(this->overlap - 0.5 * this->spacing)));
+    ExPolygonWithOffset poly_with_offset(surface->expolygon, - rotate_vector.first, float(scale_(this->overlap - 0.5 * this->flow_spacing())));
     if (poly_with_offset.n_contours > 0) {
         Polylines fill_lines;
-        coord_t line_spacing = coord_t(scale_(this->spacing) / params.density);
+        coord_t line_spacing = this->scaled_fill_spacing();
         // Create infill lines, keep them vertical.
         make_fill_lines(poly_with_offset, rotate_vector.second.rotated(- rotate_vector.first), 0, 0, line_spacing, 0, fill_lines);
         // Both the poly_with_offset and polylines_out are rotated, so the infill lines are strictly vertical.
-        connect_base_support(std::move(fill_lines), poly_with_offset.polygons_outer, poly_with_offset.bounding_box_outer(), polylines_out, this->spacing, params);
+        connect_base_support(std::move(fill_lines), poly_with_offset.polygons_outer, poly_with_offset.bounding_box_outer(), polylines_out, params);
         // Rotate back by rotate_vector.first
         const double cos_a = cos(rotate_vector.first);
         const double sin_a = sin(rotate_vector.first);
@@ -3707,189 +3701,13 @@ Polylines FillMonotonicLines::fill_surface(const Surface *surface, const FillPar
     return polylines_out;
 }
     
-// Orca: Replaced with FillMonotonicLines from Prusa slicer. Moved gap fill algorithm to
-// FillBase to perform gap fill for all fill types.
-/*void FillMonotonicLineWGapFill::fill_surface_extrusion(const Surface* surface, const FillParams& params, ExtrusionEntitiesPtr& out)
-{
-    ExtrusionEntityCollection *coll_nosort = new ExtrusionEntityCollection();
-    coll_nosort->no_sort = this->no_sort();
-
-    Polylines polylines_rectilinear;
-    Surface rectilinear_surface{ *surface };
-    FillParams params2 = params;
-    params2.monotonic = true;
-    params2.anchor_length_max = 0.0f;
-    //BBS: always don't adjust the spacing of top surface infill
-    params2.dont_adjust = true;
-
-    //BBS: always use no overlap expolygons to avoid overflow in top surface
-    //for (const ExPolygon &rectilinear_area : this->no_overlap_expolygons) {
-    //    rectilinear_surface.expolygon = rectilinear_area;
-    //    fill_surface_by_lines(&rectilinear_surface, params2, polylines_rectilinear);
-    //}
-    
-    // Orca: The above causes pockmarks in top layer surfaces with a properly calibrated printer with PA and EM tuned.
-    // Revert implementation to the prusa slicer approach that respects the infill/wall overlap setting
-    // while retaining the gap fill logic below. The user can adjust the overlap calue to reduce overflow if needed.
-    fill_surface_by_lines(surface, params2, polylines_rectilinear);
-    ExPolygons unextruded_areas;
-    Flow new_flow = params.flow;
-    if (!polylines_rectilinear.empty()) {
-        // calculate actual flow from spacing (which might have been adjusted by the infill
-        // pattern generator)
-        double flow_mm3_per_mm = params.flow.mm3_per_mm();
-        double flow_width = params.flow.width();
-        if (params.using_internal_flow) {
-            // if we used the internal flow we're not doing a solid infill
-            // so we can safely ignore the slight variation that might have
-            // been applied to f->spacing
-        }
-        else {
-            new_flow = params.flow.with_spacing(this->spacing);
-            flow_mm3_per_mm = new_flow.mm3_per_mm();
-            flow_width = new_flow.width();
-        }
-
-        extrusion_entities_append_paths_with_wipe(
-                coll_nosort->entities, std::move(polylines_rectilinear),
-                params.extrusion_role,
-                flow_mm3_per_mm, float(flow_width), params.flow.height());
-        unextruded_areas = diff_ex(this->no_overlap_expolygons, union_ex(coll_nosort->polygons_covered_by_spacing(10)));
-    }
-    else
-        unextruded_areas = this->no_overlap_expolygons;
-
-    //gapfill
-    ExPolygons gapfill_areas = union_ex(unextruded_areas);
-    if (!this->no_overlap_expolygons.empty())
-            gapfill_areas = intersection_ex(gapfill_areas, this->no_overlap_expolygons);
-    if (gapfill_areas.size() > 0 && params.density >= 1) {
-        double min = 0.2 * new_flow.scaled_spacing() * (1 - INSET_OVERLAP_TOLERANCE);
-        double max = 2. * new_flow.scaled_spacing();
-        ExPolygons gaps_ex = diff_ex(
-            opening_ex(gapfill_areas, float(min / 2.)),
-            offset2_ex(gapfill_areas, -float(max / 2.), float(max / 2. + ClipperSafetyOffset)));
-        //BBS: sort the gap_ex to avoid mess travel
-        Points ordering_points;
-        ordering_points.reserve(gaps_ex.size());
-        ExPolygons gaps_ex_sorted;
-        gaps_ex_sorted.reserve(gaps_ex.size());
-        for (const ExPolygon &ex : gaps_ex)
-            ordering_points.push_back(ex.contour.first_point());
-        std::vector<Points::size_type> order = chain_points(ordering_points);
-        for (size_t i : order)
-            gaps_ex_sorted.emplace_back(std::move(gaps_ex[i]));
-
-        ThickPolylines polylines;
-        for (ExPolygon& ex : gaps_ex_sorted) {
-            //BBS: Use DP simplify to avoid duplicated points and accelerate medial-axis calculation as well.
-            ex.douglas_peucker(SCALED_RESOLUTION * 0.1);
-            ex.medial_axis(min, max, &polylines);
-        }
-
-        if (!polylines.empty() && !is_bridge(params.extrusion_role)) {
-            polylines.erase(std::remove_if(polylines.begin(), polylines.end(),
-                [&](const ThickPolyline& p) {
-                    return p.length() < scale_(params.config->filter_out_gap_fill.value);
-                }), polylines.end());
-
-            ExtrusionEntityCollection gap_fill;
-            variable_width(polylines, erGapFill, params.flow, gap_fill.entities);
-            coll_nosort->append(std::move(gap_fill.entities));
-
-        }
-    }
-
-    if (!coll_nosort->empty()) {
-        out.push_back(coll_nosort);
-    } else {
-        delete coll_nosort;
-    }
-}
-
-void FillMonotonicLineWGapFill::fill_surface_by_lines(const Surface* surface, const FillParams& params, Polylines& polylines_out)
-{
-    // At the end, only the new polylines will be rotated back.
-    size_t n_polylines_out_initial = polylines_out.size();
-
-    // Shrink the input polygon a bit first to not push the infill lines out of the perimeters.
-//    const float INFILL_OVERLAP_OVER_SPACING = 0.3f;
-    const float INFILL_OVERLAP_OVER_SPACING = 0.45f;
-    assert(INFILL_OVERLAP_OVER_SPACING > 0 && INFILL_OVERLAP_OVER_SPACING < 0.5f);
-
-    // Rotate polygons so that we can work with vertical lines here
-    std::pair<float, Point> rotate_vector = this->_infill_direction(surface);
-
-    assert(params.full_infill());
-    coord_t line_spacing = params.flow.scaled_spacing();
-
-    // On the polygons of poly_with_offset, the infill lines will be connected.
-    ExPolygonWithOffset poly_with_offset(
-        surface->expolygon,
-        - rotate_vector.first, 
-        float(scale_(0 - (0.5 - INFILL_OVERLAP_OVER_SPACING) * params.flow.spacing())),
-        float(scale_(0 - 0.5f * params.flow.spacing())));
-    if (poly_with_offset.n_contours_inner == 0) {
-        // Not a single infill line fits.
-        //FIXME maybe one shall trigger the gap fill here?
-        return;
-    }
-
-    BoundingBox bounding_box = poly_with_offset.bounding_box_src();
-
-    // define flow spacing according to requested density
-    if (params.full_infill() && !params.dont_adjust) {
-        line_spacing = this->_adjust_solid_spacing(bounding_box.size()(0), line_spacing);
-        this->spacing = unscale<double>(line_spacing);
-    } else {
-        // extend bounding box so that our pattern will be aligned with other layers
-        // Transform the reference point to the rotated coordinate system.
-        Point refpt = rotate_vector.second.rotated(-rotate_vector.first);
-        bounding_box.merge(align_to_grid(
-            bounding_box.min,
-            Point(line_spacing, line_spacing),
-            refpt));
-    }
-
-    // Intersect a set of euqally spaced vertical lines wiht expolygon.
-    size_t  n_vlines = (bounding_box.max(0) - bounding_box.min(0) + line_spacing - 1) / line_spacing;
-	coord_t x0 = bounding_box.min(0);
-	if (params.full_infill())
-		x0 += (line_spacing + coord_t(SCALED_EPSILON)) / 2;
-
-    std::vector<SegmentedIntersectionLine> segs = slice_region_by_vertical_lines(poly_with_offset, n_vlines, x0, line_spacing);
-    // Connect by horizontal / vertical links, classify the links based on link_max_length as too long.
-	connect_segment_intersections_by_contours(poly_with_offset, segs, params, link_max_length);
-
-    // Sometimes the outer contour pinches the inner contour from both sides along a single vertical line.
-    // This situation is not handled correctly by generate_montonous_regions().
-    // Insert phony OUTER_HIGH / OUTER_LOW pairs at the position where the contour is pinched.
-    pinch_contours_insert_phony_outer_intersections(segs);
-	std::vector<MonotonicRegion> regions = generate_montonous_regions(segs);
-
-	connect_monotonic_regions(regions, poly_with_offset, segs);
-    if (! regions.empty()) {
-		std::mt19937_64 rng;
-		std::vector<MonotonicRegionLink> path = chain_monotonic_regions(regions, poly_with_offset, segs, rng);
-		polylines_from_paths(path, poly_with_offset, segs, polylines_out);
-    }
-
-    // paths must be rotated back
-    for (Polylines::iterator it = polylines_out.begin() + n_polylines_out_initial; it != polylines_out.end(); ++ it) {
-        // No need to translate, the absolute position is irrelevant.
-        // it->translate(- rotate_vector.second(0), - rotate_vector.second(1));
-        assert(! it->has_duplicate_points());
-        it->rotate(rotate_vector.first);
-        //FIXME rather simplify the paths to avoid very short edges?
-        //assert(! it->has_duplicate_points());
-        it->remove_duplicate_points();
-    }
-}*/
-
 void FillLockedZag::fill_surface_locked_zag (const Surface *                          surface,
                                              const FillParams &                       params,
                                              std::vector<std::pair<Polylines, Flow>> &multi_width_polyline)
 {
+    // LockedZag can't really be adjusted to fit within within polygons, but that's fine because it's always used for sparse infill, which is
+    // never adjusted to ensure layers align correctly.
+    assert(params.dont_adjust);
     // merge different part exps
     // diff skin flow
     Polylines skin_lines;
@@ -3911,7 +3729,6 @@ void FillLockedZag::fill_surface_locked_zag (const Surface *                    
         auto it = flow_params.begin();
         while (it != flow_params.end()) {
             ExPolygons region_exp = union_safety_offset_ex(it->second);
-
             Polylines polys = intersection_pl(polylines, region_exp);
             multi_width_polyline.emplace_back(polys, it->first);
             it++;
@@ -3926,7 +3743,6 @@ void FillLockedZag::fill_surface_locked_zag (const Surface *                    
         exps                  = intersection_ex(offset_ex(exps, overlap_threshold), surface->expolygon);
         for (ExPolygon &exp : exps) {
             zig_surface.expolygon = exp;
-
             Polylines zig_polylines_out = this->fill_surface(&zig_surface, zig_params);
             skeloton_lines.insert(skeloton_lines.end(), zig_polylines_out.begin(), zig_polylines_out.end());
         }
@@ -3975,23 +3791,10 @@ void FillLockedZag::fill_surface_extrusion(const Surface *surface, const FillPar
         size_t idx   = eec->entities.size();
         {
             for (std::pair<Polylines, Flow> &poly_with_flow: multi_width_polyline) {
-                // calculate actual flow from spacing (which might have been adjusted by the infill
-                // pattern generator)
-                double flow_mm3_per_mm = poly_with_flow.second.mm3_per_mm();
-                double flow_width      = poly_with_flow.second.width();
-                if (params.using_internal_flow) {
-                    // if we used the internal flow we're not doing a solid infill
-                    // so we can safely ignore the slight variation that might have
-                    // been applied to f->spacing
-                } else {
-                    Flow new_flow   = poly_with_flow.second.with_spacing(this->spacing);
-                    flow_mm3_per_mm = new_flow.mm3_per_mm();
-                    flow_width      = new_flow.width();
-                }
             extrusion_entities_append_paths(
                 eec->entities, std::move(poly_with_flow.first),
                 params.extrusion_role,
-                flow_mm3_per_mm, float(flow_width), poly_with_flow.second.height());
+                poly_with_flow.second.mm3_per_mm(), poly_with_flow.second.width(), poly_with_flow.second.height());
             }
         }
         if (!params.can_reverse) {

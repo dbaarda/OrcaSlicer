@@ -2,7 +2,7 @@
 #include "Print.hpp"
 
 namespace Slic3r {
-
+/*
 unsigned int PrintRegion::extruder(const PrintObject& object, FlowRole role) const
 {
     return object.extruder(*this, role);
@@ -17,7 +17,7 @@ Flow PrintRegion::flow(const PrintObject& object, FlowRole role, double layer_he
 {
     return object.flow(*this, role, layer_height, bridge, first_layer);
 }
-
+*/
 coordf_t PrintRegion::nozzle_dmr_avg(const PrintObject& object) const
 {    
     // Note this doesn't include bridge or support extruders because it didn't in the past. Currently bridge flows use the same nozzle as

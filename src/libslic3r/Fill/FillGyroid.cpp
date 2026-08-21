@@ -35,33 +35,35 @@ struct GyroidField
     const coordr_t         gsize  = std::round(gsizef / rsizef);
     Point                  size;
     Point                  offs;
-    coordf_t               z;
     float                  fx;
     float                  fy;
-    float                  fz;
+    float                  sin_c;
+    float                  cos_c;
     float                  isoval = 0.0f;
 
     explicit GyroidField(const BoundingBox bb, const coordf_t z, const float period, const float omega = 1.0f)
-        : size{bb.size()}, offs{bb.min}, z{z}
+        : size{bb.size()}, offs{bb.min}
     {
         const float baseline = float(2.0 * PI) / std::max(period, 1e-3f);
         fx = baseline;
         fy = baseline;
-        fz = omega * baseline;
+        const float fz = omega * baseline;
+        const float c = fz * float(z);
+        sin_c = std::sin(c);
+        cos_c = std::cos(c);
     }
 
-    float get_scalar(coordf_t x, coordf_t y, coordf_t z_arg) const
+    float get_scalar(coordf_t x, coordf_t y) const
     {
         const float a = fx * float(x);
         const float b = fy * float(y);
-        const float c = fz * float(z_arg);
-        return std::sin(a) * std::cos(b) + std::sin(b) * std::cos(c) + std::sin(c) * std::cos(a);
+        return std::sin(a) * std::cos(b) + std::sin(b) * cos_c + sin_c * std::cos(a);
     }
 
     float get_scalar(Coord p) const
     {
         Pointf pf = to_Pointf(p);
-        return get_scalar(pf.x(), pf.y(), z);
+        return get_scalar(pf.x(), pf.y());
     }
 
     inline coord_t  to_coord (const coordr_t& x) const { return x * rsize; }
@@ -175,7 +177,7 @@ static std::vector<Vec2d> make_one_period(double width, double scaleFactor, doub
         for (unsigned int i = 1;i < size; ++i) {
             auto& lp = points[i-1]; // left point
             auto& rp = points[i];   // right point
-            double x = lp(0) + (rp(0) - lp(0)) / 2;
+            double x = (lp(0) + rp(0)) / 2;
             double y = f(x, z_sin, z_cos, vertical, flip);
             Vec2d ip = {x, y};
             if (std::abs(cross2(Vec2d(ip - lp), Vec2d(ip - rp))) > sqr(tolerance)) {
@@ -208,7 +210,7 @@ static std::vector<Vec2d> make_one_period(double width, double scaleFactor, doub
 // at LOW density the gyroid strands are long and slender (prime buckling
 // targets), so they need the most shortening; at high density the strands
 // are already short and need little extra help. omega is therefore the
-// inverse-square-root of density_adjusted:
+// inverse-square-root of density_factor:
 //
 //   omega = sqrt(1 / density_adj) / sqrt(1 + layer_h/spacing),
 //           clamped [1.0, 2.0]
@@ -231,27 +233,29 @@ static std::vector<Vec2d> make_one_period(double width, double scaleFactor, doub
 // standard parametric gyroid path below.
 // ---------------------------------------------------------------------------
 
-static inline double compute_omega_factor(double density_adjusted, double line_spacing, double layer_height)
+static inline double compute_omega_factor(double density_factor, double line_spacing, double layer_height)
 {
-    double lh_ratio   = (line_spacing > 0.) ? layer_height / line_spacing : 0.5;
+    assert(density_factor > 0.0);
+    assert(line_spacing > 0.0);
+    double lh_ratio   = layer_height / line_spacing;
     double correction = 1.0 / std::sqrt(1.0 + lh_ratio);
-    double raw        = std::sqrt(1.0 / std::max(density_adjusted, 0.1)) * correction;
+    double raw        = std::sqrt(1.0 / density_factor) * correction;
     return std::clamp(raw, 1.0, 2.0);
 }
 
-static Polylines make_gyroid_waves(double gridZ, double density_adjusted, double line_spacing, double width, double height)
+static Polylines make_gyroid_waves(double gridZ, double density_factor, double line_spacing, double width, double height)
 {
-    const double scaleFactor = scale_(line_spacing) / density_adjusted;
+    const double scaleFactor = line_spacing / density_factor;
 
     // tolerance in scaled units. clamp the maximum tolerance as there's
     // no processing-speed benefit to do so beyond a certain point
-    const double tolerance = std::min(line_spacing / 2, FillGyroid::PatternTolerance) / unscale<double>(scaleFactor);
+    const double tolerance = std::min(line_spacing / 2, scaled<double>(FillGyroid::PatternTolerance)) / scaleFactor;
 
     //scale factor for 5% : 8 712 388
     // 1z = 10^-6 mm ?
     const double z     = gridZ / scaleFactor;
-    const double z_sin = sin(z);
-    const double z_cos = cos(z);
+    const double z_sin = std::sin(z);
+    const double z_cos = std::cos(z);
 
     bool vertical = (std::abs(z_sin) <= std::abs(z_cos));
     double lower_bound = 0.;
@@ -293,21 +297,23 @@ void FillGyroid::_fill_surface_single(
     Polylines                       &polylines_out)
 {
     auto infill_angle = float(this->angle + (CorrectionAngle * 2*M_PI) / 360.);
-    if(std::abs(infill_angle) >= EPSILON)
+    if(!is_zero(infill_angle))
         expolygon.rotate(-infill_angle);
 
     BoundingBox bb = expolygon.contour.bounding_box();
     // Density adjusted to have a good %of weight.
-    double      density_adjusted = std::max(0., params.density * DensityAdjust / params.multiline);
-    // Distance between the gyroid waves in scaled coordinates.
-    coord_t     distance = coord_t(scale_(this->spacing) / density_adjusted);
+    double      density_factor = std::max(0.001, params.density * DensityAdjust);
+    // Scaled multi-line spacing.
+    coord_t     scaled_line_spacing = this->scaled_line_spacing();
+    // Distance per-radian and period of the gyroid waves in scaled coordinates.
+    const coord_t distance = scaled(this->line_spacing() / density_factor);
+    const coord_t period   = coord_t(2.0 * M_PI * distance);
 
     // align bounding box to a multiple of our grid module
-    bb.merge(align_to_grid(bb.min, Point(2*M_PI*distance, 2*M_PI*distance)));
+    bb.align_to_grid(period);
 
     // Expand the bounding box to avoid artifacts at the edges
-    coord_t expand = 10 * (scale_(this->spacing));
-    bb.offset(expand); 
+    bb.offset(4 * scaled_line_spacing); 
 
     // generate pattern
     Polylines polylines;
@@ -321,21 +327,18 @@ void FillGyroid::_fill_surface_single(
         // per-XY-slice line length per unit area is approximately preserved.
         // Empirically (sim_gyroid_compare.py) the optimized line/std ratio is
         // ~1.000 across densities, so no period compensation is needed.
-        const double lh = (params.layer_height > 0.) ? double(params.layer_height) : double(this->spacing);
-        const double omega = compute_omega_factor(density_adjusted, this->spacing * params.multiline, lh);
+        assert(params.layer_height > 0.0);
+        const double omega = compute_omega_factor(density_factor, this->line_spacing(), params.layer_height);
 
-        const float density_factor = std::max(0.001f, float(params.density * DensityAdjust / params.multiline));
-        const float period         = float(2.0 * M_PI) * float(this->spacing) / density_factor;
-
-        // bb is already expanded above by 10 * scale_(spacing) for edge artifacts;
+        // bb is already expanded above by 10 * scaled_line_spacing for edge artifacts;
         // skip a second offset here to avoid raster-area bloat in the marching squares pass.
-        marchsq::GyroidField sf(bb, this->z, period, float(omega));
+        marchsq::GyroidField sf(bb, this->z, float(period), float(omega));
         polylines = marchsq::get_gyroid_polylines(sf, SCALED_SPARSE_INFILL_RESOLUTION);
     } else {
         polylines = make_gyroid_waves(
-            scale_(this->z),
-            density_adjusted,
-            this->spacing,
+            scaled<double>(this->z),
+            density_factor,
+            scaled_line_spacing,
             ceil(bb.size()(0) / distance) + 1.,
             ceil(bb.size()(1) / distance) + 1.);
 
@@ -347,14 +350,14 @@ void FillGyroid::_fill_surface_single(
     }
 
     // Apply multiline offset if needed
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
 	polylines = intersection_pl(std::move(polylines), expolygon);
 
     if (! polylines.empty()) {
 		// Remove very small bits, but be careful to not remove infill lines connecting thin walls!
         // The infill perimeter lines should be separated by around a single infill line width.
-        const double minlength = scale_(0.8 * this->spacing);
+        const double minlength = scaled<double>(0.8 * this->flow_spacing());
 		polylines.erase(
 			std::remove_if(polylines.begin(), polylines.end(), [minlength](const Polyline &pl) { return pl.length() < minlength; }),
 			polylines.end());
@@ -363,10 +366,10 @@ void FillGyroid::_fill_surface_single(
 	if (! polylines.empty()) {
 		// connect lines
 		size_t polylines_out_first_idx = polylines_out.size();
-        chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+        chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, params);
 
 	    // new paths must be rotated back
-        if (std::abs(infill_angle) >= EPSILON) {
+        if (!is_zero(infill_angle)) {
 	        for (auto it = polylines_out.begin() + polylines_out_first_idx; it != polylines_out.end(); ++ it)
 	        	it->rotate(infill_angle);
 	    }

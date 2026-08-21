@@ -144,11 +144,10 @@ static Points spreadDotsArea(const ExPolygon& polygons, Point grid_size)
 {
     std::unique_ptr<Fill> filler(Fill::new_from_type(ipAlignedRectilinear));
     filler->angle        = Geometry::deg2rad(90.f);
-    filler->spacing      = unscaled(grid_size.x());
     filler->bounding_box = get_extents(polygons);
 
     FillParams params;
-    params.density = 1.f;
+    params.set_fill_spacing(unscaled(grid_size.x()));
     params.anchor_length_max = 0;
 
     Surface surface(stInternal, polygons);

@@ -30,10 +30,9 @@ TEST_CASE("Pattern path length", "[Fill]") {
     std::unique_ptr<Slic3r::Fill> filler(Slic3r::Fill::new_from_type("rectilinear"));
     filler->angle = float(-(PI)/2.0);
 	FillParams fill_params;
-	filler->spacing = 5;
+	fill_params.flow = Flow(5.0,1.0,2.0).with_spacing(5.0);
 	fill_params.dont_adjust = true;
-	//fill_params.endpoints_overlap = false;
-	fill_params.density = float(filler->spacing / 50.0);
+	fill_params.density = float(fill_params.flow.spacing() / 50.0);
 
     auto test = [&filler, &fill_params] (const ExPolygon& poly) -> Slic3r::Polylines {
         Slic3r::Surface surface(stTop, poly);
@@ -80,7 +79,7 @@ TEST_CASE("Pattern path length", "[Fill]") {
 
         for (double angle : {-(PI/2.0), -(PI/4.0), -(PI), PI/2.0, PI}) {
             for (double spacing : {25.0, 5.0, 7.5, 8.5}) {
-				fill_params.density = float(filler->spacing / spacing);
+				fill_params.density = float(filler->flow_spacing() / spacing);
                 filler->angle = float(angle);
                 ExPolygon e(test_square, test_hole);
                 Slic3r::Polylines paths = test(e);
@@ -102,7 +101,7 @@ TEST_CASE("Pattern path length", "[Fill]") {
     SECTION("Regression: Missing infill segments in some rare circumstances") {
         filler->angle = float(PI/4.0);
 		fill_params.dont_adjust = false;
-        filler->spacing = 0.654498;
+        fill_params.flow = Flow(0.7, 0.2, 0.4).with_spacing(0.654498);
         //filler->endpoints_overlap = unscale(359974);
 		fill_params.density = 1;
         filler->layer_id = 66;
@@ -130,7 +129,7 @@ TEST_CASE("Pattern path length", "[Fill]") {
 
 		FillParams fill_params;
 		fill_params.density = 1.0;
-		filler->spacing = flow.spacing();
+		fill_params.flow = flow;
 
         for (auto angle : { 0.0, 45.0}) {
             surface.expolygon.rotate(angle, Point(0,0));
@@ -436,9 +435,9 @@ bool test_if_solid_surface_filled(const ExPolygon& expolygon, double flow_spacin
     filler->angle = float(angle);
 
 	Flow flow(float(flow_spacing), 0.4f, float(flow_spacing));
-	filler->spacing = flow.spacing();
 
 	FillParams fill_params;
+	fill_params.flow = flow;
 	fill_params.density = float(density);
 	fill_params.dont_adjust = false;
 
@@ -450,7 +449,7 @@ bool test_if_solid_surface_filled(const ExPolygon& expolygon, double flow_spacin
     grown_paths.reserve(paths.size());
 
     // figure out what is actually going on here re: data types
-    float line_offset = float(scale_(filler->spacing / 2.0 + EPSILON));
+    float line_offset = float(scale_(filler->flow_spacing() / 2.0 + EPSILON));
     std::for_each(paths.begin(), paths.end(), [line_offset, &grown_paths] (const Slic3r::Polyline& p) {
         polygons_append(grown_paths, offset(p, line_offset));
     });

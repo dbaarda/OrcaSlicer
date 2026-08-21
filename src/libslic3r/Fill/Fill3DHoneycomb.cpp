@@ -197,11 +197,11 @@ void Fill3DHoneycomb::_fill_surface_single(
     // no rotation is supported for this infill pattern
     // Support infill angle 
     auto infill_angle   = float(this->angle);
-    if (std::abs(infill_angle) >= EPSILON) expolygon.rotate(-infill_angle);
+    if (!is_zero(infill_angle)) expolygon.rotate(-infill_angle);
     BoundingBox bb = expolygon.contour.bounding_box();
 
     // Expand the bounding box to avoid artifacts at the edges
-    coord_t expand = 5 * (scale_(this->spacing));
+    coord_t expand = 5 * this->scaled_flow_spacing();
     bb.offset(expand); 
 
     // Note: with equally-scaled X/Y/Z, the pattern will create a vertically-stretched
@@ -210,13 +210,13 @@ void Fill3DHoneycomb::_fill_surface_single(
 
     // adjustment to account for the additional distance of octagram curves
     // note: this only strictly applies for a rectangular area where the total
-    //       Z travel distance is a multiple of the spacing... but it should
+    //       Z travel distance is a multiple of the fill-spacing... but it should
     //       be at least better than the prevous estimate which assumed straight
     //       lines
     // = 4 * integrate(func=4*x(sqrt(2) - 1) + 1, from=0, to=0.25)
     // = (sqrt(2) + 1) / 2 [... I think]
     // make a first guess at the preferred grid Size
-    coordf_t gridSize = (scale_(this->spacing) * ((zScale + 1.) / 2.) * params.multiline  / params.density);
+    coordf_t gridSize = scale_(this->fill_spacing() * ((zScale + 1.) / 2.));
 
     // This density calculation is incorrect for many values > 25%, possibly
     // due to quantisation error, so this value is used as a first guess, then the
@@ -234,7 +234,7 @@ void Fill3DHoneycomb::_fill_surface_single(
       layersPerModule = 2;
       // re-adjust the grid size for a partial octahedral path
       // (scale of 1.1 guessed based on modeling)
-      gridSize = (scale_(this->spacing) * 1.1 * params.multiline  / params.density);
+      gridSize = scale_(this->fill_spacing() * 1.1);
       // re-adjust zScale to make layering consistent
       zScale = (gridSize * 2) / (layersPerModule * layerHeight);
     } else {
@@ -244,7 +244,7 @@ void Fill3DHoneycomb::_fill_surface_single(
       // re-adjust zScale to make layering consistent
       zScale = (gridSize * 2) / (layersPerModule * layerHeight);
       // re-adjust the grid size to account for the new zScale
-      gridSize = (scale_(this->spacing) * ((zScale + 1.) / 2.) * params.multiline  / params.density);
+      gridSize = scale_(this->fill_spacing() * ((zScale + 1.) / 2.));
       // re-calculate layersPerModule and zScale
       layersPerModule = floor((gridSize * 2) / (zScale * layerHeight) + 0.05);
       if(layersPerModule < 2){
@@ -270,19 +270,19 @@ void Fill3DHoneycomb::_fill_surface_single(
     // move pattern in place
     for (Polyline &pl : polylines){
       pl.translate(bb.min);
-      pl.simplify(5 * spacing); // simplify to 5x line width
+      pl.simplify(5 * this->scaled_flow_spacing()); // simplify to 5x line width
     }
 
     // Apply multiline offset if needed
-    multiline_fill(polylines, params, spacing);
+    multiline_fill(polylines, params.multiline, this->scaled_flow_spacing());
 
     // clip pattern to boundaries, chain the clipped polylines
-    polylines = intersection_pl(std::move(polylines), to_polygons(expolygon));
+    polylines = intersection_pl(std::move(polylines), expolygon);
 
     if (! polylines.empty()) {
     // Remove very small bits, but be careful to not remove infill lines connecting thin walls!
     // The infill perimeter lines should be separated by around a single infill line width.
-    const double minlength = scale_(0.8 * this->spacing);
+    const double minlength = scale_(0.8 * this->flow_spacing());
     polylines.erase(
 	std::remove_if(polylines.begin(), polylines.end(), [minlength](const Polyline &pl) { return pl.length() < minlength; }),
 	polylines.end());
@@ -292,10 +292,10 @@ void Fill3DHoneycomb::_fill_surface_single(
     if (!polylines.empty()) {
         int infill_start_idx = polylines_out.size(); // only rotate what belongs to us.
         // connect lines
-        chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, this->spacing, params);
+        chain_or_connect_infill(std::move(polylines), expolygon, polylines_out, params);
 
         // rotate back
-        if (std::abs(infill_angle) >= EPSILON) {
+        if (!is_zero(infill_angle)) {
           for (auto it = polylines_out.begin() + infill_start_idx; it != polylines_out.end(); ++it) 
             it->rotate(infill_angle);
         }

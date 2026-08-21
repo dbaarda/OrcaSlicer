@@ -50,7 +50,7 @@ struct TreeSupportMeshGroupSettings {
         coordf_t external_perimeter_width = 0.;
         for (size_t region_id = 0; region_id < print_object.num_printing_regions(); ++ region_id) {
             const PrintRegion &region = print_object.printing_region(region_id);
-            external_perimeter_width = std::max<coordf_t>(external_perimeter_width, region.flow(print_object, frExternalPerimeter, config.layer_height).width());
+            external_perimeter_width = std::max<coordf_t>(external_perimeter_width, print_object.flow(region, frExternalPerimeter, config.layer_height).width());
         }
 
         this->layer_height              = scaled<coord_t>(config.layer_height.value);

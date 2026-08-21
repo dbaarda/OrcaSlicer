@@ -737,7 +737,7 @@ static void add_hook(
             Vec2d dir2 = Vec2d(bg::get<1, 0>(segment), bg::get<1, 1>(segment)) - pt2;
             // Find intersection of (pt, dir) with (pt2, dir2), where dir is normalized.
             double denom = cross2(dir, dir2);
-            assert(std::abs(denom) > EPSILON);
+            assert(!is_zero(denom));
             double t = cross2(pt2 - pt, dir2) / denom;
             if (hook_intersection.second < lines_src.size())
                 // Trimming by another infill line. Reduce overlap.
@@ -1372,7 +1372,7 @@ void Filler::_fill_surface_single(
         std::transform(lines.begin(), lines.end(), std::back_inserter(all_polylines), [](const Line& l) { return Polyline{ l.a, l.b }; });
 
         // Apply multiline offset if needed
-        multiline_fill(all_polylines, params, spacing);
+        multiline_fill(all_polylines, params.multiline, this->scaled_flow_spacing());
 
         // Crop all polylines
         all_polylines = intersection_pl(std::move(all_polylines), expolygon);
@@ -1398,7 +1398,9 @@ void Filler::_fill_surface_single(
         const auto hook_length     = coordf_t(std::min<float>(std::numeric_limits<coord_t>::max(), scale_(params.anchor_length)));
         const auto hook_length_max = coordf_t(std::min<float>(std::numeric_limits<coord_t>::max(), scale_(params.anchor_length_max)));
 
-    Polylines all_polylines_with_hooks = all_polylines.size() > 1 ? connect_lines_using_hooks(std::move(all_polylines), expolygon, this->spacing, hook_length, hook_length_max) : std::move(all_polylines);
+        Polylines all_polylines_with_hooks = all_polylines.size() > 1 ?
+            connect_lines_using_hooks(std::move(all_polylines), expolygon, this->scaled_flow_spacing(), hook_length, hook_length_max) :
+            std::move(all_polylines);
 
 #ifdef ADAPTIVE_CUBIC_INFILL_DEBUG_OUTPUT
         {
@@ -1407,10 +1409,10 @@ void Filler::_fill_surface_single(
         }
 #endif /* ADAPTIVE_CUBIC_INFILL_DEBUG_OUTPUT */
 
-        chain_or_connect_infill(std::move(all_polylines_with_hooks), expolygon, polylines_out, this->spacing, params);
+        chain_or_connect_infill(std::move(all_polylines_with_hooks), expolygon, polylines_out, params);
     } else { 
         // if multiline  is > 1 infill is ready to connect
-        chain_or_connect_infill(std::move(all_polylines), expolygon, polylines_out, this->spacing, params);
+        chain_or_connect_infill(std::move(all_polylines), expolygon, polylines_out, params);
     }
 
 #ifdef ADAPTIVE_CUBIC_INFILL_DEBUG_OUTPUT

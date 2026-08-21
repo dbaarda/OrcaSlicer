@@ -774,7 +774,7 @@ struct SupportGeneratorLayerExtruded
 
     bool could_merge(const SupportGeneratorLayerExtruded &other) const {
         return ! this->empty() && ! other.empty() &&
-            std::abs(this->layer->height - other.layer->height) < EPSILON &&
+            is_approx(this->layer->height, other.layer->height) &&
             this->layer->bridging == other.layer->bridging;
     }
 
@@ -1392,7 +1392,7 @@ SupportGeneratorLayersPtr generate_support_layers(
             if (this_layer_contacts_only) {
                 // Find a supporting layer for its interface ID.
                 for (auto it = object.support_layers().rbegin(); it != object.support_layers().rend(); ++ it)
-                    if (const SupportLayer &other_layer = **it; std::abs(other_layer.print_z - top_contact_bottom_z) < EPSILON) {
+                    if (const SupportLayer &other_layer = **it; is_approx(other_layer.print_z, top_contact_bottom_z)) {
                         // other_layer supports this top contact layer. Assign a different support interface direction to this layer
                         // from the layer that supports it.
                         this_layer_id_interface = other_layer.interface_id() + 1;
@@ -1470,8 +1470,8 @@ void generate_support_toolpaths(
                 if (! to_infill_polygons.empty()) {
                     Fill *filler = filler_support.get();
                     filler->angle = support_params.raft_angle_base;
-                    filler->spacing = support_params.support_material_flow.spacing();
-                    filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / support_params.support_density));
+                    //filler->spacing = support_params.support_material_flow.spacing();
+                    //filler->link_max_length = scaled(filler->spacing * link_max_length_factor / support_params.support_density);
                     fill_expolygons_with_sheath_generate_paths(
                         // Destination
                         support_layer.support_fills.entities,
@@ -1493,19 +1493,19 @@ void generate_support_toolpaths(
             if (support_layer_id == 0) {
                 // Base flange.
                 filler->angle = support_params.raft_angle_1st_layer;
-                filler->spacing = support_params.first_layer_flow.spacing();
+                //filler->spacing = support_params.first_layer_flow.spacing();
                 density       = float(config.raft_first_layer_density.value * 0.01);
             } else if (support_layer_id >= slicing_params.base_raft_layers) {
                 filler->angle = support_params.raft_interface_angle(support_layer.interface_id());
                 // We don't use $base_flow->spacing because we need a constant spacing
                 // value that guarantees that all layers are correctly aligned.
-                filler->spacing = support_params.support_material_flow.spacing();
+                // filler->spacing = support_params.support_material_flow.spacing();
                 assert(! raft_layer.bridging);
                 flow          = Flow(float(support_params.raft_interface_flow.width()), float(raft_layer.height), support_params.raft_interface_flow.nozzle_diameter());
                 density       = float(support_params.raft_interface_density);
             } else
                 continue;
-            filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
+            //filler->link_max_length = scaled(filler->spacing * link_max_length_factor / density);
             fill_expolygons_with_sheath_generate_paths(
                 // Destination
                 support_layer.support_fills.entities,
@@ -1716,9 +1716,9 @@ void generate_support_toolpaths(
                     double density = raft_contact ? support_params.raft_interface_density :
                         interface_as_base ? support_params.support_density :
                         bottom_interface ? support_params.bottom_interface_density : support_params.top_interface_density;
-                    filler->spacing = raft_contact ? support_params.raft_interface_flow.spacing() :
-                        interface_as_base ? support_params.support_material_flow.spacing() : support_params.support_material_interface_flow.spacing();
-                    filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
+                    //filler->spacing = raft_contact ? support_params.raft_interface_flow.spacing() :
+                    //    interface_as_base ? support_params.support_material_flow.spacing() : support_params.support_material_interface_flow.spacing();
+                    //filler->link_max_length = scaled(filler->spacing * link_max_length_factor / density);
                     fill_expolygons_generate_paths(
                         // Destination
                         layer_ex.extrusions,
@@ -1744,8 +1744,8 @@ void generate_support_toolpaths(
                 assert(! base_interface_layer.layer->bridging);
                 Flow interface_flow = support_params.support_material_flow.with_height(float(base_interface_layer.layer->height));
                 filler->angle   = support_interface_angle;
-                filler->spacing = support_params.support_material_interface_flow.spacing();
-                    filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / support_params.top_interface_density));
+                //filler->spacing = support_params.support_material_interface_flow.spacing();
+                //filler->link_max_length = scaled(filler->spacing * link_max_length_factor / support_params.top_interface_density);
                 fill_expolygons_generate_paths(
                     // Destination
                     base_interface_layer.extrusions,
@@ -1766,8 +1766,8 @@ void generate_support_toolpaths(
                 // value that guarantees that all layers are correctly aligned.
                 assert(! base_layer.layer->bridging);
                 auto flow = support_params.support_material_flow.with_height(float(base_layer.layer->height));
-                filler->spacing = support_params.support_material_flow.spacing();
-                filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / support_params.support_density));
+                //filler->spacing = support_params.support_material_flow.spacing();
+                //filler->link_max_length = scaled(filler->spacing * link_max_length_factor / support_params.support_density);
                 float density = float(support_params.support_density);
                 bool  sheath  = support_params.with_sheath;
                 bool  no_sort = false;
@@ -1781,8 +1781,8 @@ void generate_support_toolpaths(
                     // use the proper spacing for first layer as we don't need to align
                     // its pattern to the other layers
                     //FIXME When paralellizing, each thread shall have its own copy of the fillers.
-                    filler->spacing = flow.spacing();
-                    filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
+                    //filler->spacing = flow.spacing();
+                    //filler->link_max_length = scaled(filler->spacing * link_max_length_factor / density);
                     sheath  = true;
                     no_sort = true;
                 } else if (support_params.support_style == SupportMaterialStyle::smsTreeOrganic &&
@@ -1879,8 +1879,8 @@ void generate_support_toolpaths(
                 f->z               = support_layer.print_z;
                 f->overlap         = 0;
                 f->angle           = layer_cache.ironing_angle;
-                f->spacing         = support_params.ironing_spacing;
-                f->link_max_length = (coord_t) scale_(3. * f->spacing);
+                //f->spacing         = support_params.ironing_spacing;
+                //f->link_max_length = (coord_t) scale_(3. * f->spacing);
 
                 ExPolygons polys_to_iron = union_safety_offset_ex(layer_cache.polys_to_iron);
                 layer_cache.polys_to_iron.clear();
