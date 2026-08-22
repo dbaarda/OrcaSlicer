@@ -26,8 +26,8 @@ template<class Opt> void test_sin(Opt &&opt)
         return std::sin(phi);
     };
 
-    auto init = initvals({PI});
-    auto optbounds = bounds({ {0., 2 * PI}});
+    auto init = initvals({M_PI});
+    auto optbounds = bounds({ {0., 2 * M_PI}});
 
     Result result_min = opt.to_min().optimize(optfunc, init, optbounds);
     Result result_max = opt.to_max().optimize(optfunc, init, optbounds);
