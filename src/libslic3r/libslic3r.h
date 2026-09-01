@@ -71,8 +71,6 @@ static constexpr coordf_t SCALING_FACTOR = 1e-6;
 #endif
 static constexpr coordf_t INV_SCALING_FACTOR = 1.0 / SCALING_FACTOR;
 
-// This is the default type used for unscaled coordinates.
-
 namespace Slic3r {
 
 // A meta-predicate which is true for integers wider than or equal to coord_t.
@@ -82,6 +80,15 @@ struct is_scaled_coord
     static const constexpr bool value = std::is_integral<I>::value &&
                                         std::numeric_limits<I>::digits >= std::numeric_limits<coord_t>::digits;
 };
+
+// A type identity template for preventing type inference for a template argument. Copied from C++20's std::identity.
+template<typename T>
+struct identity_
+{
+    using type = T;
+};
+template<typename T>
+using identity_t = typename identity_<T>::type;
 
 // Meta predicates for floating, 'scaled coord' and generic arithmetic types
 // Can be used to restrict templates to work for only the specified set of types.
@@ -111,21 +118,26 @@ using IteratorOnly = std::enable_if_t<!std::is_same_v<typename std::iterator_tra
 template<class From, class To>
 using IsConvertible = std::enable_if_t<std::is_convertible_v<From, To>>;
 
-// This gets the promoted result type of adding two types. It correctly handles things like coersion of ConfigOptions into their value type
-// for the promotions, unlike std::common_type_t which can down-convert them into a lower precision/range type to match the other type.
-template<class T1, class T2>
-using get_result_t = decltype(std::declval<T1>() + std::declval<T2>());
+// This gets the lowest numeric type that an object can be directly converted to without applying any down-conversions. It correctly handles
+// things like coersion of ConfigOptions into their value type.
+template<class T1>
+using obj_numeric_t = decltype(std::declval<T1>() + 1);
+
+// This gets the numeric type to use for COORD_EPSILON depending on the arg type(s). If both args are integral or both floating, we use
+// their common type, otherwise we fallback to coord_t. This means if either arg is an integral type, we assume it is scaled, and we always
+// use the lowest resolution type that can safely compare both argument types. It correctly handles ConfigOption arguments.
+template<class Arg1, class Arg2 = Arg1, typename T1 = obj_numeric_t<Arg1>, typename T2 = obj_numeric_t<Arg2>>
+using coord_epsilon_t = std::conditional_t<std::is_integral_v<T1> == std::is_integral_v<T2>, std::common_type_t<T1, T2>, coord_t>;
 
 // Conversion from any convertable unscaled type into any arithmetic scaled type.
-// The return type defaults to coord_t but can be explicitly specified.
-template<typename Tout = coord_t, typename Tin, typename = IsConvertible<Tin, Tout>, typename = ArithmeticOnly<Tout>>
+// The return type defaults to coord_t but can be explicitly specified like `scaled<float>(value)`.
+template<typename Tout = coord_t, typename Tin, typename Number = obj_numeric_t<Tin>, typename = ArithmeticOnly<Tout>>
 inline constexpr Tout scaled(const Tin& v) noexcept
 {
-    // For efficiency we want to down-convert the scaling factor to the cheapest type that can be multiplied by Tin to give a result with
-    // sufficient range for the result with at least as much resolution as Tin. Tin might also need to be coerced into this type if it is
-    // something like a ConfigOption. Note INV_SCALING_FACTOR can be converted exactly into an int, so the cheapest possible type is int32_t.
-    using UnscaledType = get_result_t<Tin, int32_t>;
-    return Tout(v * UnscaledType(INV_SCALING_FACTOR));
+    // We cast INV_SCALING_FACTOR to the numeric type of v because that can be done at compile-time and we avoid runtime upcasting v to
+    // double and doing a double multiply. Note INV_SCALING_FACTOR is an integer value so this has no loss of accuracy for integer input
+    // values.
+    return static_cast<Tout>(v * static_cast<Number>(INV_SCALING_FACTOR));
 }
 
 // Conversion from any convertable scaled type to floating point unscaled type.
@@ -179,8 +191,8 @@ static constexpr coordf_t WIPE_TOWER_MARGIN      = 1.;
 static constexpr coordf_t EPSILON       = 1e-4;
 static constexpr coord_t SCALED_EPSILON = scaled(EPSILON);
 // A convenient templated EPSILON that is scaled or not depending on the type.
-template<typename T>
-static constexpr T COORD_EPSILON = is_scaled_coord<T>::value ? SCALED_EPSILON : EPSILON;
+template<typename Epsilon = coord_t>
+static constexpr Epsilon COORD_EPSILON = std::is_integral_v<Epsilon> ? SCALED_EPSILON : EPSILON;
 
 #ifndef UNUSED
 #define UNUSED(x) (void) (x)
@@ -371,68 +383,70 @@ inline constexpr T sqr(T x)
 { return x * x; }
 
 // Is value approximately zero?
-template<typename Number, typename Precision = Number>
-inline constexpr bool is_zero(const Number value, const Precision precision = COORD_EPSILON<Number>)
+template<typename Arg1, typename Epsilon = coord_epsilon_t<Arg1>>
+inline constexpr bool is_zero(const Arg1 value, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
 {
-    // Note we use <= here so that precision=0 works.
-    return std::abs(value) <= precision;
+    // Note we use <= here so that epsilon=0 works.
+    return std::abs(static_cast<Epsilon>(value)) <= epsilon;
 }
 
 // Is value approximately equal to test?
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx(const Arg1 value, const Arg2 test, const Precision precision = COORD_EPSILON<Number>)
-{ return is_zero(value - test, precision); }
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_eq(const Arg1 value, const Arg2 test, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return is_zero(static_cast<Epsilon>(value) - static_cast<Epsilon>(test), epsilon); }
 
 // Is value approximately < test?
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx_lt(const Arg1 value, const Arg2 test, const Precision precision = COORD_EPSILON<Number>)
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_lt(const Arg1 value, const Arg2 test, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
 {
-    // Note we use < here so that precision=0 works.
-    return value < (test - precision);
+    // Note we use < here so that epsilon=0 works.
+    return static_cast<Epsilon>(value) < (static_cast<Epsilon>(test) - epsilon);
 }
 
 // Is value approximately == test? For std::optional numbers.
 // Will return true if both have no value, or false if only one has a value.
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx(const std::optional<Arg1>& value,
-                                const std::optional<Arg2>& test,
-                                const Precision precision = COORD_EPSILON<Number>)
-{
-    return (!value.has_value() && !test.has_value()) ||
-           (value.has_value() && test.has_value() && is_approx<Number>(*value, *test, precision));
-}
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_eq(const std::optional<Arg1>& value,
+                            const std::optional<Arg2>& test,
+                            const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return (!value.has_value() && !test.has_value()) || (value.has_value() && test.has_value() && is_eq(*value, *test, epsilon)); }
 
 // Is value approximately < test? For std:optional numbers.
 // Having any value will be considered greater than no value.
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx_lt(const std::optional<Arg1>& value,
-                                   const std::optional<Arg2>& test,
-                                   const Precision precision = COORD_EPSILON<Number>)
-{
-    return (!value.has_value() && test.has_value()) ||
-           (value.has_value() && test.has_value() && is_approx_lt<Number>(*value, *test, precision));
-}
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_lt(const std::optional<Arg1>& value,
+                            const std::optional<Arg2>& test,
+                            const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return (!value.has_value() && test.has_value()) || (value.has_value() && test.has_value() && is_lt(*value, *test, epsilon)); }
 
 // Is value approximately > test?
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx_gt(const Arg1 value, const Arg2 test, const Precision precision = COORD_EPSILON<Number>)
-{ return is_approx_lt(test, value, precision); }
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_gt(const Arg1 value, const Arg2 test, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return is_lt(test, value, epsilon); }
 
 // Is value approximately <= test?
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx_le(const Arg1 value, const Arg2 test, const Precision precision = COORD_EPSILON<Number>)
-{ return !is_approx_lt(test, value, precision); }
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_le(const Arg1 value, const Arg2 test, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return !is_lt(test, value, epsilon); }
 
 // Is value approximately >= test?
-template<typename Arg1, typename Arg2, typename Number = get_result_t<Arg1, Arg2>, typename Precision = Number>
-inline constexpr bool is_approx_ge(const Arg1 value, const Arg2 test, const Precision precision = COORD_EPSILON<Number>)
-{ return !is_approx_lt(value, test, precision); }
+template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, Arg2>>
+inline constexpr bool is_ge(const Arg1 value, const Arg2 test, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return !is_lt(value, test, epsilon); }
+
+template<typename Number>
+constexpr inline bool is_approx(const Number value, const Number test, const identity_t<Number> epsilon = EPSILON)
+{ return is_eq(value, test, epsilon); }
+
+template<typename Number>
+constexpr inline bool is_approx(const std::optional<Number>& value, const std::optional<Number>& test)
+{ return is_eq(value, test); }
 
 // Linearly interpolate between a and b by ratio t.
 template<typename T, typename Number>
 inline constexpr T lerp(const T& a, const T& b, Number t)
 {
-    assert(is_approx_le(Number(0), t) && is_approx_le(t, Number(1)));
+    assert(is_le(Number(0), t) && is_le(t, Number(1)));
     return (Number(1) - t) * a + t * b;
 }
 
