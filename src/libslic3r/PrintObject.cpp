@@ -229,7 +229,7 @@ void PrintObject::_transform_hole_to_polyholes()
 
 
                                 // SCALED_EPSILON was a bit too harsh. Now using a config, as some may want some harsh setting and some don't.
-                                coord_t max_variation = std::max(SCALED_EPSILON, scale_(this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_threshold.get_abs_value(unscaled(diameter_sum / hole.points.size()))));
+                                coord_t max_variation = std::max(SCALED_EPSILON, scaled(this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_threshold.get_abs_value(unscaled(diameter_sum / hole.points.size()))));
                                 bool twist = this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_twisted.value;
                                 int max_edges = this->m_layers[layer_idx]->m_regions[region_idx]->region().config().hole_to_polyhole_max_edges.value;
                                 if (diameter_max - diameter_min < max_variation * 2 && diameter_line_max - diameter_line_min < max_variation * 2) {

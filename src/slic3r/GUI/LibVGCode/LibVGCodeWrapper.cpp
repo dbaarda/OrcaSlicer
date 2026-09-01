@@ -574,7 +574,7 @@ private:
     uint8_t color_print_color_id(double print_z, size_t extruder_id) const {
         auto it = std::find_if(m_color_print_values.begin(), m_color_print_values.end(),
             [print_z](const Slic3r::CustomGCode::Item& code) {
-            return std::fabs(code.print_z - print_z) < EPSILON;
+            return std::fabs(code.print_z - print_z) < Slic3r::EPSILON;
         });
         if (it != m_color_print_values.end()) {
             Slic3r::CustomGCode::Type type = it->type;
@@ -595,7 +595,7 @@ private:
             }
         }
 
-        const Slic3r::CustomGCode::Item value{ print_z + EPSILON, Slic3r::CustomGCode::Custom, 0, "" };
+        const Slic3r::CustomGCode::Item value{ print_z + Slic3r::EPSILON, Slic3r::CustomGCode::Custom, 0, "" };
         it = std::lower_bound(m_color_print_values.begin(), m_color_print_values.end(), value);
         while (it != m_color_print_values.begin()) {
             --it;
