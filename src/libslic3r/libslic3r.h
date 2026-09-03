@@ -57,7 +57,7 @@
 // use float for unscaled coordinates without loss of resolution when using them for scaled values.
 using coord_t = int32_t;
 using coordf_t = float;
-static constexpr coordf_t SCALING_FACTOR = 1e-2;
+static constexpr coordf_t SCALING_FACTOR = 1e-2;  // 10um
 #else
 // FIXME At least FillRectilinear2 and std::boost Voronoi require coord_t to be 32bit.
 //
@@ -67,7 +67,7 @@ static constexpr coordf_t SCALING_FACTOR = 1e-2;
 //  values.
 using coord_t                            = int64_t;
 using coordf_t                           = double;
-static constexpr coordf_t SCALING_FACTOR = 1e-6;
+static constexpr coordf_t SCALING_FACTOR = 1e-6; // 1nm
 #endif
 static constexpr coordf_t INV_SCALING_FACTOR = 1.0 / SCALING_FACTOR;
 
@@ -135,16 +135,16 @@ template<typename Tout = coord_t, typename Tin, typename Number = obj_numeric_t<
 inline constexpr Tout scaled(const Tin& v) noexcept
 {
     // We cast INV_SCALING_FACTOR to the numeric type of v because that can be done at compile-time and we avoid runtime upcasting v to
-    // double and doing a double multiply. Note INV_SCALING_FACTOR is an integer value so this has no loss of accuracy for integer input
-    // values.
+    // double and doing a double multiply if v is a float. Note INV_SCALING_FACTOR is an integer value so this has no loss of accuracy if v
+    // is an int.
     return static_cast<Tout>(v * static_cast<Number>(INV_SCALING_FACTOR));
 }
 
 // Conversion from any convertable scaled type to floating point unscaled type.
-// The return type defaults to coordf_t but can be explicitly specified.
+// The return type defaults to coordf_t but can be explicitly specified like `unscaled<float>(value)`.
 template<typename Tout = coordf_t, typename Tin, typename = IsConvertible<Tin, Tout>, typename = FloatingOnly<Tout>>
 inline constexpr Tout unscaled(const Tin& v) noexcept
-{ return Tout(v) * Tout(SCALING_FACTOR); }
+{ return static_cast<Tout>(v) * static_cast<Tout>(SCALING_FACTOR); }
 
 // These are older macro versions of these functions that used to return a double expression.
 #define scale_(val) scaled<coordf_t>(val)
@@ -188,7 +188,7 @@ static constexpr coordf_t WIPE_TOWER_MARGIN      = 1.;
 //  For a threshold of a squared Euclidean distance,
 //  for a trheshold in a difference of radians,
 //  for a threshold of a cross product of two non-normalized vectors etc.
-static constexpr coordf_t EPSILON       = 1e-4;
+static constexpr coordf_t EPSILON       = 1e-4; // 0.1um
 static constexpr coord_t SCALED_EPSILON = scaled(EPSILON);
 // A convenient templated EPSILON that is scaled or not depending on the type.
 template<typename Epsilon = coord_t>
@@ -379,7 +379,7 @@ inline bool one_of(const T& v, const std::initializer_list<T>& il)
 { return contains(il, v); }
 
 template<typename T>
-inline constexpr T sqr(T x)
+inline constexpr T sqr(const T x)
 { return x * x; }
 
 // Is value approximately zero?
@@ -434,6 +434,27 @@ template<typename Arg1, typename Arg2, typename Epsilon = coord_epsilon_t<Arg1, 
 inline constexpr bool is_ge(const Arg1 value, const Arg2 test, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
 { return !is_lt(value, test, epsilon); }
 
+// is value approximately within the range min <= value <= max?
+template<typename Arg1, typename Lim, typename Epsilon = coord_epsilon_t<Arg1, Lim>>
+inline constexpr bool is_within(const Arg1 value, const Lim min, const Lim max, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return is_le(min, value, epsilon) && is_le(value, max, epsilon); }
+
+// is value approximately between the range min < value < max?
+template<typename Arg1, typename Lim, typename Epsilon = coord_epsilon_t<Arg1, Lim>>
+inline constexpr bool is_inside(const Arg1 value, const Lim min, const Lim max, const identity_t<Epsilon> epsilon = COORD_EPSILON<Epsilon>)
+{ return is_lt(min, value, epsilon) && is_lt(value, max, epsilon); }
+
+// Define convenience macros for approximate tests using epsilon=SCALED_EPSILON.
+#define is_scaled_zero(value) is_zero(value, SCALED_EPSILON)
+#define is_scaled_lt(value, test) is_lt(value, test, SCALED_EPSILON)
+#define is_scaled_le(value, test) is_le(value, test, SCALED_EPSILON)
+#define is_scaled_eq(value, test) is_zero(value, test, SCALED_EPSILON)
+#define is_scaled_ge(value, test) is_ge(value, test, SCALED_EPSILON)
+#define is_scaled_gt(value, test) is_gt(value, test, SCALED_EPSILON)
+#define is_scaled_within(value, min, max) is_within(value, min, max, SCALED_EPSILON)
+#define is_scaled_inside(value, min, max) is_inside(value, min, max, SCALED_EPSILON)
+
+// Backwards compatible equivalents to is_eq().
 template<typename Number>
 constexpr inline bool is_approx(const Number value, const Number test, const identity_t<Number> epsilon = EPSILON)
 { return is_eq(value, test, epsilon); }
