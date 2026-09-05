@@ -448,7 +448,7 @@ inline constexpr bool is_inside(const Arg1 value, const Lim min, const Lim max, 
 #define is_scaled_zero(value) is_zero(value, SCALED_EPSILON)
 #define is_scaled_lt(value, test) is_lt(value, test, SCALED_EPSILON)
 #define is_scaled_le(value, test) is_le(value, test, SCALED_EPSILON)
-#define is_scaled_eq(value, test) is_zero(value, test, SCALED_EPSILON)
+#define is_scaled_eq(value, test) is_eq(value, test, SCALED_EPSILON)
 #define is_scaled_ge(value, test) is_ge(value, test, SCALED_EPSILON)
 #define is_scaled_gt(value, test) is_gt(value, test, SCALED_EPSILON)
 #define is_scaled_within(value, min, max) is_within(value, min, max, SCALED_EPSILON)
