@@ -183,6 +183,9 @@ static constexpr coordf_t INSET_OVERLAP_TOLERANCE = 0.4;
 static constexpr coordf_t EXTERNAL_INFILL_MARGIN = 3.;
 static constexpr coordf_t BRIDGE_INFILL_MARGIN   = 1.;
 static constexpr coordf_t WIPE_TOWER_MARGIN      = 1.;
+// Margin for system placement of the wipe tower (defaults, re-placement, CLI). Positions
+// within WIPE_TOWER_MARGIN stay valid: a user drag down to that limit is respected.
+static constexpr double WIPE_TOWER_AUTO_MARGIN = 15.;
 
 // FIXME This epsilon value is used for many non-related purposes:
 //  For a threshold of a squared Euclidean distance,
